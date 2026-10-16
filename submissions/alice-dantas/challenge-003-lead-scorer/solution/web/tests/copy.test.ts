@@ -2,13 +2,15 @@
 import { describe, expect, test } from "vitest";
 
 import {
-  DATA_WARNING, GROUP_LABELS, UI, accountWarning, actionText, bandTitle, clientText, dataLabel, errorText,
+  BRAND, DATA_WARNING, EVIDENCE, GROUP_LABELS, NAV, PAGES, RANKER_DESCRIPTIONS, RANKER_LABELS, ROLE_LABELS, RULES, TEAM,
+  UI, accountWarning, actionText, bandRange, bandTitle, clientText, dataLabel, errorText, groupDescription,
   groupEmptyText, legendText, missingShort, pipelineEmptyText, reasonText, summaryCounts, tieText, valueLabel,
 } from "@/copy/pt-BR";
+import type { Evidence, Rules } from "@/lib/contract";
 import type { Item } from "@/lib/contract";
-import { formatDate, formatInt } from "@/lib/format";
+import { formatDate, formatInt, formatPct, formatPp } from "@/lib/format";
 
-import { allPipelines, errors, readContract, sellerPipeline } from "./fixtures";
+import { allPipelines, errors, load, readContract, sellerPipeline } from "./fixtures";
 
 // Mesma lista do núcleo (leadscorer/policy.py, FORBIDDEN_TERMS).
 const FORBIDDEN_TERMS = ["probabilidade", "perdida", "encerre", "prioridade alta", "chance alta", "score"];
@@ -28,20 +30,37 @@ const CONTRACT = {
   empty: [...codeOf("GroupEmpty"), ...codeOf("StartWithGroup"), ...codeOf("PipelineEmpty")],
   errors: schemas.ErrorBody.properties.code.enum as string[],
   groups: schemas.Group.properties.state.enum as string[],
+  rankers: schemas.RankerResult.properties.code.enum as string[],
 };
 
 const pipelines = allPipelines();
 const items = (): Item[] => pipelines.flatMap((p) => p.groups.flatMap((g) => g.items));
 
+/** Todos os textos fixos de um catálogo (objetos aninhados inclusive). */
+const strings = (value: unknown): string[] =>
+  typeof value === "string" ? [value] : value && typeof value === "object" ? Object.values(value).flatMap(strings) : [];
+
 /** Todo texto que a tela monta a partir das fixtures. */
 function renderedTexts(): string[] {
-  const texts: string[] = [...Object.values(GROUP_LABELS), DATA_WARNING];
-  for (const value of Object.values(UI)) {
-    if (typeof value === "string") texts.push(value);
-    else if (typeof value === "object") texts.push(...Object.values(value));
-  }
+  const texts: string[] = [...strings([GROUP_LABELS, BRAND, NAV, PAGES, ROLE_LABELS, UI, TEAM, RANKER_LABELS,
+    RANKER_DESCRIPTIONS, EVIDENCE, RULES]), DATA_WARNING];
+  const evidence = load("evidence") as Evidence;
+  const rules = load("rules") as Rules;
+  const { design } = evidence;
+  texts.push(EVIDENCE.question(design.top_k, design.horizon_days), EVIDENCE.columns.value(design.top_k),
+    EVIDENCE.method(design.cuts.length, design.cuts[0], design.cuts[design.cuts.length - 1], design.horizon_days),
+    EVIDENCE.how(design.observations, design.unique_opportunities, design.n_boot_sellers),
+    ...evidence.rankers.flatMap((r) => (r.delta_val ? [EVIDENCE.vsReference(formatPp(r.delta_val.value)),
+      EVIDENCE.interval(formatPp(r.delta_val.low), formatPp(r.delta_val.high))] : [])),
+    RULES.cycleHelp(rules.meta.min_cases), RULES.cycleColumns.cycle(rules.meta.cycle_percentile),
+    RULES.chance(rules.meta.base_rate), RULES.days(105), ...rules.value_bands.map(bandRange),
+    ...rules.value_bands.map((b) => bandTitle(b.band)));
+  texts.push(UI.seeGroup(GROUP_LABELS.revisar), UI.moreInTab(3, GROUP_LABELS.focar), UI.whyHereFor("EPP"),
+    UI.position(1, 5), UI.ageDays(10), UI.ofTotal(2089), UI.showMore(1), UI.showMore(50),
+    UI.startWithTie(tieText(3, "GTX Plus Pro", 5482)));
   for (const p of pipelines) {
     texts.push(legendText(p.ordering), dataLabel(p.meta), accountWarning(p.summary.without_account, p.summary.total));
+    texts.push(...p.groups.map((g) => groupDescription(g.state, p.meta.cycle_limit_days)));
     if (p.empty) texts.push(pipelineEmptyText(p.empty));
     for (const g of p.groups) {
       if (g.empty) texts.push(groupEmptyText(g.empty));
@@ -71,6 +90,11 @@ describe("cobertura: todo código do contrato tem texto", () => {
   });
   test("grupos", () => {
     expect(Object.keys(GROUP_LABELS).sort()).toEqual([...CONTRACT.groups].sort());
+  });
+  test("estratégias do backtest: rótulo e descrição para cada código", () => {
+    expect(Object.keys(RANKER_LABELS).sort()).toEqual([...CONTRACT.rankers].sort());
+    expect(Object.keys(RANKER_DESCRIPTIONS).sort()).toEqual([...CONTRACT.rankers].sort());
+    expect((load("evidence") as Evidence).rankers.map((r) => r.code).sort()).toEqual([...CONTRACT.rankers].sort());
   });
   test.each(CONTRACT.errors)("erro %s", (code) => {
     expect(errorText({ detail: "", code: code as never, params: {} })).not.toBe("");
@@ -166,5 +190,33 @@ describe("textos de referência", () => {
       "Nenhuma oportunidade aberta para este vendedor.");
     expect(clientText(itemOf("pipeline-ana-alfa", "E138"))).toBe("sem cliente registrado");
     expect(valueLabel("médio")).toBe("valor de tabela médio");
+  });
+
+  test("definição dos grupos, papéis dos motivos e cartão de próximo passo", () => {
+    const limit = sellerPipeline("pipeline-ana-alfa").meta.cycle_limit_days;
+    expect((["focar", "revisar", "qualificar", "nao_pontuavel"] as const).map((g) => groupDescription(g, limit))).toEqual([
+      "Em negociação há até 138 dias, dentro do maior ciclo já fechado.",
+      "Em negociação há mais de 138 dias, acima do maior ciclo já fechado.",
+      "Ainda em prospecção.",
+      "Falta produto, preço de tabela ou data de engajamento no CRM.",
+    ]);
+    expect(ROLE_LABELS).toEqual({
+      group: "Por que está neste grupo", order: "Por que nesta posição", context: "Para contexto (não muda a posição)",
+    });
+    expect(UI.startWithTie(tieText(3, "GTX Plus Pro", 5482))).toBe(
+      "Comece por estas 3 oportunidades de mesmo valor de tabela (GTX Plus Pro, 5.482):");
+    expect([UI.ofTotal(2089), UI.showMore(1), UI.showMore(1241)]).toEqual([
+      "de 2.089 abertas", "Mostrar mais (1 restante)", "Mostrar mais (1.241 restantes)"]);
+  });
+
+  test("evidência e regras: frações em porcentagem, diferenças em pontos e faixas em palavras", () => {
+    expect([formatPct(0.569), formatPct(0.14), formatPct(1)]).toEqual(["56,9%", "14,0%", "100,0%"]);
+    expect([formatPp(-0.031), formatPp(0.015), formatPp(0), formatPp(-0.0004)]).toEqual(
+      ["−3,1 pp", "+1,5 pp", "0,0 pp", "0,0 pp"]);
+    const bands = (load("rules") as Rules).value_bands;
+    expect(bands.map((b) => `${bandTitle(b.band)}: ${bandRange(b)}`)).toEqual([
+      "Valor de tabela alto: a partir de 3.000", "Valor de tabela médio: 500 a 2.999", "Valor de tabela baixo: até 499"]);
+    expect(EVIDENCE.question(10, 90)).toBe(
+      "Do valor ganho nos 90 dias seguintes, quanto estava nas 10 primeiras de cada vendedor?");
   });
 });

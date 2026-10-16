@@ -2,8 +2,10 @@
 import type { ZodType } from "zod";
 
 import { CONTRACT_ERROR, errorText, httpError, networkError } from "@/copy/pt-BR";
-import type { Meta, SellerList, SellerPipeline } from "@/lib/contract";
-import { zErrorBody, zMeta, zSellerList, zSellerPipeline } from "@/lib/contract/zod.gen";
+import type { Evidence, Meta, Rules, SellerList, SellerPipeline, TeamPipeline } from "@/lib/contract";
+import {
+  zErrorBody, zEvidence, zMeta, zRules, zSellerList, zSellerPipeline, zTeamPipeline,
+} from "@/lib/contract/zod.gen";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -32,4 +34,13 @@ export const api = {
   meta: () => getJson<Meta>("/api/meta", zMeta),
   sellerPipeline: (seller: string) =>
     getJson<SellerPipeline>(`/api/sellers/${encodeURIComponent(seller)}/pipeline`, zSellerPipeline),
+  teamPipeline: (filter: { manager?: string | null; office?: string | null }) => {
+    const query = new URLSearchParams();
+    if (filter.manager) query.set("manager", filter.manager);
+    if (filter.office) query.set("office", filter.office);
+    const suffix = query.toString();
+    return getJson<TeamPipeline>(`/api/pipeline${suffix ? `?${suffix}` : ""}`, zTeamPipeline);
+  },
+  rules: () => getJson<Rules>("/api/rules", zRules),
+  evidence: () => getJson<Evidence>("/api/evidence", zEvidence),
 };
