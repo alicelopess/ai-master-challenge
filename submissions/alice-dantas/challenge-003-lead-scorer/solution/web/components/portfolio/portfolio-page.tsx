@@ -121,6 +121,7 @@ export function PortfolioPage() {
               <NextStepCard payload={payload} onSelect={setSelected} onShowGroup={showGroup} />
               <PortfolioSummary payload={payload} />
               <GroupTabs
+                key={seller}
                 groups={payload.groups}
                 tab={tab}
                 onTab={(state) => setQuery({ grupo: state })}

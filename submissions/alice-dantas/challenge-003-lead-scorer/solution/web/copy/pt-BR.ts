@@ -7,9 +7,10 @@
  * vocabulário e a origem de cada número.
  */
 import type {
-  BaseRate, ErrorBody, Group, Item, Meta, Ordering, RankerResult, SellerPipeline, StartWithParams, ValueBandRule,
+  BaseRate, Delta, ErrorBody, EvidenceDesign, Group, Item, Meta, Ordering, RankerResult, SellerPipeline,
+  StartWithParams, ValueBandRule,
 } from "@/lib/contract";
-import { capitalize, formatDate, formatInt } from "@/lib/format";
+import { capitalize, formatDate, formatDecimal, formatInt, formatPp } from "@/lib/format";
 import type { NavKey } from "@/lib/nav";
 
 export type GroupKey = Item["group"];
@@ -92,7 +93,14 @@ export const UI = {
   theme: { label: "Tema", light: "Claro", dark: "Escuro", system: "Sistema" },
   filters: { manager: "Gerente", office: "Escritório", all: "Todos", clear: "Limpar filtros" },
   ofTotal: (total: number) => `de ${formatInt(total)} abertas`,
-  showMore: (count: number) => `Mostrar mais (${formatInt(count)} ${count === 1 ? "restante" : "restantes"})`,
+  pagination: {
+    label: "Páginas da tabela",
+    previous: "Página anterior",
+    next: "Próxima página",
+    page: (page: number) => `Página ${page}`,
+    range: (from: number, to: number, total: number) =>
+      `${formatInt(from)}–${formatInt(to)} de ${formatInt(total)}`,
+  },
 } as const;
 
 export const TEAM = {
@@ -124,42 +132,154 @@ export const RANKER_DESCRIPTIONS: Record<RankerCode, string> = {
   rule_a: "Variação testada: antes, as mais novas que o ciclo típico das ganhas do produto; depois, como a regra atual.",
 };
 
+// Evidência em duas linguagens: a de negócio (padrão, para gestores) e a técnica (para quem audita o método).
+export type EvidenceLanguage = "negocio" | "tecnica";
+
+export const EVIDENCE_LANGUAGES: Record<EvidenceLanguage, string> = {
+  negocio: "Linguagem de negócio",
+  tecnica: "Linguagem técnica",
+};
+
 export const EVIDENCE = {
+  languageLabel: "Linguagem",
   questionLabel: "A pergunta",
-  question: (topK: number, horizonDays: number) =>
-    `Do valor ganho nos ${horizonDays} dias seguintes, quanto estava nas ${topK} primeiras de cada vendedor?`,
-  method: (count: number, first: string, last: string, horizonDays: number) =>
-    `Voltamos a ${count} datas, de ${formatDate(first)} a ${formatDate(last)}. Em cada uma, montamos a lista de cada ` +
-    `vendedor só com o que se sabia naquele dia e olhamos os ${horizonDays} dias seguintes. 100% seria a melhor ` +
-    "lista possível, montada sabendo o futuro.",
   reference: "Referência",
-  vsReference: (delta: string) => `${delta} em relação à regra atual`,
-  interval: (low: string, high: string) => `intervalo de 95%: ${low} a ${high}`,
-  chartLabel: "Valor ganho capturado por estratégia",
-  detailTitle: "Detalhe por estratégia",
-  columns: {
-    strategy: "Estratégia",
-    value: (topK: number) => `Valor nas ${topK} primeiras`,
-    delta: "Diferença para a regra atual",
-    auc: "Separação (AUC)",
-  },
-  aucHelp: "Quanto a ordem separa as que foram ganhas das que não foram: 0,5 é o acaso.",
-  withoutTitle: "Sem as que nunca fecharam",
-  withoutHelp: "A mesma medida sem as oportunidades que nunca fecharam na base. Mostra quanto da diferença vem de " +
-    "tirar da frente as que passaram do maior ciclo já fechado.",
-  howTitle: "Como medimos",
-  how: (observations: number, unique: number, resamples: number) =>
-    `${formatInt(observations)} observações de ${formatInt(unique)} oportunidades (as datas se sobrepõem). As ` +
-    `diferenças têm intervalo de 95% por ${formatInt(resamples)} reamostragens de vendedores.`,
-  limitsTitle: "O que esta evidência não mostra",
-  limits: [
-    "Não mede se os vendedores seguiram a lista: é uma reconstrução do passado, não um teste com a equipe.",
-    "Não prova o efeito de mudar a rotina; mostra o que a lista teria indicado.",
-    "Qualificar fica de fora: oportunidades em prospecção não têm data para reconstruir o passado.",
-    "Usa só a base do desafio (um CRM de exemplo); vale repetir com os dados reais da empresa.",
-  ],
   notAudited: "O backtest não rodou sobre os CSVs auditados: estes números podem não valer para os dados da tela.",
   seeTeam: "Ver a carteira da equipe",
+  outOf: (count: number, total: number) => `${count} de ${total}`,
+} as const;
+
+export const RANKER_TECH_DESCRIPTIONS: Record<RankerCode, string> = {
+  global_rate: "Taxa de ganho global das fechadas até T, igual para todas: empate total, desfeito pelo ID.",
+  product_rate: "Taxa de ganho do produto nas fechadas até T, suavizada pela taxa global.",
+  random: "Permutação aleatória com semente fixa.",
+  list_price_only: "Preço de tabela decrescente; ignora a idade.",
+  age_newest_first: "engage_date mais recente primeiro.",
+  current_rule: "Idade até o maior ciclo fechado até T → faixa → preço de tabela decrescente → ID (a regra servida).",
+  rule_a: "Idade até o P90 do ciclo das ganhas do produto em T → até o maior ciclo → preço de tabela decrescente.",
+};
+
+/** Pontos percentuais sem sinal, para a linguagem de negócio: −0.031 → "3,1". */
+const points = (fraction: number): string => formatDecimal(Math.abs(Math.round(fraction * 1000) / 10), 1);
+const pointWord = (fraction: number): string => (Math.abs(fraction) < 0.02 ? "ponto" : "pontos");
+
+function marginText({ low, high }: Delta): string {
+  if (high < 0) return `margem de erro: entre ${points(high)} e ${points(low)} pontos a menos`;
+  if (low > 0) return `margem de erro: entre ${points(low)} e ${points(high)} pontos a mais`;
+  return `margem de erro: entre ${points(low)} a menos e ${points(high)} a mais`;
+}
+
+function businessDelta(delta: Delta): string {
+  const same = points(delta.value) === points(0);
+  if (same && points(delta.low) === points(0) && points(delta.high) === points(0)) return "Igual à regra atual";
+  if (same) return `Igual à regra atual (${marginText(delta)})`;
+  const side = delta.value < 0 ? "a menos" : "a mais";
+  return `${points(delta.value)} ${pointWord(delta.value)} ${side} que a regra atual (${marginText(delta)})`;
+}
+
+type EvidenceText = {
+  question: (topK: number, horizonDays: number) => string;
+  method: (count: number, first: string, last: string, horizonDays: number) => string;
+  headline: (topK: number) => string;
+  delta: (delta: Delta) => string;
+  chartLabel: string;
+  detailTitle: string;
+  detailHelp: string;
+  columns: { strategy: string; value: (topK: number) => string; delta: (topK: number) => string };
+  descriptions: Record<RankerCode, string>;
+  withoutTitle: string;
+  withoutHelp: string;
+  howTitle: string;
+  how: (design: EvidenceDesign) => string;
+  limitsTitle: string;
+  limits: readonly string[];
+};
+
+export const EVIDENCE_TEXT: Record<EvidenceLanguage, EvidenceText> = {
+  negocio: {
+    question: (topK, horizonDays) =>
+      `Se cada vendedor trabalhasse as ${topK} primeiras da lista, quanto do valor vendido nos ${horizonDays} dias ` +
+      "seguintes estaria nelas?",
+    method: (count, first, last, horizonDays) =>
+      `Refizemos a lista de cada vendedor em ${count} datas, de ${formatDate(first)} a ${formatDate(last)}, só com o ` +
+      `que se sabia em cada dia, e conferimos o que foi vendido nos ${horizonDays} dias seguintes. 100% seria acertar ` +
+      "as melhores vendas, como quem já sabe o futuro.",
+    headline: (topK) => `do valor vendido estava nas ${topK} primeiras`,
+    delta: businessDelta,
+    chartLabel: "Valor vendido capturado por jeito de ordenar",
+    detailTitle: "Comparação dos jeitos de ordenar",
+    detailHelp: "Cada linha é um jeito de montar a lista. Quanto maior a porcentagem, mais a lista apontou para o que " +
+      "acabou sendo vendido.",
+    columns: {
+      strategy: "Como a lista é ordenada",
+      value: (topK) => `Valor vendido nas ${topK} primeiras`,
+      delta: () => "Comparado à regra atual",
+    },
+    descriptions: RANKER_DESCRIPTIONS,
+    withoutTitle: "E sem as negociações paradas?",
+    withoutHelp: "A mesma conta sem as oportunidades que nunca fecharam na base. Mostra quanto da vantagem da regra " +
+      "vem de tirar da frente as negociações paradas.",
+    howTitle: "De onde vêm os números",
+    how: (design) =>
+      `${formatInt(design.unique_opportunities)} oportunidades da base, olhadas em ${design.cuts.length} datas. A ` +
+      "margem de erro de cada diferença leva em conta que o mesmo vendedor aparece em todas as datas.",
+    limitsTitle: "O que esta evidência não mostra",
+    limits: [
+      "Não mostra se a equipe seguiu a lista: é uma simulação com dados do passado.",
+      "Não garante o mesmo resultado daqui para frente; para medir o efeito de verdade, é preciso testar com parte " +
+        "da equipe.",
+      "Não avalia as oportunidades em prospecção: elas não têm data para simular o passado.",
+      "Usa a base do desafio (um CRM de exemplo); vale repetir com os dados da empresa.",
+    ],
+  },
+  tecnica: {
+    question: (topK, horizonDays) =>
+      `Val@${topK}: fração do valor ganho em ${horizonDays} dias que as top-${topK} de cada vendedor capturam, sobre ` +
+      `o oráculo (as ${topK} melhores sabendo o futuro).`,
+    method: (count, first, last, horizonDays) =>
+      `Backtest com ${count} cortes mensais, de ${formatDate(first)} a ${formatDate(last)}. População em cada corte ` +
+      "T: toda negociação em Engaging aberta em T, inclusive as que nunca fecham. Desfecho: ganhou em até " +
+      `${horizonDays} dias após T (observado, pois T + ${horizonDays} dias cai dentro da base). Ordenadores só com ` +
+      "atributos conhecidos em T.",
+    headline: (topK) => `Val@${topK}`,
+    delta: (delta) =>
+      `Δ ${formatPp(delta.value)} contra a regra atual (IC95%: ${formatPp(delta.low)} a ${formatPp(delta.high)})`,
+    chartLabel: "Val@K por ordenador",
+    detailTitle: "Métricas por ordenador",
+    detailHelp: "P@K: ganhas nas K ÷ K. Lift@K: ganhas ÷ esperadas ao acaso. Val@K: valor ganho nas K ÷ valor das K " +
+      "melhores sabendo o futuro. AUC: 0,5 é o acaso. Δ contra a regra atual com IC95% por bootstrap de vendedores.",
+    columns: {
+      strategy: "Ordenador",
+      value: (topK) => `Val@${topK}`,
+      delta: (topK) => `Δ Val@${topK} (IC95%)`,
+    },
+    descriptions: RANKER_TECH_DESCRIPTIONS,
+    withoutTitle: "Sensibilidade: sem as negociações sem desfecho",
+    withoutHelp: "Mesmas métricas excluindo as negociações que seguem abertas no fim da base. Isola quanto da vantagem " +
+      "vem da divisão por idade aplicada a elas.",
+    howTitle: "Desenho do backtest",
+    how: (design) =>
+      `${formatInt(design.observations)} observações (negociação × corte) de ${formatInt(design.unique_opportunities)} ` +
+      `negociações únicas; top-${design.top_k} por vendedor com pelo menos ${design.top_k} abertas no corte; IC95% por ` +
+      `${formatInt(design.n_boot_sellers)} reamostragens de vendedores, cada um com todos os cortes.`,
+    limitsTitle: "Limites do método",
+    limits: [
+      "Retrospectivo e observacional: mede associação, não o efeito causal de mudar a ordem de trabalho; exige " +
+        "piloto com grupo de controle.",
+      "Qualificar fica fora: Prospecting não tem engage_date, então não há como reconstruir a carteira em T.",
+      "Cortes sobrepostos: as observações não são independentes (tratado com bootstrap por vendedor).",
+      "Base provavelmente sintética (ver as limitações no README); não generalizar sem dados reais.",
+    ],
+  },
+};
+
+// Colunas que só a linguagem técnica mostra.
+export const TECH_COLUMNS = {
+  hits: (topK: number) => `P@${topK}`,
+  lift: (topK: number) => `Lift@${topK}`,
+  auc: "AUC (mín.–máx. entre cortes)",
+  aucCuts: "Cortes com AUC acima do acaso",
+  aboveReference: "Cortes acima da referência",
 } as const;
 
 export const RULES = {

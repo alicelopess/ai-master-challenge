@@ -38,3 +38,12 @@ test("components/ui só tem primitivos do shadcn (sem textos de tela)", () => {
     expect(readFileSync(join(WEB_DIR, "components", "ui", name), "utf8")).not.toContain("@/copy/");
   }
 });
+
+test("todo elemento clicável mostra a mãozinha, acima dos utilitários dos primitivos", () => {
+  const css = readFileSync(join(WEB_DIR, "app", "globals.css"), "utf8");
+  const rule = css.match(/\n(button:not\(:disabled\),[^{]+)\{\s*cursor: pointer;/);
+  expect(rule, "regra de cursor fora de @layer").not.toBeNull();
+  for (const selector of ["button", '[role="tab"]', '[role="option"]', '[role="menuitemradio"]', '[role="combobox"]', "a[href]"]) {
+    expect(rule![1]).toContain(selector);
+  }
+});

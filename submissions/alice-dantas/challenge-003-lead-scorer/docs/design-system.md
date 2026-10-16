@@ -128,6 +128,11 @@ A grade é de 4 px (escala padrão do Tailwind).
 
 **Foco:** o padrão do shadcn (`focus-visible:ring-[3px] ring-ring/50`), sempre visível no teclado.
 
+**Cursor:**
+- Todo elemento clicável mostra a mãozinha: botões, links, abas, opções de select e de menu, e o combobox.
+- O Tailwind v4 tirou esse padrão dos botões, e alguns primitivos marcam os itens com `cursor-default`. Por isso a regra fica em `globals.css`, fora de `@layer`, para valer sobre os utilitários.
+- Itens desabilitados ficam de fora.
+
 ### 3.6. Tema
 
 `next-themes` com `attribute="class"`. Por padrão segue o sistema, e o seletor Claro / Escuro / Sistema fica no cabeçalho. A escolha fica salva no navegador.
@@ -155,10 +160,12 @@ A grade é de 4 px (escala padrão do Tailwind).
 | Tema claro, escuro ou sistema | DropdownMenu + Button | `app/ThemeToggle` |
 | Data dos dados, contagem, campo ausente, grupo | Badge | `app/DataBadge`, abas, tabela, sheet |
 | Escolher vendedor (35 nomes, com busca) | Combobox (Popover + Command) | `portfolio/SellerCombobox` |
-| Filtros de gerente e escritório | Select + Button | `team/TeamFilters` |
+| Filtros de gerente e escritório (um restringe o outro) | Select + Button | `team/TeamFilters`, `lib/team.ts` |
+| Linguagem da Evidência (negócio ou técnica) | Select | `evidence/EvidencePage` |
 | Próximo passo, números, blocos de explicação | Card | `portfolio/NextStepCard`, `team/TeamSummary` |
 | Grupos da carteira | Tabs | `portfolio/GroupTabs` |
 | Listas | Table | `portfolio/ItemsTable` |
+| Páginas da tabela | Pagination | `app/TablePagination` |
 | "Por que está aqui" | Sheet + Separator + Button | `portfolio/ReasonSheet` |
 | Ajuda de coluna | Tooltip | `portfolio/ItemsTable` |
 | Vazio, carregando, erro e aviso | Empty, Skeleton, Alert | Todas as páginas |
@@ -177,6 +184,10 @@ A grade é de 4 px (escala padrão do Tailwind).
   - A aba fica na URL.
 - **Tabelas:**
   - A ordem é a do back.
+  - Listas longas são paginadas, nunca com rolagem infinita nem "Mostrar mais":
+    - 25 linhas por página, com a faixa "26–50 de 1.291", página anterior, números com saltos e próxima;
+    - no celular, só anterior, a página atual e próxima;
+    - quando o painel avança para um item de outra página, a tabela acompanha.
   - Linhas de faixa e de empate separam blocos.
   - A linha inteira abre a sheet, e o ID é o botão acessível.
   - Os números ficam à direita.
@@ -186,9 +197,15 @@ A grade é de 4 px (escala padrão do Tailwind).
 - **Estados:** carregando usa Skeleton; vazio usa Empty com o texto do código; erro usa Alert `destructive`; dados fora da versão auditada usam Alert `warning`.
 - **Gráficos:**
   - São complemento: os mesmos números ficam numa tabela visível, que é a versão para leitores de tela (o gráfico leva `aria-hidden`).
-  - Abaixo de `sm` o gráfico some, porque as barras ficariam curtas demais para ler.
+  - No cartão "A pergunta" da Evidência, os números ficam empilhados à esquerda e o gráfico ocupa a direita.
+  - Abaixo de `md` o gráfico some, porque as barras ficariam curtas demais para ler.
   - A estratégia de referência usa `--chart-1`, e as demais `--chart-2`, mais apagadas.
 - **Tabelas de pessoas** (por vendedor): seguem a ordem da API, que é alfabética, e não têm controle de ordenação, para que a tela nunca vire um ranking.
+- **Filtros dependentes:** cada filtro mostra só as opções compatíveis com o outro; por exemplo, com um gerente escolhido aparecem só os escritórios dele.
+- **Duas linguagens** (Evidência):
+  - **Linguagem de negócio,** o padrão para gestores: pontos em palavras ("3,1 pontos a menos, margem de erro entre 1,9 e 4,4"), sem siglas nem jargão estatístico, que um teste confere.
+  - **Linguagem técnica,** para quem audita o método: Val@K, P@K, Lift@K, AUC, IC95% e o desenho do backtest.
+  - A escolha fica na URL (`?linguagem=tecnica`), e os números são os mesmos nas duas.
 
 ## 6. Texto
 

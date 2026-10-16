@@ -134,3 +134,17 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+/* Todo elemento clicável mostra a mãozinha. O Tailwind v4 tirou esse padrão dos botões, e alguns
+   primitivos marcam os itens com `cursor-default`; fora de @layer, esta regra vale sobre os utilitários. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="tab"]:not([data-disabled]),
+[role="option"]:not([data-disabled]),
+[role="menuitem"]:not([data-disabled]),
+[role="menuitemradio"]:not([data-disabled]),
+[role="combobox"]:not(:disabled),
+a[href]:not([aria-disabled="true"]),
+label[for] {
+  cursor: pointer;
+}

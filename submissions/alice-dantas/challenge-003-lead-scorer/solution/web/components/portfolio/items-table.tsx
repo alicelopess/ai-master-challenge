@@ -15,8 +15,9 @@ type Props = {
   selected: string | null;
   onSelect: (id: string) => void;
   showSeller?: boolean;
-  /** Quantas linhas mostrar (a lista da equipe cresce aos poucos); sem limite, todas. */
-  limit?: number;
+  /** A página a mostrar, como posições [início, fim) na lista; sem ela, todas. As contagens de faixa
+   * continuam sendo da lista inteira. */
+  range?: [number, number];
 };
 
 function HelpHead({ label, help, className }: { label: string; help: string; className?: string }) {
@@ -38,7 +39,7 @@ function HelpHead({ label, help, className }: { label: string; help: string; cla
 }
 
 /** Lista na ordem que veio da API, com linhas de faixa e de empate entre os blocos. */
-export function ItemsTable({ items, selected, onSelect, showSeller = false, limit }: Props) {
+export function ItemsTable({ items, selected, onSelect, showSeller = false, range }: Props) {
   const columns = showSeller ? 7 : 6;
   const bandCounts = new Map<string, number>();
   items.forEach((item) => {
@@ -49,7 +50,7 @@ export function ItemsTable({ items, selected, onSelect, showSeller = false, limi
   const rows: ReactNode[] = [];
   let band: string | null = null;
   let product: string | null | undefined;
-  items.slice(0, limit).forEach((item) => {
+  items.slice(...(range ?? [0, items.length])).forEach((item) => {
     const title = bandTitle(item.value_band);
     if (title !== band) {
       band = title;

@@ -16,17 +16,13 @@ import { PAGES, TEAM, UI, pipelineEmptyText } from "@/copy/pt-BR";
 import { api } from "@/lib/api";
 import type { Group } from "@/lib/contract";
 import { defaultTab } from "@/lib/portfolio";
+import { filterOptions } from "@/lib/team";
 import { useApi } from "@/lib/use-api";
 import { useQuery } from "@/lib/use-query";
 
 import { BySellerTable } from "./by-seller-table";
 import { TeamFilters } from "./team-filters";
 import { TeamSummary } from "./team-summary";
-
-// A carteira da equipe passa de 2 mil linhas: a lista cresce aos poucos, na ordem da API.
-const PAGE_SIZE = 50;
-
-const unique = (values: string[]) => [...new Set(values)].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
 export function TeamPage() {
   const [query, setQuery] = useQuery();
@@ -37,7 +33,7 @@ export function TeamPage() {
   const pipeline = useApi(() => api.teamPipeline({ manager, office }), key);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const names = sellers.data?.sellers ?? [];
+  const options = filterOptions(sellers.data?.sellers ?? [], manager, office);
   const payload = pipeline.data;
   const fromQuery = query.get("grupo");
   const tab = payload?.groups.some((g) => g.state === fromQuery) ? (fromQuery as Group["state"]) : payload && defaultTab(payload);
@@ -60,8 +56,8 @@ export function TeamPage() {
       />
 
       <TeamFilters
-        managers={unique(names.map((s) => s.manager))}
-        offices={unique(names.map((s) => s.office))}
+        managers={options.managers}
+        offices={options.offices}
         manager={manager}
         office={office}
         onChange={(changes) => {
@@ -85,7 +81,7 @@ export function TeamPage() {
         <>
           {!payload.meta.audited && <DataWarning />}
           <TeamSummary payload={payload} />
-          {payload.by_seller.length > 0 && <BySellerTable rows={payload.by_seller} />}
+          {payload.by_seller.length > 0 && <BySellerTable key={key} rows={payload.by_seller} />}
           {payload.empty ? (
             <Empty className="border border-dashed">
               <EmptyHeader>
@@ -107,7 +103,6 @@ export function TeamPage() {
                 onSelect={setSelected}
                 cycleLimitDays={payload.meta.cycle_limit_days}
                 showSeller
-                pageSize={PAGE_SIZE}
               />
             </>
           )}

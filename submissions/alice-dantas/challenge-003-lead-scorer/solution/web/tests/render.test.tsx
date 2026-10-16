@@ -12,7 +12,8 @@ import { TeamPage } from "@/components/team/team-page";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/app/page";
 import {
-  CONTRACT_ERROR, EVIDENCE, GROUP_LABELS, NAV, RANKER_LABELS, ROLE_LABELS, RULES, TEAM, UI, actionText, bandRange,
+  CONTRACT_ERROR, EVIDENCE, EVIDENCE_TEXT, GROUP_LABELS, NAV, RANKER_LABELS, ROLE_LABELS, RULES, TECH_COLUMNS, TEAM, UI,
+  actionText, bandRange,
   bandTitle, errorText, groupDescription, groupEmptyText, pipelineEmptyText, reasonText, tieText,
 } from "@/copy/pt-BR";
 import type { Evidence, Rules, SellerPipeline, TeamPipeline } from "@/lib/contract";
@@ -180,17 +181,26 @@ describe("equipe", () => {
     expect(await screen.findByText(pipelineEmptyText(teamPipeline("team-empty").empty!))).toBeTruthy();
   });
 
-  test("a lista cresce aos poucos, na ordem da API", () => {
+  test("tabela paginada, na ordem da API, sem rolagem infinita", () => {
     const { groups, meta } = sellerPipeline("pipeline-ana-alfa");
-    render(<GroupTabs groups={groups} tab="focar" onTab={() => {}} selected={null} onSelect={() => {}}
-                      cycleLimitDays={meta.cycle_limit_days} pageSize={2} />);
-    const ids = () => screen.getAllByRole("button", { name: /^Por que .* está aqui$/ }).length;
-    expect(ids()).toBe(2);
-    act(() => fireEvent.click(screen.getByRole("button", { name: UI.showMore(3) })));
-    expect(ids()).toBe(4);
-    act(() => fireEvent.click(screen.getByRole("button", { name: UI.showMore(1) })));
-    expect(ids()).toBe(5);
-    expect(screen.queryByRole("button", { name: /^Mostrar mais/ })).toBeNull();
+    const ids = () => screen.getAllByRole("button", { name: /^Por que .* está aqui$/ })
+      .map((button) => button.textContent);
+    const view = (selected: string | null) => (
+      <GroupTabs groups={groups} tab="focar" onTab={() => {}} selected={selected} onSelect={() => {}}
+                 cycleLimitDays={meta.cycle_limit_days} pageSize={2} />);
+    const { rerender } = render(view(null));
+    const all = groups[0].items.map((item) => item.opportunity_id);
+    expect(ids()).toEqual(all.slice(0, 2));
+    expect(screen.getByText(UI.pagination.range(1, 2, 5))).toBeTruthy();
+    act(() => fireEvent.click(screen.getByRole("link", { name: UI.pagination.page(3) })));
+    expect(ids()).toEqual(all.slice(4));
+    expect(screen.getByText(UI.pagination.range(5, 5, 5))).toBeTruthy();
+    expect(screen.getByRole("link", { name: UI.pagination.next }).getAttribute("aria-disabled")).toBe("true");
+    act(() => fireEvent.click(screen.getByRole("link", { name: UI.pagination.previous })));
+    expect(ids()).toEqual(all.slice(2, 4));
+    // Anterior e Próxima no painel podem passar da página: a tabela acompanha a oportunidade aberta.
+    rerender(<TooltipProvider>{view(all[0])}</TooltipProvider>);
+    expect(ids()).toEqual(all.slice(0, 2));
   });
 });
 
@@ -218,22 +228,47 @@ describe("equipe por vendedor", () => {
 });
 
 describe("evidência", () => {
-  test("a pergunta, cada estratégia com rótulo e números do payload, sem a armadilha", async () => {
+  const evidence = () => load("evidence") as Evidence;
+
+  test("linguagem de negócio (padrão): a pergunta, cada estratégia com rótulo e números do payload", async () => {
     stubApi(() => ok(load("evidence")));
+    navigation.go("/evidencia");
     render(<EvidencePage />);
-    const evidence = load("evidence") as Evidence;
-    const { design } = evidence;
-    expect(await screen.findByText(EVIDENCE.question(design.top_k, design.horizon_days))).toBeTruthy();
-    const detail = screen.getByText(EVIDENCE.detailTitle).closest("[data-slot=card]") as HTMLElement;
-    for (const ranker of evidence.rankers) {
+    const { design, rankers } = evidence();
+    const text = EVIDENCE_TEXT.negocio;
+    expect(await screen.findByText(text.question(design.top_k, design.horizon_days))).toBeTruthy();
+    const detail = screen.getByText(text.detailTitle).closest("[data-slot=card]") as HTMLElement;
+    for (const ranker of rankers) {
       const row = within(detail).getByText(RANKER_LABELS[ranker.code]).closest("tr") as HTMLElement;
       expect(within(row).getByText(formatPct(ranker.val_at_k))).toBeTruthy();
-      if (ranker.delta_val) expect(within(row).getByText(formatPp(ranker.delta_val.value))).toBeTruthy();
+      if (ranker.delta_val) expect(within(row).getByText(text.delta(ranker.delta_val))).toBeTruthy();
     }
+    // Sem jargão: nenhuma coluna técnica, nenhum "pp" nem "IC95%".
+    expect(within(detail).queryByText(TECH_COLUMNS.auc)).toBeNull();
+    expect(detail.textContent).not.toMatch(/\bpp\b|IC95%|AUC|Val@/);
     expect(document.body.textContent).not.toMatch(/vazamento|leak/i);
     // A fixture sintética não vem dos CSVs auditados: o aviso aparece.
     expect(design.audited_data).toBe(false);
     expect(screen.getByText(EVIDENCE.notAudited)).toBeTruthy();
+  });
+
+  test("linguagem técnica: métricas completas, com a escolha na URL", async () => {
+    stubApi(() => ok(load("evidence")));
+    navigation.go("/evidencia?linguagem=tecnica");
+    render(<EvidencePage />);
+    const { design, rankers } = evidence();
+    const text = EVIDENCE_TEXT.tecnica;
+    expect(await screen.findByText(text.question(design.top_k, design.horizon_days))).toBeTruthy();
+    const detail = screen.getByText(text.detailTitle).closest("[data-slot=card]") as HTMLElement;
+    for (const header of [TECH_COLUMNS.auc, TECH_COLUMNS.hits(design.top_k), TECH_COLUMNS.lift(design.top_k)]) {
+      expect(within(detail).getByRole("columnheader", { name: header })).toBeTruthy();
+    }
+    for (const ranker of rankers) {
+      const row = within(detail).getByText(RANKER_LABELS[ranker.code]).closest("tr") as HTMLElement;
+      expect(within(row).getByText(formatPct(ranker.p_at_k))).toBeTruthy();
+      if (ranker.delta_val) expect(within(row).getByText(formatPp(ranker.delta_val.value))).toBeTruthy();
+    }
+    expect(screen.getByRole("combobox", { name: EVIDENCE.languageLabel }).textContent).toBe("Linguagem técnica");
   });
 
   test("sem o resultado do backtest, a mensagem do catálogo", async () => {

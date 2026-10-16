@@ -2,7 +2,8 @@
 import { describe, expect, test } from "vitest";
 
 import {
-  BRAND, DATA_WARNING, EVIDENCE, GROUP_LABELS, NAV, PAGES, RANKER_DESCRIPTIONS, RANKER_LABELS, ROLE_LABELS, RULES, TEAM,
+  BRAND, DATA_WARNING, EVIDENCE, EVIDENCE_LANGUAGES, EVIDENCE_TEXT, GROUP_LABELS, NAV, PAGES, RANKER_DESCRIPTIONS,
+  RANKER_LABELS, RANKER_TECH_DESCRIPTIONS, ROLE_LABELS, RULES, TECH_COLUMNS, TEAM,
   UI, accountWarning, actionText, bandRange, bandTitle, clientText, dataLabel, errorText, groupDescription,
   groupEmptyText, legendText, missingShort, pipelineEmptyText, reasonText, summaryCounts, tieText, valueLabel,
 } from "@/copy/pt-BR";
@@ -43,20 +44,23 @@ const strings = (value: unknown): string[] =>
 /** Todo texto que a tela monta a partir das fixtures. */
 function renderedTexts(): string[] {
   const texts: string[] = [...strings([GROUP_LABELS, BRAND, NAV, PAGES, ROLE_LABELS, UI, TEAM, RANKER_LABELS,
-    RANKER_DESCRIPTIONS, EVIDENCE, RULES]), DATA_WARNING];
+    RANKER_DESCRIPTIONS, RANKER_TECH_DESCRIPTIONS, EVIDENCE, EVIDENCE_LANGUAGES, EVIDENCE_TEXT, TECH_COLUMNS, RULES]),
+    DATA_WARNING];
   const evidence = load("evidence") as Evidence;
   const rules = load("rules") as Rules;
   const { design } = evidence;
-  texts.push(EVIDENCE.question(design.top_k, design.horizon_days), EVIDENCE.columns.value(design.top_k),
-    EVIDENCE.method(design.cuts.length, design.cuts[0], design.cuts[design.cuts.length - 1], design.horizon_days),
-    EVIDENCE.how(design.observations, design.unique_opportunities, design.n_boot_sellers),
-    ...evidence.rankers.flatMap((r) => (r.delta_val ? [EVIDENCE.vsReference(formatPp(r.delta_val.value)),
-      EVIDENCE.interval(formatPp(r.delta_val.low), formatPp(r.delta_val.high))] : [])),
+  for (const text of Object.values(EVIDENCE_TEXT)) {
+    texts.push(text.question(design.top_k, design.horizon_days), text.headline(design.top_k),
+      text.columns.value(design.top_k), text.columns.delta(design.top_k), text.how(design),
+      text.method(design.cuts.length, design.cuts[0], design.cuts[design.cuts.length - 1], design.horizon_days),
+      ...[...evidence.rankers, ...evidence.without_no_outcome].flatMap((r) => (r.delta_val ? [text.delta(r.delta_val)] : [])));
+  }
+  texts.push(TECH_COLUMNS.hits(design.top_k), TECH_COLUMNS.lift(design.top_k), EVIDENCE.outOf(6, 7),
     RULES.cycleHelp(rules.meta.min_cases), RULES.cycleColumns.cycle(rules.meta.cycle_percentile),
     RULES.chance(rules.meta.base_rate), RULES.days(105), ...rules.value_bands.map(bandRange),
     ...rules.value_bands.map((b) => bandTitle(b.band)));
   texts.push(UI.seeGroup(GROUP_LABELS.revisar), UI.moreInTab(3, GROUP_LABELS.focar), UI.whyHereFor("EPP"),
-    UI.position(1, 5), UI.ageDays(10), UI.ofTotal(2089), UI.showMore(1), UI.showMore(50),
+    UI.position(1, 5), UI.ageDays(10), UI.ofTotal(2089), UI.pagination.page(2), UI.pagination.range(26, 50, 1291),
     UI.startWithTie(tieText(3, "GTX Plus Pro", 5482)));
   for (const p of pipelines) {
     texts.push(legendText(p.ordering), dataLabel(p.meta), accountWarning(p.summary.without_account, p.summary.total));
@@ -94,6 +98,7 @@ describe("cobertura: todo código do contrato tem texto", () => {
   test("estratégias do backtest: rótulo e descrição para cada código", () => {
     expect(Object.keys(RANKER_LABELS).sort()).toEqual([...CONTRACT.rankers].sort());
     expect(Object.keys(RANKER_DESCRIPTIONS).sort()).toEqual([...CONTRACT.rankers].sort());
+    expect(Object.keys(RANKER_TECH_DESCRIPTIONS).sort()).toEqual([...CONTRACT.rankers].sort());
     expect((load("evidence") as Evidence).rankers.map((r) => r.code).sort()).toEqual([...CONTRACT.rankers].sort());
   });
   test.each(CONTRACT.errors)("erro %s", (code) => {
@@ -205,8 +210,7 @@ describe("textos de referência", () => {
     });
     expect(UI.startWithTie(tieText(3, "GTX Plus Pro", 5482))).toBe(
       "Comece por estas 3 oportunidades de mesmo valor de tabela (GTX Plus Pro, 5.482):");
-    expect([UI.ofTotal(2089), UI.showMore(1), UI.showMore(1241)]).toEqual([
-      "de 2.089 abertas", "Mostrar mais (1 restante)", "Mostrar mais (1.241 restantes)"]);
+    expect([UI.ofTotal(2089), UI.pagination.range(26, 50, 1291)]).toEqual(["de 2.089 abertas", "26–50 de 1.291"]);
   });
 
   test("evidência e regras: frações em porcentagem, diferenças em pontos e faixas em palavras", () => {
@@ -216,7 +220,24 @@ describe("textos de referência", () => {
     const bands = (load("rules") as Rules).value_bands;
     expect(bands.map((b) => `${bandTitle(b.band)}: ${bandRange(b)}`)).toEqual([
       "Valor de tabela alto: a partir de 3.000", "Valor de tabela médio: 500 a 2.999", "Valor de tabela baixo: até 499"]);
-    expect(EVIDENCE.question(10, 90)).toBe(
-      "Do valor ganho nos 90 dias seguintes, quanto estava nas 10 primeiras de cada vendedor?");
+  });
+
+  test("evidência em linguagem de negócio: pontos em palavras, sem jargão", () => {
+    const { negocio, tecnica } = EVIDENCE_TEXT;
+    expect(negocio.question(10, 90)).toBe(
+      "Se cada vendedor trabalhasse as 10 primeiras da lista, quanto do valor vendido nos 90 dias seguintes estaria nelas?");
+    expect(negocio.delta({ value: -0.031, low: -0.044, high: -0.019 })).toBe(
+      "3,1 pontos a menos que a regra atual (margem de erro: entre 1,9 e 4,4 pontos a menos)");
+    expect(negocio.delta({ value: 0.015, low: 0.002, high: 0.027 })).toBe(
+      "1,5 ponto a mais que a regra atual (margem de erro: entre 0,2 e 2,7 pontos a mais)");
+    expect(negocio.delta({ value: 0.004, low: -0.008, high: 0.016 })).toBe(
+      "0,4 ponto a mais que a regra atual (margem de erro: entre 0,8 a menos e 1,6 a mais)");
+    expect(negocio.delta({ value: 0, low: 0, high: 0 })).toBe("Igual à regra atual");
+    expect(tecnica.delta({ value: -0.031, low: -0.044, high: -0.019 })).toBe(
+      "Δ −3,1 pp contra a regra atual (IC95%: −4,4 pp a −1,9 pp)");
+    // A linguagem de negócio não usa siglas nem jargão estatístico.
+    const business = [...strings(negocio), ...Object.values(RANKER_DESCRIPTIONS), negocio.question(10, 90),
+      negocio.headline(10), negocio.columns.value(10), negocio.columns.delta(10)];
+    for (const line of business) expect(line, line).not.toMatch(/\bpp\b|IC95%|AUC|Val@|P@|Lift|bootstrap|oráculo/i);
   });
 });

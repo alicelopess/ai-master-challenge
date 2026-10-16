@@ -1,8 +1,9 @@
 "use client";
 
 import { ArrowRight, Inbox } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { TablePagination } from "@/components/app/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GROUP_LABELS, UI, actionText, groupDescription, groupEmptyText } from "@/copy/pt-BR";
 import type { Group } from "@/lib/contract";
+import { PAGE_SIZE, pageOf } from "@/lib/pagination";
 
 import { ItemsTable } from "./items-table";
 
@@ -23,7 +25,7 @@ type Props = {
   onSelect: (id: string) => void;
   cycleLimitDays: number;
   showSeller?: boolean;
-  /** Linhas por vez em cada aba (lista da equipe); sem valor, todas. */
+  /** Linhas por página em cada aba. */
   pageSize?: number;
   /** Grupo cujo próximo passo já está no cartão "Seu próximo passo" (não repete a frase). */
   actionShownFor?: State;
@@ -31,9 +33,23 @@ type Props = {
 
 /** Um grupo por aba, na ordem da API, com a contagem no rótulo. */
 export function GroupTabs({
-  groups, tab, onTab, selected, onSelect, cycleLimitDays, showSeller, pageSize, actionShownFor,
+  groups, tab, onTab, selected, onSelect, cycleLimitDays, showSeller, pageSize = PAGE_SIZE, actionShownFor,
 }: Props) {
-  const [limits, setLimits] = useState<Partial<Record<State, number>>>({});
+  const [pages, setPages] = useState<Partial<Record<State, number>>>({});
+  const tables = useRef<Partial<Record<State, HTMLDivElement | null>>>({});
+
+  // Anterior e Próxima no painel podem passar da página: a tabela acompanha a oportunidade aberta.
+  useEffect(() => {
+    for (const group of groups) {
+      const index = group.items.findIndex((item) => item.opportunity_id === selected);
+      if (index >= 0) setPages((current) => ({ ...current, [group.state]: pageOf(index, pageSize) }));
+    }
+  }, [selected, groups, pageSize]);
+
+  const goTo = (state: State, page: number) => {
+    setPages((current) => ({ ...current, [state]: page }));
+    tables.current[state]?.scrollIntoView({ block: "start", behavior: "smooth" });
+  };
 
   return (
     <Tabs id="grupos" value={tab} onValueChange={(value) => onTab(value as State)} className="gap-4">
@@ -49,8 +65,8 @@ export function GroupTabs({
       </TabsList>
 
       {groups.map((group) => {
-        const limit = pageSize ? (limits[group.state] ?? pageSize) : undefined;
-        const hidden = limit === undefined ? 0 : group.items.length - limit;
+        const page = pages[group.state] ?? 1;
+        const range: [number, number] = [(page - 1) * pageSize, page * pageSize];
         return (
           <TabsContent key={group.state} value={group.state} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
@@ -63,9 +79,11 @@ export function GroupTabs({
             </div>
 
             {group.items.length ? (
-              <Card className="gap-0 py-0">
+              <Card className="scroll-mt-24 gap-0 py-0" ref={(node) => { tables.current[group.state] = node; }}>
                 <ItemsTable items={group.items} selected={selected} onSelect={onSelect} showSeller={showSeller}
-                            limit={limit} />
+                            range={range} />
+                <TablePagination page={page} total={group.items.length} pageSize={pageSize}
+                                 onPage={(next) => goTo(group.state, next)} />
               </Card>
             ) : (
               <Empty className="border border-dashed">
@@ -86,12 +104,6 @@ export function GroupTabs({
               </Empty>
             )}
 
-            {hidden > 0 && limit !== undefined && pageSize && (
-              <Button variant="outline" className="w-fit self-center"
-                      onClick={() => setLimits((current) => ({ ...current, [group.state]: limit + pageSize }))}>
-                {UI.showMore(hidden)}
-              </Button>
-            )}
           </TabsContent>
         );
       })}
