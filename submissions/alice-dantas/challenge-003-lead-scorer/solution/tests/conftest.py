@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import csv
+import json
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import pytest
 
-from leadscorer import data, policy
+from leadscorer import codes, data, policy
 
 AS_OF = date(2017, 12, 31)
 
@@ -81,6 +82,53 @@ def write_raw(directory: Path, **tables: List[Dict[str, str]]) -> Path:
 @pytest.fixture
 def raw_dir(tmp_path: Path) -> Path:
     return write_raw(tmp_path / "raw")
+
+
+# Resultado sintético de scripts/backtest.py: todas as estratégias, a armadilha e o recorte
+# sem as que nunca fecham, com números distintos por código (a tela tem de citar os do payload).
+REFERENCE_VAL = 0.57
+EVIDENCE_VALUES = {codes.RANKER_GLOBAL_RATE: 0.25, codes.RANKER_PRODUCT_RATE: 0.14, codes.RANKER_RANDOM: 0.23,
+                   codes.RANKER_LIST_PRICE_ONLY: 0.54, codes.RANKER_AGE_NEWEST_FIRST: 0.27,
+                   codes.RANKER_CURRENT_RULE: REFERENCE_VAL, codes.RANKER_RULE_A: 0.58,
+                   codes.RANKER_LEAK_QUARTER_END: 0.45}
+
+
+def evidence_entry(code: str, val_at_k: float, with_ci: bool = True) -> Dict[str, object]:
+    leak = code == codes.RANKER_LEAK_QUARTER_END
+    entry: Dict[str, object] = {"ranker": f"nome de {code}", "code": code, "leak": leak,
+                                "auc_mean": round(0.5 + val_at_k / 10, 3), "auc_min": 0.5, "auc_max": 0.6}
+    if with_ci:
+        entry.update(cuts_ci_above_half=2 if leak else 1, cuts_ci_below_half=0)
+    entry.update(p_at_k=0.4, lift_at_k=1.05, val_at_k=val_at_k)
+    if code != codes.RANKER_CURRENT_RULE:
+        entry["cuts_val_above_reference"] = int(val_at_k > REFERENCE_VAL)
+        if not leak:
+            delta = round(val_at_k - REFERENCE_VAL, 3)
+            entry.update(d_p_at_k=0.01, d_p_low=0.0, d_p_high=0.02, d_val_at_k=delta,
+                         d_val_low=round(delta - 0.01, 3), d_val_high=round(delta + 0.01, 3))
+    return entry
+
+
+EVIDENCE_RESULTS = {
+    "design": {"cuts": ["2017-03-31", "2017-04-30"], "horizon_days": 90, "top_k": 10, "seed": 1, "smooth_m": 20,
+               "n_boot": 10, "n_boot_sellers": 20, "fixed_limits": [90], "observations": 30,
+               "unique_opportunities": 20, "audited_data": False},
+    "cuts": [], "rows": [], "limits": [], "walk_forward": {"steps": [], "mean": {}},
+    "summary": [evidence_entry(code, value) for code, value in EVIDENCE_VALUES.items()],
+    "without_no_outcome": [evidence_entry(code, 0.79 if code != codes.RANKER_RULE_A else 0.78, with_ci=False)
+                           for code in (codes.RANKER_LIST_PRICE_ONLY, codes.RANKER_CURRENT_RULE, codes.RANKER_RULE_A)],
+}
+
+
+def write_evidence(path: Path, result: Optional[Dict[str, object]] = None) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(EVIDENCE_RESULTS if result is None else result), encoding="utf-8")
+    return path
+
+
+@pytest.fixture
+def evidence_path(tmp_path: Path) -> Path:
+    return write_evidence(tmp_path / "processed" / "backtest_results.json")
 
 
 def skip_without_real_csvs() -> None:

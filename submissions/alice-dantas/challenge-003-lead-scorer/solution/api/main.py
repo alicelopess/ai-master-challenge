@@ -11,10 +11,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from leadscorer import data, policy, views
+from leadscorer import data, evidence, policy, views
 from leadscorer.errors import DataError, LeadScorerError, NotFoundError, PolicyError
 
-from .schemas import ErrorBody, Meta, SellerList, SellerPipeline, TeamPipeline
+from .schemas import ErrorBody, Evidence, Meta, Rules, SellerList, SellerPipeline, TeamPipeline
 
 WEB_ORIGIN = "http://localhost:3000"
 STATUS = ((DataError, 503), (PolicyError, 422), (NotFoundError, 404))
@@ -23,9 +23,10 @@ STATUS = ((DataError, 503), (PolicyError, 422), (NotFoundError, 404))
 DATA_ERROR = {503: {"model": ErrorBody, "description": "CSVs ausentes ou inválidos"}}
 AS_OF_ERROR = {422: {"model": ErrorBody, "description": "as_of inválido"}}
 NOT_FOUND = {404: {"model": ErrorBody, "description": "Vendedor não encontrado"}}
+EVIDENCE_ERROR = {503: {"model": ErrorBody, "description": "Resultado do backtest ausente ou inválido"}}
 
 
-def create_app(raw_dir: Path = policy.RAW_DIR) -> FastAPI:
+def create_app(raw_dir: Path = policy.RAW_DIR, evidence_path: Path = policy.EVIDENCE_PATH) -> FastAPI:
     app = FastAPI(title="Lead Scorer", version="0.1.0")
     app.add_middleware(CORSMiddleware, allow_origins=[WEB_ORIGIN], allow_methods=["GET"])
     cache: Dict[str, data.Dataset] = {}
@@ -62,6 +63,15 @@ def create_app(raw_dir: Path = policy.RAW_DIR) -> FastAPI:
     def get_pipeline(manager: Optional[str] = None, office: Optional[str] = None,
                      as_of: Optional[str] = None) -> Dict[str, Any]:
         return views.team_pipeline(dataset(), manager, office, as_of)
+
+    @app.get("/api/rules", response_model=Rules, responses={**DATA_ERROR, **AS_OF_ERROR})
+    def get_rules(as_of: Optional[str] = None) -> Dict[str, Any]:
+        return views.rules(dataset(), as_of)
+
+    # A evidência vem do resultado gravado do backtest: não depende dos CSVs no ar.
+    @app.get("/api/evidence", response_model=Evidence, responses=EVIDENCE_ERROR)
+    def get_evidence() -> Dict[str, Any]:
+        return evidence.load(evidence_path)
 
     return app
 

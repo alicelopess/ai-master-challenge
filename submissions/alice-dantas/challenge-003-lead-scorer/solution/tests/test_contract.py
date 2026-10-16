@@ -7,8 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import create_app
-from api.schemas import Meta, SellerList, SellerPipeline, TeamPipeline
-from leadscorer import data, policy, views
+from api.schemas import Evidence, Meta, Rules, SellerList, SellerPipeline, TeamPipeline
+from leadscorer import data, evidence, policy, views
 from leadscorer.__main__ import main
 
 def load_script(name):
@@ -105,6 +105,8 @@ def test_payloads_pass_through_the_models_unchanged(raw_dir):
     ctx = views.context(dataset, None)
     assert dumped(Meta, views.meta(dataset, ctx)) == as_json(views.meta(dataset, ctx))
     assert dumped(SellerList, {"sellers": views.sellers(dataset)}) == as_json({"sellers": views.sellers(dataset)})
+    assert dumped(Rules, views.rules(dataset)) == as_json(views.rules(dataset))
+    assert dumped(Evidence, evidence.load()) == as_json(evidence.load())
 
 
 def test_a_field_without_contract_breaks_validation(raw_dir):

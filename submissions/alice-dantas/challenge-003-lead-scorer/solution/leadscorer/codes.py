@@ -6,7 +6,8 @@ apresenta (a tela e a CLI). Um código novo precisa entrar aqui, no schema da AP
 """
 from __future__ import annotations
 
-CONTRACT_VERSION = 3  # 2: códigos ao lado dos textos (F2); 3: sem os campos de texto (F5)
+CONTRACT_VERSION = 4  # 2: códigos ao lado dos textos (F2); 3: sem os campos de texto (F5);
+                      # 4: /api/evidence, /api/rules e o resumo por vendedor na carteira da equipe
 
 # Papel de cada motivo: o que ele influenciou na posição da oportunidade.
 ROLE_GROUP = "group"      # decidiu o grupo
@@ -56,6 +57,19 @@ ORDER_SALES_PRICE_DESC = "sales_price_desc"
 ORDER_OPPORTUNITY_ID = "opportunity_id"
 ORDER_CRITERIA = (ORDER_VALUE_BAND, ORDER_SALES_PRICE_DESC, ORDER_OPPORTUNITY_ID)
 
+# Estratégias do backtest (evidence.rankers[].code), na ordem do relatório.
+RANKER_GLOBAL_RATE = "global_rate"
+RANKER_PRODUCT_RATE = "product_rate"
+RANKER_RANDOM = "random"
+RANKER_LIST_PRICE_ONLY = "list_price_only"
+RANKER_AGE_NEWEST_FIRST = "age_newest_first"
+RANKER_CURRENT_RULE = "current_rule"  # a regra servida: referência das diferenças
+RANKER_RULE_A = "rule_a"
+RANKER_CODES = (RANKER_GLOBAL_RATE, RANKER_PRODUCT_RATE, RANKER_RANDOM, RANKER_LIST_PRICE_ONLY,
+                RANKER_AGE_NEWEST_FIRST, RANKER_CURRENT_RULE, RANKER_RULE_A)
+# Só no relatório do backtest, nunca na API: a armadilha usa o desfecho (vazamento).
+RANKER_LEAK_QUARTER_END = "leak_quarter_end_close"
+
 # Erros (corpo de erro da API: code)
 DATA_FILE_MISSING = "data_file_missing"
 DATA_FILE_EMPTY = "data_file_empty"
@@ -69,6 +83,7 @@ INVALID_AS_OF_FORMAT = "invalid_as_of_format"
 AS_OF_BEFORE_LAST_CLOSE = "as_of_before_last_close"
 SELLER_NOT_FOUND = "seller_not_found"
 OPPORTUNITY_NOT_FOUND = "opportunity_not_found"
+EVIDENCE_UNAVAILABLE = "evidence_unavailable"  # resultado do backtest ausente ou inválido
 ERROR_CODES = (DATA_FILE_MISSING, DATA_FILE_EMPTY, DATA_FILE_INVALID, DATA_COLUMNS_MISSING, DATA_UNKNOWN_LABEL,
                DATA_BAD_DATE, DATA_DUPLICATE_KEY, DATA_BAD_PRICE, INVALID_AS_OF_FORMAT, AS_OF_BEFORE_LAST_CLOSE,
-               SELLER_NOT_FOUND, OPPORTUNITY_NOT_FOUND)
+               SELLER_NOT_FOUND, OPPORTUNITY_NOT_FOUND, EVIDENCE_UNAVAILABLE)

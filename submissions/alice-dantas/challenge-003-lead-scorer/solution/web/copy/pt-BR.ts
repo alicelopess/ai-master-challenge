@@ -206,6 +206,8 @@ const ERRORS: Record<ErrorBody["code"], (p: ErrorParams) => string> = {
     `partir de ${text(p.minimum)}.`,
   seller_not_found: (p) => `Vendedor '${text(p.seller)}' não encontrado.`,
   opportunity_not_found: (p) => `Oportunidade ${text(p.opportunity_id)} não encontrada.`,
+  evidence_unavailable: (p) => `Resultado do backtest indisponível (${text(p.file)}). Rode scripts/backtest.py ` +
+    "com os CSVs em data/raw/.",
 };
 
 export const errorText = (error: ErrorBody): string => ERRORS[error.code](error.params);

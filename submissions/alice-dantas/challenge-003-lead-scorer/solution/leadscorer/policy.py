@@ -11,6 +11,8 @@ from . import codes
 
 SOLUTION_DIR = Path(__file__).resolve().parents[1]
 RAW_DIR = SOLUTION_DIR / "data" / "raw"
+# Resultado do backtest (scripts/backtest.py), servido em /api/evidence.
+EVIDENCE_PATH = SOLUTION_DIR / "data" / "processed" / "backtest_results.json"
 DATASET_URL = "https://www.kaggle.com/datasets/agungpambudi/crm-sales-predictive-analytics"
 
 # Colunas que a solução usa de cada tabela; as demais são ignoradas.

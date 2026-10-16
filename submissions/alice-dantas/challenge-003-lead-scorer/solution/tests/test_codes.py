@@ -95,7 +95,7 @@ def assert_no_outcome(payload):
 
 def check_payload(payload):
     meta = payload["meta"]
-    assert meta["contract_version"] == codes.CONTRACT_VERSION == 3
+    assert meta["contract_version"] == codes.CONTRACT_VERSION == 4
     for entry in items(payload):
         assert entry["group"] in policy.STATES
         assert_reasons_match_decision(entry, meta)
@@ -168,6 +168,7 @@ def test_codes_and_schema_list_the_same_values():
         set(codes.EMPTY_CODES)
     assert set(get_args(schemas.ErrorCode)) == set(codes.ERROR_CODES)
     assert literals(schemas.Reason, "role") == set(codes.ROLES)
+    assert get_args(schemas.RankerCode) == codes.RANKER_CODES
 
 
 def test_every_error_raised_by_the_core_has_a_contract_code():

@@ -35,7 +35,7 @@
       "high_pct": 90
     },
     "audited": false,
-    "contract_version": 3
+    "contract_version": 4
   },
   "ordering": {
     "group_order": [
@@ -523,6 +523,35 @@
       },
       "next_action": null,
       "items": []
+    }
+  ],
+  "by_seller": [
+    {
+      "seller": "Ana Alfa",
+      "total": 6,
+      "focar": 5,
+      "revisar": 1,
+      "qualificar": 0,
+      "nao_pontuavel": 0,
+      "without_account": 4
+    },
+    {
+      "seller": "Bruno Beta",
+      "total": 1,
+      "focar": 0,
+      "revisar": 0,
+      "qualificar": 1,
+      "nao_pontuavel": 0,
+      "without_account": 1
+    },
+    {
+      "seller": "Carla Gama",
+      "total": 0,
+      "focar": 0,
+      "revisar": 0,
+      "qualificar": 0,
+      "nao_pontuavel": 0,
+      "without_account": 0
     }
   ]
 }

@@ -124,6 +124,28 @@ export type CycleReference = {
 };
 
 /**
+ * Delta
+ */
+export type Delta = {
+    /**
+     * Value
+     */
+    value: number;
+    /**
+     * Low
+     *
+     * Limite inferior do IC95%.
+     */
+    low: number;
+    /**
+     * High
+     *
+     * Limite superior do IC95%.
+     */
+    high: number;
+};
+
+/**
  * ErrorBody
  */
 export type ErrorBody = {
@@ -136,7 +158,7 @@ export type ErrorBody = {
     /**
      * Code
      */
-    code: 'data_file_missing' | 'data_file_empty' | 'data_file_invalid' | 'data_columns_missing' | 'data_unknown_label' | 'data_bad_date' | 'data_duplicate_key' | 'data_bad_price' | 'invalid_as_of_format' | 'as_of_before_last_close' | 'seller_not_found' | 'opportunity_not_found';
+    code: 'data_file_missing' | 'data_file_empty' | 'data_file_invalid' | 'data_columns_missing' | 'data_unknown_label' | 'data_bad_date' | 'data_duplicate_key' | 'data_bad_price' | 'invalid_as_of_format' | 'as_of_before_last_close' | 'seller_not_found' | 'opportunity_not_found' | 'evidence_unavailable';
     /**
      * Params
      *
@@ -145,6 +167,77 @@ export type ErrorBody = {
     params: {
         [key: string]: number | string | Array<string>;
     };
+};
+
+/**
+ * Evidence
+ */
+export type Evidence = {
+    design: EvidenceDesign;
+    /**
+     * Reference
+     *
+     * A regra servida, base das diferenças.
+     */
+    reference: 'current_rule';
+    /**
+     * Rankers
+     *
+     * Estratégias na ordem do relatório.
+     */
+    rankers: Array<RankerResult>;
+    /**
+     * Without No Outcome
+     *
+     * As mesmas medidas sem as oportunidades que nunca fecham na base.
+     */
+    without_no_outcome: Array<RankerResult>;
+};
+
+/**
+ * EvidenceDesign
+ */
+export type EvidenceDesign = {
+    /**
+     * Cuts
+     *
+     * Datas de corte T; em cada uma, a carteira aberta em T.
+     */
+    cuts: Array<string>;
+    /**
+     * Horizon Days
+     *
+     * Desfecho: ganhou em até este número de dias depois de T.
+     */
+    horizon_days: number;
+    /**
+     * Top K
+     *
+     * Tamanho da lista de cada vendedor.
+     */
+    top_k: number;
+    /**
+     * Observations
+     *
+     * Pares oportunidade × corte (os cortes se sobrepõem).
+     */
+    observations: number;
+    /**
+     * Unique Opportunities
+     */
+    unique_opportunities: number;
+    /**
+     * N Boot Sellers
+     *
+     * Reamostragens de vendedores no IC das diferenças.
+     */
+    n_boot_sellers: number;
+    /**
+     * Audited Data
+     *
+     * O backtest rodou sobre os CSVs auditados.
+     */
+    audited_data: boolean;
 };
 
 /**
@@ -388,7 +481,7 @@ export type Meta = {
     /**
      * Contract Version
      */
-    contract_version: 3;
+    contract_version: 4;
 };
 
 /**
@@ -557,6 +650,80 @@ export type ProspectingStage = {
 };
 
 /**
+ * RankerResult
+ */
+export type RankerResult = {
+    /**
+     * Code
+     */
+    code: 'global_rate' | 'product_rate' | 'random' | 'list_price_only' | 'age_newest_first' | 'current_rule' | 'rule_a';
+    /**
+     * Auc Mean
+     *
+     * AUC média entre os cortes; 0,5 é o acaso.
+     */
+    auc_mean: number;
+    /**
+     * Auc Min
+     */
+    auc_min: number;
+    /**
+     * Auc Max
+     */
+    auc_max: number;
+    /**
+     * Cuts Auc Above Chance
+     *
+     * Cortes com o IC95% da AUC acima de 0,5; nulo quando não calculado.
+     */
+    cuts_auc_above_chance: number | null;
+    /**
+     * P At K
+     *
+     * Ganhas nas top_k de cada vendedor ÷ top_k.
+     */
+    p_at_k: number;
+    /**
+     * Lift At K
+     *
+     * Ganhas nas top_k ÷ ganhas esperadas ao acaso.
+     */
+    lift_at_k: number;
+    /**
+     * Val At K
+     *
+     * Valor ganho nas top_k ÷ valor ganho nas top_k melhores sabendo o futuro (o oráculo).
+     */
+    val_at_k: number;
+    /**
+     * val_at_k menos o da referência, com IC95% por bootstrap de vendedores; nulo na referência.
+     */
+    delta_val: Delta | null;
+    /**
+     * Cuts Val Above Reference
+     *
+     * Cortes com val_at_k acima da referência.
+     */
+    cuts_val_above_reference: number | null;
+};
+
+/**
+ * Rules
+ *
+ * A política que monta a lista, como dado.
+ */
+export type Rules = {
+    meta: Meta;
+    ordering: Ordering;
+    /**
+     * Value Bands
+     *
+     * Da faixa de cima para a de baixo.
+     */
+    value_bands: Array<ValueBandRule>;
+};
+
+/**
  * Seller
  */
 export type Seller = {
@@ -607,6 +774,42 @@ export type SellerPipeline = {
      * Na ordem de `ordering.group_order`.
      */
     groups: Array<Group>;
+};
+
+/**
+ * SellerSummary
+ *
+ * Resumo da carteira aberta de um vendedor do filtro.
+ */
+export type SellerSummary = {
+    /**
+     * Seller
+     */
+    seller: string;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Focar
+     */
+    focar: number;
+    /**
+     * Revisar
+     */
+    revisar: number;
+    /**
+     * Qualificar
+     */
+    qualificar: number;
+    /**
+     * Nao Pontuavel
+     */
+    nao_pontuavel: number;
+    /**
+     * Without Account
+     */
+    without_account: number;
 };
 
 /**
@@ -717,6 +920,34 @@ export type TeamPipeline = {
      * Na ordem de `ordering.group_order`.
      */
     groups: Array<Group>;
+    /**
+     * By Seller
+     *
+     * Todo vendedor do filtro, inclusive com zero abertas, em ordem alfabética: nunca um ranking.
+     */
+    by_seller: Array<SellerSummary>;
+};
+
+/**
+ * ValueBandRule
+ */
+export type ValueBandRule = {
+    /**
+     * Band
+     */
+    band: 'alto' | 'médio' | 'baixo';
+    /**
+     * Min Price
+     *
+     * Preço de tabela mínimo da faixa, inclusive.
+     */
+    min_price: number;
+    /**
+     * Max Price
+     *
+     * Preço de tabela máximo, inclusive; nulo na faixa de cima.
+     */
+    max_price: number | null;
 };
 
 /**
@@ -919,3 +1150,62 @@ export type GetPipelineApiPipelineGetResponses = {
 };
 
 export type GetPipelineApiPipelineGetResponse = GetPipelineApiPipelineGetResponses[keyof GetPipelineApiPipelineGetResponses];
+
+export type GetRulesApiRulesGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * As Of
+         */
+        as_of?: string | null;
+    };
+    url: '/api/rules';
+};
+
+export type GetRulesApiRulesGetErrors = {
+    /**
+     * as_of inválido
+     */
+    422: ErrorBody;
+    /**
+     * CSVs ausentes ou inválidos
+     */
+    503: ErrorBody;
+};
+
+export type GetRulesApiRulesGetError = GetRulesApiRulesGetErrors[keyof GetRulesApiRulesGetErrors];
+
+export type GetRulesApiRulesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: Rules;
+};
+
+export type GetRulesApiRulesGetResponse = GetRulesApiRulesGetResponses[keyof GetRulesApiRulesGetResponses];
+
+export type GetEvidenceApiEvidenceGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/evidence';
+};
+
+export type GetEvidenceApiEvidenceGetErrors = {
+    /**
+     * Resultado do backtest ausente ou inválido
+     */
+    503: ErrorBody;
+};
+
+export type GetEvidenceApiEvidenceGetError = GetEvidenceApiEvidenceGetErrors[keyof GetEvidenceApiEvidenceGetErrors];
+
+export type GetEvidenceApiEvidenceGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: Evidence;
+};
+
+export type GetEvidenceApiEvidenceGetResponse = GetEvidenceApiEvidenceGetResponses[keyof GetEvidenceApiEvidenceGetResponses];

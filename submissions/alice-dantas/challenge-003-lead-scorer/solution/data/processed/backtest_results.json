@@ -109,6 +109,7 @@
     {
       "cut": "2017-03-31",
       "ranker": "Taxa global",
+      "code": "global_rate",
       "leak": false,
       "auc": 0.5,
       "ci_low": 0.5,
@@ -120,6 +121,7 @@
     {
       "cut": "2017-03-31",
       "ranker": "Taxa por produto",
+      "code": "product_rate",
       "leak": false,
       "auc": 0.463,
       "ci_low": 0.432,
@@ -131,6 +133,7 @@
     {
       "cut": "2017-03-31",
       "ranker": "Aleatório",
+      "code": "random",
       "leak": false,
       "auc": 0.519,
       "ci_low": 0.49,
@@ -142,6 +145,7 @@
     {
       "cut": "2017-03-31",
       "ranker": "Só valor de tabela",
+      "code": "list_price_only",
       "leak": false,
       "auc": 0.528,
       "ci_low": 0.499,
@@ -153,6 +157,7 @@
     {
       "cut": "2017-03-31",
       "ranker": "Idade: mais nova primeiro",
+      "code": "age_newest_first",
       "leak": false,
       "auc": 0.561,
       "ci_low": 0.531,
@@ -164,6 +169,7 @@
     {
       "cut": "2017-03-31",
       "ranker": "Regra atual: até o maior ciclo → preço",
+      "code": "current_rule",
       "leak": false,
       "auc": 0.53,
       "ci_low": 0.5,
@@ -175,6 +181,7 @@
     {
       "cut": "2017-03-31",
       "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "rule_a",
       "leak": false,
       "auc": 0.539,
       "ci_low": 0.512,
@@ -186,6 +193,7 @@
     {
       "cut": "2017-03-31",
       "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "code": "leak_quarter_end_close",
       "leak": true,
       "auc": 0.661,
       "ci_low": 0.64,
@@ -197,6 +205,7 @@
     {
       "cut": "2017-04-30",
       "ranker": "Taxa global",
+      "code": "global_rate",
       "leak": false,
       "auc": 0.5,
       "ci_low": 0.5,
@@ -208,6 +217,7 @@
     {
       "cut": "2017-04-30",
       "ranker": "Taxa por produto",
+      "code": "product_rate",
       "leak": false,
       "auc": 0.495,
       "ci_low": 0.466,
@@ -219,6 +229,7 @@
     {
       "cut": "2017-04-30",
       "ranker": "Aleatório",
+      "code": "random",
       "leak": false,
       "auc": 0.488,
       "ci_low": 0.463,
@@ -230,6 +241,7 @@
     {
       "cut": "2017-04-30",
       "ranker": "Só valor de tabela",
+      "code": "list_price_only",
       "leak": false,
       "auc": 0.518,
       "ci_low": 0.489,
@@ -241,6 +253,7 @@
     {
       "cut": "2017-04-30",
       "ranker": "Idade: mais nova primeiro",
+      "code": "age_newest_first",
       "leak": false,
       "auc": 0.508,
       "ci_low": 0.481,
@@ -252,6 +265,7 @@
     {
       "cut": "2017-04-30",
       "ranker": "Regra atual: até o maior ciclo → preço",
+      "code": "current_rule",
       "leak": false,
       "auc": 0.532,
       "ci_low": 0.501,
@@ -263,6 +277,7 @@
     {
       "cut": "2017-04-30",
       "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "rule_a",
       "leak": false,
       "auc": 0.562,
       "ci_low": 0.531,
@@ -274,6 +289,7 @@
     {
       "cut": "2017-04-30",
       "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "code": "leak_quarter_end_close",
       "leak": true,
       "auc": 0.704,
       "ci_low": 0.682,
@@ -285,6 +301,7 @@
     {
       "cut": "2017-05-31",
       "ranker": "Taxa global",
+      "code": "global_rate",
       "leak": false,
       "auc": 0.5,
       "ci_low": 0.5,
@@ -296,6 +313,7 @@
     {
       "cut": "2017-05-31",
       "ranker": "Taxa por produto",
+      "code": "product_rate",
       "leak": false,
       "auc": 0.492,
       "ci_low": 0.465,
@@ -307,6 +325,7 @@
     {
       "cut": "2017-05-31",
       "ranker": "Aleatório",
+      "code": "random",
       "leak": false,
       "auc": 0.507,
       "ci_low": 0.478,
@@ -318,6 +337,7 @@
     {
       "cut": "2017-05-31",
       "ranker": "Só valor de tabela",
+      "code": "list_price_only",
       "leak": false,
       "auc": 0.491,
       "ci_low": 0.464,
@@ -329,6 +349,7 @@
     {
       "cut": "2017-05-31",
       "ranker": "Idade: mais nova primeiro",
+      "code": "age_newest_first",
       "leak": false,
       "auc": 0.538,
       "ci_low": 0.508,
@@ -340,6 +361,7 @@
     {
       "cut": "2017-05-31",
       "ranker": "Regra atual: até o maior ciclo → preço",
+      "code": "current_rule",
       "leak": false,
       "auc": 0.537,
       "ci_low": 0.511,
@@ -351,6 +373,7 @@
     {
       "cut": "2017-05-31",
       "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "rule_a",
       "leak": false,
       "auc": 0.55,
       "ci_low": 0.522,
@@ -362,6 +385,7 @@
     {
       "cut": "2017-05-31",
       "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "code": "leak_quarter_end_close",
       "leak": true,
       "auc": 0.757,
       "ci_low": 0.736,
@@ -373,6 +397,7 @@
     {
       "cut": "2017-06-30",
       "ranker": "Taxa global",
+      "code": "global_rate",
       "leak": false,
       "auc": 0.5,
       "ci_low": 0.5,
@@ -384,6 +409,7 @@
     {
       "cut": "2017-06-30",
       "ranker": "Taxa por produto",
+      "code": "product_rate",
       "leak": false,
       "auc": 0.523,
       "ci_low": 0.495,
@@ -395,6 +421,7 @@
     {
       "cut": "2017-06-30",
       "ranker": "Aleatório",
+      "code": "random",
       "leak": false,
       "auc": 0.521,
       "ci_low": 0.493,
@@ -406,6 +433,7 @@
     {
       "cut": "2017-06-30",
       "ranker": "Só valor de tabela",
+      "code": "list_price_only",
       "leak": false,
       "auc": 0.488,
       "ci_low": 0.457,
@@ -417,6 +445,7 @@
     {
       "cut": "2017-06-30",
       "ranker": "Idade: mais nova primeiro",
+      "code": "age_newest_first",
       "leak": false,
       "auc": 0.725,
       "ci_low": 0.704,
@@ -428,6 +457,7 @@
     {
       "cut": "2017-06-30",
       "ranker": "Regra atual: até o maior ciclo → preço",
+      "code": "current_rule",
       "leak": false,
       "auc": 0.558,
       "ci_low": 0.526,
@@ -439,6 +469,7 @@
     {
       "cut": "2017-06-30",
       "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "rule_a",
       "leak": false,
       "auc": 0.61,
       "ci_low": 0.584,
@@ -450,6 +481,7 @@
     {
       "cut": "2017-06-30",
       "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "code": "leak_quarter_end_close",
       "leak": true,
       "auc": 0.653,
       "ci_low": 0.632,
@@ -461,6 +493,7 @@
     {
       "cut": "2017-07-31",
       "ranker": "Taxa global",
+      "code": "global_rate",
       "leak": false,
       "auc": 0.5,
       "ci_low": 0.5,
@@ -472,6 +505,7 @@
     {
       "cut": "2017-07-31",
       "ranker": "Taxa por produto",
+      "code": "product_rate",
       "leak": false,
       "auc": 0.498,
       "ci_low": 0.472,
@@ -483,6 +517,7 @@
     {
       "cut": "2017-07-31",
       "ranker": "Aleatório",
+      "code": "random",
       "leak": false,
       "auc": 0.508,
       "ci_low": 0.483,
@@ -494,6 +529,7 @@
     {
       "cut": "2017-07-31",
       "ranker": "Só valor de tabela",
+      "code": "list_price_only",
       "leak": false,
       "auc": 0.509,
       "ci_low": 0.48,
@@ -505,6 +541,7 @@
     {
       "cut": "2017-07-31",
       "ranker": "Idade: mais nova primeiro",
+      "code": "age_newest_first",
       "leak": false,
       "auc": 0.558,
       "ci_low": 0.537,
@@ -516,6 +553,7 @@
     {
       "cut": "2017-07-31",
       "ranker": "Regra atual: até o maior ciclo → preço",
+      "code": "current_rule",
       "leak": false,
       "auc": 0.596,
       "ci_low": 0.572,
@@ -527,6 +565,7 @@
     {
       "cut": "2017-07-31",
       "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "rule_a",
       "leak": false,
       "auc": 0.638,
       "ci_low": 0.614,
@@ -538,6 +577,7 @@
     {
       "cut": "2017-07-31",
       "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "code": "leak_quarter_end_close",
       "leak": true,
       "auc": 0.705,
       "ci_low": 0.689,
@@ -549,6 +589,7 @@
     {
       "cut": "2017-08-31",
       "ranker": "Taxa global",
+      "code": "global_rate",
       "leak": false,
       "auc": 0.5,
       "ci_low": 0.5,
@@ -560,6 +601,7 @@
     {
       "cut": "2017-08-31",
       "ranker": "Taxa por produto",
+      "code": "product_rate",
       "leak": false,
       "auc": 0.486,
       "ci_low": 0.462,
@@ -571,6 +613,7 @@
     {
       "cut": "2017-08-31",
       "ranker": "Aleatório",
+      "code": "random",
       "leak": false,
       "auc": 0.503,
       "ci_low": 0.478,
@@ -582,6 +625,7 @@
     {
       "cut": "2017-08-31",
       "ranker": "Só valor de tabela",
+      "code": "list_price_only",
       "leak": false,
       "auc": 0.511,
       "ci_low": 0.482,
@@ -593,6 +637,7 @@
     {
       "cut": "2017-08-31",
       "ranker": "Idade: mais nova primeiro",
+      "code": "age_newest_first",
       "leak": false,
       "auc": 0.597,
       "ci_low": 0.572,
@@ -604,6 +649,7 @@
     {
       "cut": "2017-08-31",
       "ranker": "Regra atual: até o maior ciclo → preço",
+      "code": "current_rule",
       "leak": false,
       "auc": 0.63,
       "ci_low": 0.606,
@@ -615,6 +661,7 @@
     {
       "cut": "2017-08-31",
       "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "rule_a",
       "leak": false,
       "auc": 0.657,
       "ci_low": 0.634,
@@ -626,6 +673,7 @@
     {
       "cut": "2017-08-31",
       "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "code": "leak_quarter_end_close",
       "leak": true,
       "auc": 0.813,
       "ci_low": 0.794,
@@ -637,6 +685,7 @@
     {
       "cut": "2017-09-30",
       "ranker": "Taxa global",
+      "code": "global_rate",
       "leak": false,
       "auc": 0.5,
       "ci_low": 0.5,
@@ -648,6 +697,7 @@
     {
       "cut": "2017-09-30",
       "ranker": "Taxa por produto",
+      "code": "product_rate",
       "leak": false,
       "auc": 0.498,
       "ci_low": 0.471,
@@ -659,6 +709,7 @@
     {
       "cut": "2017-09-30",
       "ranker": "Aleatório",
+      "code": "random",
       "leak": false,
       "auc": 0.523,
       "ci_low": 0.496,
@@ -670,6 +721,7 @@
     {
       "cut": "2017-09-30",
       "ranker": "Só valor de tabela",
+      "code": "list_price_only",
       "leak": false,
       "auc": 0.488,
       "ci_low": 0.461,
@@ -681,6 +733,7 @@
     {
       "cut": "2017-09-30",
       "ranker": "Idade: mais nova primeiro",
+      "code": "age_newest_first",
       "leak": false,
       "auc": 0.826,
       "ci_low": 0.81,
@@ -692,6 +745,7 @@
     {
       "cut": "2017-09-30",
       "ranker": "Regra atual: até o maior ciclo → preço",
+      "code": "current_rule",
       "leak": false,
       "auc": 0.636,
       "ci_low": 0.614,
@@ -703,6 +757,7 @@
     {
       "cut": "2017-09-30",
       "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "rule_a",
       "leak": false,
       "auc": 0.672,
       "ci_low": 0.651,
@@ -714,6 +769,7 @@
     {
       "cut": "2017-09-30",
       "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "code": "leak_quarter_end_close",
       "leak": true,
       "auc": 0.687,
       "ci_low": 0.668,
@@ -726,6 +782,7 @@
   "summary": [
     {
       "ranker": "Taxa global",
+      "code": "global_rate",
       "leak": false,
       "auc_mean": 0.5,
       "auc_min": 0.5,
@@ -745,6 +802,7 @@
     },
     {
       "ranker": "Taxa por produto",
+      "code": "product_rate",
       "leak": false,
       "auc_mean": 0.494,
       "auc_min": 0.463,
@@ -764,6 +822,7 @@
     },
     {
       "ranker": "Aleatório",
+      "code": "random",
       "leak": false,
       "auc_mean": 0.51,
       "auc_min": 0.488,
@@ -783,6 +842,7 @@
     },
     {
       "ranker": "Só valor de tabela",
+      "code": "list_price_only",
       "leak": false,
       "auc_mean": 0.505,
       "auc_min": 0.488,
@@ -802,6 +862,7 @@
     },
     {
       "ranker": "Idade: mais nova primeiro",
+      "code": "age_newest_first",
       "leak": false,
       "auc_mean": 0.616,
       "auc_min": 0.508,
@@ -821,6 +882,7 @@
     },
     {
       "ranker": "Regra atual: até o maior ciclo → preço",
+      "code": "current_rule",
       "leak": false,
       "auc_mean": 0.574,
       "auc_min": 0.53,
@@ -833,6 +895,7 @@
     },
     {
       "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "rule_a",
       "leak": false,
       "auc_mean": 0.604,
       "auc_min": 0.539,
@@ -852,6 +915,7 @@
     },
     {
       "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "code": "leak_quarter_end_close",
       "leak": true,
       "auc_mean": 0.711,
       "auc_min": 0.653,
@@ -867,6 +931,7 @@
   "limits": [
     {
       "ranker": "Regra atual: até o maior ciclo → preço",
+      "code": "current_rule",
       "leak": false,
       "auc_mean": 0.574,
       "auc_min": 0.53,
@@ -880,6 +945,7 @@
     },
     {
       "ranker": "Até 90 d → até o maior ciclo → preço",
+      "code": "limit_90_days",
       "leak": false,
       "auc_mean": 0.614,
       "auc_min": 0.542,
@@ -898,6 +964,7 @@
     },
     {
       "ranker": "Até 100 d → até o maior ciclo → preço",
+      "code": "limit_100_days",
       "leak": false,
       "auc_mean": 0.612,
       "auc_min": 0.553,
@@ -916,6 +983,7 @@
     },
     {
       "ranker": "Até 106 d → até o maior ciclo → preço",
+      "code": "limit_106_days",
       "leak": false,
       "auc_mean": 0.607,
       "auc_min": 0.549,
@@ -934,6 +1002,7 @@
     },
     {
       "ranker": "Até 115 d → até o maior ciclo → preço",
+      "code": "limit_115_days",
       "leak": false,
       "auc_mean": 0.598,
       "auc_min": 0.539,
@@ -952,6 +1021,7 @@
     },
     {
       "ranker": "Até 120 d → até o maior ciclo → preço",
+      "code": "limit_120_days",
       "leak": false,
       "auc_mean": 0.593,
       "auc_min": 0.537,
@@ -970,6 +1040,7 @@
     },
     {
       "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "rule_a",
       "leak": false,
       "auc_mean": 0.604,
       "auc_min": 0.539,
@@ -1043,6 +1114,7 @@
   "without_no_outcome": [
     {
       "ranker": "Só valor de tabela",
+      "code": "list_price_only",
       "leak": false,
       "auc_mean": 0.51,
       "auc_min": 0.485,
@@ -1060,6 +1132,7 @@
     },
     {
       "ranker": "Regra atual: até o maior ciclo → preço",
+      "code": "current_rule",
       "leak": false,
       "auc_mean": 0.51,
       "auc_min": 0.485,
@@ -1070,6 +1143,7 @@
     },
     {
       "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "rule_a",
       "leak": false,
       "auc_mean": 0.505,
       "auc_min": 0.472,

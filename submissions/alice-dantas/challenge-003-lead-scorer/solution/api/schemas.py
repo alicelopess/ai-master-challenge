@@ -1,4 +1,4 @@
-"""Contrato tipado das respostas da API (plano do contrato, fases F1, F2 e F5).
+"""Contrato tipado das respostas da API (plano do contrato, fases F1, F2 e F5; v4 na fase U5).
 
 Espelha o payload de `views`. Os modelos proíbem campos extras: um campo novo em
 `views` sem par aqui quebra a resposta e os testes, em vez de passar sem contrato.
@@ -22,6 +22,7 @@ ValueBand = Literal[tuple(label for label, _ in policy.VALUE_BANDS)]
 MissingField = Literal[tuple(policy.MISSING_FIELDS)]
 OrderCriterion = Literal[codes.ORDER_CRITERIA]
 ErrorCode = Literal[codes.ERROR_CODES]
+RankerCode = Literal[codes.RANKER_CODES]
 
 class Contract(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -267,6 +268,17 @@ class TeamFilter(Contract):
     office: Optional[str]
 
 
+class SellerSummary(Contract):
+    """Resumo da carteira aberta de um vendedor do filtro."""
+    seller: str
+    total: int
+    focar: int
+    revisar: int
+    qualificar: int
+    nao_pontuavel: int
+    without_account: int
+
+
 class TeamPipeline(Contract):
     filter: TeamFilter
     meta: Meta
@@ -274,6 +286,63 @@ class TeamPipeline(Contract):
     summary: Summary
     empty: Optional[PipelineEmpty] = Field(description="Nulo quando há oportunidades abertas.")
     groups: List[Group] = Field(description="Na ordem de `ordering.group_order`.")
+    by_seller: List[SellerSummary] = Field(
+        description="Todo vendedor do filtro, inclusive com zero abertas, em ordem alfabética: nunca um ranking.")
+
+
+# Regras (página Como funciona).
+class ValueBandRule(Contract):
+    band: ValueBand
+    min_price: int = Field(description="Preço de tabela mínimo da faixa, inclusive.")
+    max_price: Optional[int] = Field(description="Preço de tabela máximo, inclusive; nulo na faixa de cima.")
+
+
+class Rules(Contract):
+    """A política que monta a lista, como dado."""
+    meta: Meta
+    ordering: Ordering
+    value_bands: List[ValueBandRule] = Field(description="Da faixa de cima para a de baixo.")
+
+
+# Evidência (página Evidência): resultado de scripts/backtest.py, sem a armadilha de vazamento.
+class EvidenceDesign(Contract):
+    cuts: List[date] = Field(description="Datas de corte T; em cada uma, a carteira aberta em T.")
+    horizon_days: int = Field(description="Desfecho: ganhou em até este número de dias depois de T.")
+    top_k: int = Field(description="Tamanho da lista de cada vendedor.")
+    observations: int = Field(description="Pares oportunidade × corte (os cortes se sobrepõem).")
+    unique_opportunities: int
+    n_boot_sellers: int = Field(description="Reamostragens de vendedores no IC das diferenças.")
+    audited_data: bool = Field(description="O backtest rodou sobre os CSVs auditados.")
+
+
+class Delta(Contract):
+    value: float
+    low: float = Field(description="Limite inferior do IC95%.")
+    high: float = Field(description="Limite superior do IC95%.")
+
+
+class RankerResult(Contract):
+    code: RankerCode
+    auc_mean: float = Field(description="AUC média entre os cortes; 0,5 é o acaso.")
+    auc_min: float
+    auc_max: float
+    cuts_auc_above_chance: Optional[int] = Field(
+        description="Cortes com o IC95% da AUC acima de 0,5; nulo quando não calculado.")
+    p_at_k: float = Field(description="Ganhas nas top_k de cada vendedor ÷ top_k.")
+    lift_at_k: float = Field(description="Ganhas nas top_k ÷ ganhas esperadas ao acaso.")
+    val_at_k: float = Field(
+        description="Valor ganho nas top_k ÷ valor ganho nas top_k melhores sabendo o futuro (o oráculo).")
+    delta_val: Optional[Delta] = Field(
+        description="val_at_k menos o da referência, com IC95% por bootstrap de vendedores; nulo na referência.")
+    cuts_val_above_reference: Optional[int] = Field(description="Cortes com val_at_k acima da referência.")
+
+
+class Evidence(Contract):
+    design: EvidenceDesign
+    reference: Literal[codes.RANKER_CURRENT_RULE] = Field(description="A regra servida, base das diferenças.")
+    rankers: List[RankerResult] = Field(description="Estratégias na ordem do relatório.")
+    without_no_outcome: List[RankerResult] = Field(
+        description="As mesmas medidas sem as oportunidades que nunca fecham na base.")
 
 
 class Seller(Contract):

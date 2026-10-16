@@ -35,7 +35,7 @@
       "high_pct": 90
     },
     "audited": false,
-    "contract_version": 3
+    "contract_version": 4
   },
   "ordering": {
     "group_order": [
@@ -104,5 +104,6 @@
       "next_action": null,
       "items": []
     }
-  ]
+  ],
+  "by_seller": []
 }

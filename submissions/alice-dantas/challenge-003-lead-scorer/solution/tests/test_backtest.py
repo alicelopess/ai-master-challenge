@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from leadscorer import data, policy, triage
+from leadscorer import codes, data, policy, triage
 from leadscorer.errors import PolicyError
 
 from conftest import PIPELINE, opp, skip_without_real_csvs, write_raw
@@ -158,6 +158,20 @@ def test_real_rule_a_beats_the_current_rule_only_with_deals_without_outcome(real
     assert current["val_at_k"] > summary["Só valor de tabela"]["val_at_k"]
     without = {s["ranker"]: s for s in real_result["without_no_outcome"]}
     assert without[backtest.RULE_A]["d_val_high"] < 0
+
+
+def test_every_strategy_has_a_stable_code():
+    names = [name for name, _, _ in backtest.RANKERS + backtest.LIMITS]
+    assert set(backtest.CODES) == set(names) and len(set(backtest.CODES.values())) == len(names)
+    served = [backtest.CODES[name] for name, _, leak in backtest.RANKERS if not leak]
+    assert served == list(codes.RANKER_CODES)  # a API serve estas, nesta ordem
+
+
+@pytest.mark.real_data
+def test_real_result_carries_the_codes(real_result):
+    for key in ("summary", "limits", "without_no_outcome"):
+        assert all(entry["code"] == backtest.CODES[entry["ranker"]] for entry in real_result[key]), key
+    assert all(row["code"] == backtest.CODES[row["ranker"]] for row in real_result["rows"])
 
 
 @pytest.mark.real_data

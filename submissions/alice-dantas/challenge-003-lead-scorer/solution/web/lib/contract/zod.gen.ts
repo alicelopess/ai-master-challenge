@@ -64,6 +64,15 @@ export const zCycleReference = z.object({
 });
 
 /**
+ * Delta
+ */
+export const zDelta = z.object({
+    value: z.number(),
+    low: z.number(),
+    high: z.number()
+});
+
+/**
  * ErrorBody
  */
 export const zErrorBody = z.object({
@@ -80,13 +89,27 @@ export const zErrorBody = z.object({
         'invalid_as_of_format',
         'as_of_before_last_close',
         'seller_not_found',
-        'opportunity_not_found'
+        'opportunity_not_found',
+        'evidence_unavailable'
     ]),
     params: z.record(z.string(), z.union([
         z.int(),
         z.string(),
         z.array(z.string())
     ]))
+});
+
+/**
+ * EvidenceDesign
+ */
+export const zEvidenceDesign = z.object({
+    cuts: z.array(z.iso.date()),
+    horizon_days: z.int(),
+    top_k: z.int(),
+    observations: z.int(),
+    unique_opportunities: z.int(),
+    n_boot_sellers: z.int(),
+    audited_data: z.boolean()
 });
 
 /**
@@ -143,7 +166,7 @@ export const zMeta = z.object({
     cycle_references: z.record(z.string(), zCycleReference),
     base_rate: zBaseRate,
     audited: z.boolean(),
-    contract_version: z.literal(3)
+    contract_version: z.literal(4)
 });
 
 /**
@@ -272,6 +295,40 @@ export const zProspectingStage = z.object({
 });
 
 /**
+ * RankerResult
+ */
+export const zRankerResult = z.object({
+    code: z.enum([
+        'global_rate',
+        'product_rate',
+        'random',
+        'list_price_only',
+        'age_newest_first',
+        'current_rule',
+        'rule_a'
+    ]),
+    auc_mean: z.number(),
+    auc_min: z.number(),
+    auc_max: z.number(),
+    cuts_auc_above_chance: z.int().nullable(),
+    p_at_k: z.number(),
+    lift_at_k: z.number(),
+    val_at_k: z.number(),
+    delta_val: zDelta.nullable(),
+    cuts_val_above_reference: z.int().nullable()
+});
+
+/**
+ * Evidence
+ */
+export const zEvidence = z.object({
+    design: zEvidenceDesign,
+    reference: z.literal('current_rule'),
+    rankers: z.array(zRankerResult),
+    without_no_outcome: z.array(zRankerResult)
+});
+
+/**
  * Seller
  */
 export const zSeller = z.object({
@@ -285,6 +342,21 @@ export const zSeller = z.object({
  */
 export const zSellerList = z.object({
     sellers: z.array(zSeller)
+});
+
+/**
+ * SellerSummary
+ *
+ * Resumo da carteira aberta de um vendedor do filtro.
+ */
+export const zSellerSummary = z.object({
+    seller: z.string(),
+    total: z.int(),
+    focar: z.int(),
+    revisar: z.int(),
+    qualificar: z.int(),
+    nao_pontuavel: z.int(),
+    without_account: z.int()
 });
 
 /**
@@ -346,6 +418,30 @@ export const zSummary = z.object({
 export const zTeamFilter = z.object({
     manager: z.string().nullable(),
     office: z.string().nullable()
+});
+
+/**
+ * ValueBandRule
+ */
+export const zValueBandRule = z.object({
+    band: z.enum([
+        'alto',
+        'médio',
+        'baixo'
+    ]),
+    min_price: z.int(),
+    max_price: z.int().nullable()
+});
+
+/**
+ * Rules
+ *
+ * A política que monta a lista, como dado.
+ */
+export const zRules = z.object({
+    meta: zMeta,
+    ordering: zOrdering,
+    value_bands: z.array(zValueBandRule)
 });
 
 /**
@@ -504,7 +600,8 @@ export const zTeamPipeline = z.object({
     ordering: zOrdering,
     summary: zSummary,
     empty: zPipelineEmpty.nullable(),
-    groups: z.array(zGroup)
+    groups: z.array(zGroup),
+    by_seller: z.array(zSellerSummary)
 });
 
 export const zGetMetaApiMetaGetQuery = z.object({
@@ -544,3 +641,17 @@ export const zGetPipelineApiPipelineGetQuery = z.object({
  * Successful Response
  */
 export const zGetPipelineApiPipelineGetResponse = zTeamPipeline;
+
+export const zGetRulesApiRulesGetQuery = z.object({
+    as_of: z.string().nullish()
+});
+
+/**
+ * Successful Response
+ */
+export const zGetRulesApiRulesGetResponse = zRules;
+
+/**
+ * Successful Response
+ */
+export const zGetEvidenceApiEvidenceGetResponse = zEvidence;

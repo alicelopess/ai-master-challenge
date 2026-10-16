@@ -251,6 +251,90 @@
           }
         }
       }
+    },
+    "/api/rules": {
+      "get": {
+        "summary": "Get Rules",
+        "operationId": "get_rules_api_rules_get",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rules"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "CSVs ausentes ou inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "as_of inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evidence": {
+      "get": {
+        "summary": "Get Evidence",
+        "operationId": "get_evidence_api_evidence_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Evidence"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Resultado do backtest ausente ou inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -422,6 +506,32 @@
         ],
         "title": "CycleReference"
       },
+      "Delta": {
+        "properties": {
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low",
+            "description": "Limite inferior do IC95%."
+          },
+          "high": {
+            "type": "number",
+            "title": "High",
+            "description": "Limite superior do IC95%."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "low",
+          "high"
+        ],
+        "title": "Delta"
+      },
       "ErrorBody": {
         "properties": {
           "detail": {
@@ -443,7 +553,8 @@
               "invalid_as_of_format",
               "as_of_before_last_close",
               "seller_not_found",
-              "opportunity_not_found"
+              "opportunity_not_found",
+              "evidence_unavailable"
             ],
             "title": "Code"
           },
@@ -477,6 +588,98 @@
           "params"
         ],
         "title": "ErrorBody"
+      },
+      "Evidence": {
+        "properties": {
+          "design": {
+            "$ref": "#/components/schemas/EvidenceDesign"
+          },
+          "reference": {
+            "type": "string",
+            "const": "current_rule",
+            "title": "Reference",
+            "description": "A regra servida, base das diferenças."
+          },
+          "rankers": {
+            "items": {
+              "$ref": "#/components/schemas/RankerResult"
+            },
+            "type": "array",
+            "title": "Rankers",
+            "description": "Estratégias na ordem do relatório."
+          },
+          "without_no_outcome": {
+            "items": {
+              "$ref": "#/components/schemas/RankerResult"
+            },
+            "type": "array",
+            "title": "Without No Outcome",
+            "description": "As mesmas medidas sem as oportunidades que nunca fecham na base."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "design",
+          "reference",
+          "rankers",
+          "without_no_outcome"
+        ],
+        "title": "Evidence"
+      },
+      "EvidenceDesign": {
+        "properties": {
+          "cuts": {
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "array",
+            "title": "Cuts",
+            "description": "Datas de corte T; em cada uma, a carteira aberta em T."
+          },
+          "horizon_days": {
+            "type": "integer",
+            "title": "Horizon Days",
+            "description": "Desfecho: ganhou em até este número de dias depois de T."
+          },
+          "top_k": {
+            "type": "integer",
+            "title": "Top K",
+            "description": "Tamanho da lista de cada vendedor."
+          },
+          "observations": {
+            "type": "integer",
+            "title": "Observations",
+            "description": "Pares oportunidade × corte (os cortes se sobrepõem)."
+          },
+          "unique_opportunities": {
+            "type": "integer",
+            "title": "Unique Opportunities"
+          },
+          "n_boot_sellers": {
+            "type": "integer",
+            "title": "N Boot Sellers",
+            "description": "Reamostragens de vendedores no IC das diferenças."
+          },
+          "audited_data": {
+            "type": "boolean",
+            "title": "Audited Data",
+            "description": "O backtest rodou sobre os CSVs auditados."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cuts",
+          "horizon_days",
+          "top_k",
+          "observations",
+          "unique_opportunities",
+          "n_boot_sellers",
+          "audited_data"
+        ],
+        "title": "EvidenceDesign"
       },
       "FieldParams": {
         "properties": {
@@ -938,7 +1141,7 @@
           },
           "contract_version": {
             "type": "integer",
-            "const": 3,
+            "const": 4,
             "title": "Contract Version"
           }
         },
@@ -1229,6 +1432,128 @@
         "title": "ProspectingStage",
         "description": "Estágio Prospecting: grupo qualificar (a regra é o estágio, não a falta de data)."
       },
+      "RankerResult": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "global_rate",
+              "product_rate",
+              "random",
+              "list_price_only",
+              "age_newest_first",
+              "current_rule",
+              "rule_a"
+            ],
+            "title": "Code"
+          },
+          "auc_mean": {
+            "type": "number",
+            "title": "Auc Mean",
+            "description": "AUC média entre os cortes; 0,5 é o acaso."
+          },
+          "auc_min": {
+            "type": "number",
+            "title": "Auc Min"
+          },
+          "auc_max": {
+            "type": "number",
+            "title": "Auc Max"
+          },
+          "cuts_auc_above_chance": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuts Auc Above Chance",
+            "description": "Cortes com o IC95% da AUC acima de 0,5; nulo quando não calculado."
+          },
+          "p_at_k": {
+            "type": "number",
+            "title": "P At K",
+            "description": "Ganhas nas top_k de cada vendedor ÷ top_k."
+          },
+          "lift_at_k": {
+            "type": "number",
+            "title": "Lift At K",
+            "description": "Ganhas nas top_k ÷ ganhas esperadas ao acaso."
+          },
+          "val_at_k": {
+            "type": "number",
+            "title": "Val At K",
+            "description": "Valor ganho nas top_k ÷ valor ganho nas top_k melhores sabendo o futuro (o oráculo)."
+          },
+          "delta_val": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Delta"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "val_at_k menos o da referência, com IC95% por bootstrap de vendedores; nulo na referência."
+          },
+          "cuts_val_above_reference": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuts Val Above Reference",
+            "description": "Cortes com val_at_k acima da referência."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "auc_mean",
+          "auc_min",
+          "auc_max",
+          "cuts_auc_above_chance",
+          "p_at_k",
+          "lift_at_k",
+          "val_at_k",
+          "delta_val",
+          "cuts_val_above_reference"
+        ],
+        "title": "RankerResult"
+      },
+      "Rules": {
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          },
+          "ordering": {
+            "$ref": "#/components/schemas/Ordering"
+          },
+          "value_bands": {
+            "items": {
+              "$ref": "#/components/schemas/ValueBandRule"
+            },
+            "type": "array",
+            "title": "Value Bands",
+            "description": "Da faixa de cima para a de baixo."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "meta",
+          "ordering",
+          "value_bands"
+        ],
+        "title": "Rules",
+        "description": "A política que monta a lista, como dado."
+      },
       "Seller": {
         "properties": {
           "name": {
@@ -1317,6 +1642,51 @@
           "groups"
         ],
         "title": "SellerPipeline"
+      },
+      "SellerSummary": {
+        "properties": {
+          "seller": {
+            "type": "string",
+            "title": "Seller"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "focar": {
+            "type": "integer",
+            "title": "Focar"
+          },
+          "revisar": {
+            "type": "integer",
+            "title": "Revisar"
+          },
+          "qualificar": {
+            "type": "integer",
+            "title": "Qualificar"
+          },
+          "nao_pontuavel": {
+            "type": "integer",
+            "title": "Nao Pontuavel"
+          },
+          "without_account": {
+            "type": "integer",
+            "title": "Without Account"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seller",
+          "total",
+          "focar",
+          "revisar",
+          "qualificar",
+          "nao_pontuavel",
+          "without_account"
+        ],
+        "title": "SellerSummary",
+        "description": "Resumo da carteira aberta de um vendedor do filtro."
       },
       "SimpleAction": {
         "properties": {
@@ -1503,6 +1873,14 @@
             "type": "array",
             "title": "Groups",
             "description": "Na ordem de `ordering.group_order`."
+          },
+          "by_seller": {
+            "items": {
+              "$ref": "#/components/schemas/SellerSummary"
+            },
+            "type": "array",
+            "title": "By Seller",
+            "description": "Todo vendedor do filtro, inclusive com zero abertas, em ordem alfabética: nunca um ranking."
           }
         },
         "additionalProperties": false,
@@ -1513,9 +1891,48 @@
           "ordering",
           "summary",
           "empty",
-          "groups"
+          "groups",
+          "by_seller"
         ],
         "title": "TeamPipeline"
+      },
+      "ValueBandRule": {
+        "properties": {
+          "band": {
+            "type": "string",
+            "enum": [
+              "alto",
+              "médio",
+              "baixo"
+            ],
+            "title": "Band"
+          },
+          "min_price": {
+            "type": "integer",
+            "title": "Min Price",
+            "description": "Preço de tabela mínimo da faixa, inclusive."
+          },
+          "max_price": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Price",
+            "description": "Preço de tabela máximo, inclusive; nulo na faixa de cima."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "band",
+          "min_price",
+          "max_price"
+        ],
+        "title": "ValueBandRule"
       },
       "WonCycleParams": {
         "properties": {

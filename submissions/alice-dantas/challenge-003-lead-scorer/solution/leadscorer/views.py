@@ -87,12 +87,26 @@ def ordering() -> Dict[str, Any]:
             "within_group": list(codes.ORDER_CRITERIA), "age_affects_order": False}
 
 
+def value_bands() -> List[Dict[str, Any]]:
+    """Faixas de valor de tabela como dado (`triage.value_band`): preço ≥ mínimo, da faixa
+    de cima para a de baixo. Os preços são inteiros, então o máximo é o mínimo da faixa
+    de cima menos 1; a faixa de cima não tem máximo."""
+    bands, upper = [], None
+    for label, minimum in policy.VALUE_BANDS:
+        bands.append({"band": label, "min_price": minimum, "max_price": None if upper is None else upper - 1})
+        upper = minimum
+    return bands
+
+
+def summary(opps: pd.DataFrame) -> Dict[str, int]:
+    return {"total": len(opps), **triage.summary(opps), "without_account": int(opps["account"].isna().sum())}
+
+
 def portfolio(opps: pd.DataFrame, info: Dict[str, Any], ctx: triage.Context, no_open: str) -> Dict[str, Any]:
     """Resumo, ordem e grupos de uma carteira já ordenada. `no_open` é o código de
     carteira vazia (`codes.NO_OPEN_FOR_SELLER` ou `NO_OPEN_FOR_FILTER`)."""
     counts = triage.summary(opps)
     total = len(opps)
-    no_account = int(opps["account"].isna().sum())
     groups = []
     for state in policy.STATES:
         rows = opps[opps["state"] == state]
@@ -106,7 +120,7 @@ def portfolio(opps: pd.DataFrame, info: Dict[str, Any], ctx: triage.Context, no_
     return {
         "meta": info,
         "ordering": ordering(),
-        "summary": {"total": total, **counts, "without_account": no_account},
+        "summary": summary(opps),
         "empty": None if total else _code(no_open),
         "groups": groups,
     }
@@ -125,12 +139,26 @@ def team_pipeline(dataset: Dataset, manager: Optional[str] = None, office: Optio
     Filtro sem abertas (ou inexistente) devolve lista vazia com o código de vazio."""
     ctx = context(dataset, as_of)
     opps = triage.classify(dataset.opportunities, ctx)
+    teams = dataset.teams
     if manager:
-        opps = opps[opps["manager"] == manager]
+        opps, teams = opps[opps["manager"] == manager], teams[teams["manager"] == manager]
     if office:
-        opps = opps[opps["regional_office"] == office]
+        opps, teams = opps[opps["regional_office"] == office], teams[teams["regional_office"] == office]
     payload = portfolio(triage.order(opps), meta(dataset, ctx), ctx, codes.NO_OPEN_FOR_FILTER)
-    return {"filter": {"manager": manager, "office": office}, **payload}
+    return {"filter": {"manager": manager, "office": office}, **payload, "by_seller": by_seller(opps, teams)}
+
+
+def by_seller(opps: pd.DataFrame, teams: pd.DataFrame) -> List[Dict[str, Any]]:
+    """O resumo de cada vendedor do filtro, inclusive quem não tem abertas, em ordem
+    alfabética: é a carteira de cada um, nunca um ranking de pessoas (AC-2.9)."""
+    return [{"seller": name, **summary(opps[opps["sales_agent"] == name])}
+            for name in sorted(teams["sales_agent"])]
+
+
+def rules(dataset: Dataset, as_of: Optional[triage.DateLike] = None) -> Dict[str, Any]:
+    """A política que monta a lista, como dado, para a página Como funciona."""
+    ctx = context(dataset, as_of)
+    return {"meta": meta(dataset, ctx), "ordering": ordering(), "value_bands": value_bands()}
 
 
 def seller_pipeline(dataset: Dataset, seller: str, as_of: Optional[triage.DateLike] = None) -> Dict[str, Any]:

@@ -40,7 +40,7 @@ from scipy import stats
 SOLUTION_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SOLUTION_DIR))
 
-from leadscorer import data, policy, triage  # noqa: E402
+from leadscorer import codes, data, policy, triage  # noqa: E402
 from leadscorer.errors import LeadScorerError, PolicyError  # noqa: E402
 
 SEED = 20260101
@@ -182,6 +182,18 @@ RANKERS: List[Tuple[str, Callable[[Cut], np.ndarray], bool]] = [
 ]
 LIMITS: List[Tuple[str, Callable[[Cut], np.ndarray], bool]] = [
     (f"Até {days} d → até o maior ciclo → preço", fixed_limit(days), False) for days in FIXED_LIMITS]
+# Código estável de cada estratégia no JSON (o nome é do relatório; a API serve os códigos).
+CODES = {
+    "Taxa global": codes.RANKER_GLOBAL_RATE,
+    "Taxa por produto": codes.RANKER_PRODUCT_RATE,
+    "Aleatório": codes.RANKER_RANDOM,
+    "Só valor de tabela": codes.RANKER_LIST_PRICE_ONLY,
+    "Idade: mais nova primeiro": codes.RANKER_AGE_NEWEST_FIRST,
+    REFERENCE: codes.RANKER_CURRENT_RULE,
+    RULE_A: codes.RANKER_RULE_A,
+    "[VAZAMENTO] fechou no 3º mês do trimestre": codes.RANKER_LEAK_QUARTER_END,
+    **{name: f"limit_{days}_days" for (name, _, _), days in zip(LIMITS, FIXED_LIMITS)},
+}
 # Sem as que nunca fecham, só os que ordenam por preço e idade interessam.
 SENSITIVE = [(name, ranker, leak) for name, ranker, leak in RANKERS if name in
              ("Só valor de tabela", REFERENCE, RULE_A)]
@@ -260,7 +272,8 @@ def evaluate(cuts: List[Cut], rankers: List[Tuple[str, Callable[[Cut], np.ndarra
             scores = ranker(cut)
             top = top_k(cut, scores).assign(cut=cut.as_of.date().isoformat())
             lists.setdefault(name, []).append(top)
-            row = {"cut": cut.as_of.date().isoformat(), "ranker": name, "leak": leak, "auc": round(auc(y, scores), 3)}
+            row = {"cut": cut.as_of.date().isoformat(), "ranker": name, "code": CODES[name], "leak": leak,
+                   "auc": round(auc(y, scores), 3)}
             if with_ci:
                 low, high = auc_ci(y, scores)
                 row.update(ci_low=round(low, 3), ci_high=round(high, 3))
@@ -276,7 +289,7 @@ def summarize(rows: List[Dict], lists: Dict[str, pd.DataFrame],
     summary = []
     for name, _, leak in rankers:
         mine = [r for r in rows if r["ranker"] == name]
-        entry = {"ranker": name, "leak": leak,
+        entry = {"ranker": name, "code": CODES[name], "leak": leak,
                  "auc_mean": round(float(np.mean([r["auc"] for r in mine])), 3),
                  "auc_min": min(r["auc"] for r in mine), "auc_max": max(r["auc"] for r in mine)}
         if "ci_low" in mine[0]:
