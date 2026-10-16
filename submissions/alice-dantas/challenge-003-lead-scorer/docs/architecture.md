@@ -1,6 +1,6 @@
 # Architecture — Challenge 003 | Lead Scorer
 
-**Status:** Decisões propostas (ADR-001 a ADR-003, registradas em 15/10/2026). A seção 1 mantém as **entradas de produto** como contexto; a seção 2 registra as decisões. Implementação não iniciada.
+**Status:** Decisões propostas (ADR-001 a ADR-003, registradas em 15/10/2026); ADR-004 (16/10/2026) corrige o contrato entre back e front do ADR-003. A seção 1 mantém as **entradas de produto** como contexto; a seção 2 registra as decisões. Implementação não iniciada.
 **Última atualização:** 15/10/2026
 **Documentos de origem:** [discovery.md](./discovery.md) (Etapas 1 a 4) e [data-audit.md](./data-audit.md) (auditoria dos dados)
 
@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | **Antes de começar** | Como ler este documento? | [Como ler](#como-ler) · [Procedência](#procedencia) · [Convenção de identificadores](#ids) |
 | [**1. Contexto: entradas de produto**](#secao-1) | O que construir primeiro, para quem, com que evidência e sob quais limites? | [1.1 Conclusões](#sub-1-1) · [1.2 Requisitos](#sub-1-2) · [1.3 Matriz de oportunidades](#sub-1-3) · [1.4 Priorização](#sub-1-4) · [1.5 P0 e jornada](#sub-1-5) · [1.6 Rastreabilidade](#sub-1-6) · [1.7 Trade-offs](#sub-1-7) · [1.8 Fora do MVP](#sub-1-8) · [1.9 Sinais mínimos e restrições](#sub-1-9) · [1.10 Incertezas](#sub-1-10) |
-| [**2. Registros de decisão arquitetural**](#secao-2) | O que decidimos, por quê, o que rejeitamos, o que sacrificamos, como verificamos e quando mudaríamos de ideia? | [2.0 Panorama](#sub-2-0) · [ADR-001 Scoring](#adr-001) · [ADR-002 Dados](#adr-002) · [ADR-003 Tecnologia](#adr-003) |
+| [**2. Registros de decisão arquitetural**](#secao-2) | O que decidimos, por quê, o que rejeitamos, o que sacrificamos, como verificamos e quando mudaríamos de ideia? | [2.0 Panorama](#sub-2-0) · [ADR-001 Scoring](#adr-001) · [ADR-002 Dados](#adr-002) · [ADR-003 Tecnologia](#adr-003) · [ADR-004 Contrato](#adr-004) |
 | [**3. Rastreabilidade e pendências**](#secao-3) | Onde cada questão aberta foi resolvida e o que ainda precisa ser corrigido? | [3.1 Questões do discovery](#sub-3-1) · [3.2 Requisitos por ADR](#sub-3-2) · [3.3 Evidência nova](#sub-3-3) · [3.4 Correções pendentes](#sub-3-4) |
 | **Apêndice** | Limites e registro | [Limites deste documento](#limites) |
 
@@ -52,7 +52,7 @@ Cada identificador tem um link para o ponto onde é definido.
 | [RJ-01](#rj-01) a [RJ-07](#rj-07) | Abordagens rejeitadas do MVP | [1.8](#sub-1-8) |
 | [Q-01](#q-01) a [Q-03](#q-03) | Questões adicionais para a arquitetura | [1.9](#sub-1-9) |
 | [U-01](#u-01) a [U-10](#u-10) | Incertezas | [1.10](#sub-1-10) |
-| [ADR-001](#adr-001) a [ADR-003](#adr-003) | Registros de decisão arquitetural | [2](#secao-2) |
+| [ADR-001](#adr-001) a [ADR-004](#adr-004) | Registros de decisão arquitetural | [2](#secao-2) |
 | [CP-01](#cp-01) a [CP-06](#cp-06) | Correções pendentes nos documentos de origem | [3.4](#sub-3-4) |
 | [P-001](./discovery.md#p-001) a [P-003](./discovery.md#p-003) · [H-001](./discovery.md#h-001) a [H-008](./discovery.md#h-008) | Problemas e hipóteses | [discovery 1.3](./discovery.md#sub-1-3) |
 | [HD-01](./discovery.md#hd-01) a [HD-08](./discovery.md#hd-08) | Decisões do mapa | [discovery 2.6](./discovery.md#sub-2-6) |
@@ -411,7 +411,7 @@ Cada incerteza diz de onde vem, o que muda no MVP e como reduzi-la. As marcadas 
 >
 > **O que esta seção responde:** o que decidimos construir, por que, o que rejeitamos, o que sacrificamos, como vamos verificar e quando mudaríamos de ideia.
 >
-> **Como está organizada:** são três decisões independentes, cada uma com sua evidência e sua condição de revisão: [ADR-001](#adr-001) (scoring), [ADR-002](#adr-002) (dados) e [ADR-003](#adr-003) (tecnologia).
+> **Como está organizada:** são três decisões independentes, cada uma com sua evidência e sua condição de revisão: [ADR-001](#adr-001) (scoring), [ADR-002](#adr-002) (dados) e [ADR-003](#adr-003) (tecnologia). O [ADR-004](#adr-004) (contrato entre back e front) veio depois do build e corrige o ADR-003.
 >
 > **O que NÃO decide:** pesos definitivos. As faixas de valor e a ordem de desempate são **política provisória** ([U-06](#u-06)), à espera de validação da Head de RevOps.
 
@@ -716,7 +716,7 @@ A auditoria identificou:
 <a id="adr-003"></a>
 ### ADR-003 — Escolha das Tecnologias
 
-**Status:** Proposto
+**Status:** Proposto; o contrato entre back e front foi corrigido pelo [ADR-004](#adr-004) (16/10/2026)
 **Data:** 15/10/2026
 
 #### Contexto
@@ -834,6 +834,141 @@ Estrutura **indicativa** em `solution/`:
 - **Mais de ~30 vendedores** usando ou necessidade de escrita (marcações): migrar para banco e autenticação.
 - **O avaliador não tiver Node:** servir o front pré-compilado pela própria API.
 - **A fonte passar a ser o CRM vivo:** reavaliar a camada de dados.
+
+---
+
+<a id="adr-004"></a>
+### ADR-004 — Contrato orientado a dados entre back e front
+
+**Status:** Aceito e implementado (fases F1 a F5 do plano do contrato). Corrige o [ADR-003](#adr-003) no que ele previa como "contrato tipado".
+**Data:** 16/10/2026
+
+#### Contexto
+
+O [ADR-003](#adr-003) pedia apresentação desacoplada da lógica e um contrato tipado. O build entregou outra coisa:
+
+- **[Código] Payload com texto de tela.** O payload trazia frases prontas em pt-BR: nomes dos grupos, as frases do "por que está aqui", próximo passo, legenda, avisos e mensagens de vazio.
+- **[Código] Sem schema de resposta.** As rotas devolviam `Dict[str, Any]`, então o `/docs` não descrevia o formato e o front não tinha tipos para gerar nem para validar.
+- **[Código] Front preso ao back.** Qualquer mudança de texto exigia mudar Python e testes de frase exata, e um time de front não conseguia evoluir a tela sozinho.
+- **[Dados] Frases que diziam mais do que a regra.** Duas frases afirmavam mais do que a regra decidia:
+  - "Qualificar porque ainda não tem data de engajamento", quando a regra é o estágio Prospecting;
+  - "isso não diferencia uma da outra", quando a idade diferencia os grupos no backtest corrigido.
+
+#### Alternativas consideradas
+
+##### A. Manter o texto no núcleo
+
+- **Vantagens:** a frase e a regra ficam juntas, e a CLI e a tela mostram o mesmo texto.
+- **Limitações:** o back decide a experiência de uso; o front não evolui sozinho; não há contrato tipado.
+
+##### B. Códigos e números no back, texto no front e na CLI
+
+- **Vantagens:**
+  - cada lado tem sua responsabilidade;
+  - o front gera tipos e validação do contrato;
+  - a garantia de honestidade fica onde dá para provar: o back testa que o código cita o que decidiu, e quem apresenta testa que a frase só usa os valores do código.
+- **Limitações:** dois catálogos de texto (tela e CLI) e mais arquivos gerados.
+- **Veredito:** **escolhida**.
+
+##### C. Camada BFF no servidor do Next, dona dos textos
+
+- **Vantagens:** mais limpa para times grandes.
+- **Limitações:** mais uma camada para um MVP de uma página.
+
+##### D. Catálogo de textos único, lido pela tela e pela CLI
+
+- **Vantagens:** uma fonte só de texto.
+- **Limitações:** acopla de novo o front a um arquivo do back; os públicos (vendedor na tela, operador no terminal) são diferentes.
+
+#### Decisão
+
+**Adotamos B.**
+
+| Responsabilidade | Dono | Como |
+| --- | --- | --- |
+| Grupo de cada oportunidade e ordem (dos grupos e dentro deles) | Back | `group`, a ordem dos itens e `ordering` (critérios como dado) |
+| Motivos da posição | Back | `reasons: [{code, role, params}]`; `role` diz se o motivo decidiu o grupo, a ordem ou é só contexto |
+| Ação sugerida e grupo indicado quando o primeiro está vazio | Back | `next_action` e `empty`, como código com parâmetros |
+| Números e cálculos | Back | Inclusive derivados; o front não calcula valor de negócio |
+| Erros | Back | `{code, params, detail}`; o `detail` é a mensagem para quem opera |
+| Nomes, frases, formatação, layout, abas, filtros | Front e CLI | `web/copy/pt-BR.ts` e `leadscorer/cli_text.py` |
+
+**Artefatos do contrato:**
+
+| Artefato | Onde | Papel |
+| --- | --- | --- |
+| Códigos | `leadscorer/codes.py` | Fonte dos códigos do contrato |
+| Modelos de resposta | `api/schemas.py` (pydantic) | Proíbem campos extras e usam uniões discriminadas por `code` |
+| Snapshot do contrato | `web/contract/openapi.json` | Gerado por `scripts/export_openapi.py` |
+| Tipos e validação do front | `web/lib/contract/` (TypeScript e zod) | Gerados por `npm run contract` |
+| Respostas sintéticas | `web/tests/fixtures/` | Geradas por `scripts/export_fixtures.py` |
+
+**Versões do contrato:**
+- **Versão 2:** os códigos foram acrescentados ao lado dos textos.
+- **Versão 3:** os textos saíram do payload.
+
+O campo `meta.contract_version` informa qual é a versão em uso.
+
+**Regras de fronteira:**
+1. O front formata e escolhe o que mostrar, mas não calcula valores de negócio. Um número novo na tela vem do back como campo.
+2. A frase não afirma mais do que o código diz. O significado de cada código fica na descrição do schema.
+3. O front tolera campo novo (mudança aditiva) e recusa código ou tipo desconhecido, mostrando uma mensagem de erro em vez de uma tela quebrada.
+
+#### Justificativa
+
+1. **[Escolha] Fronteira definida pelo usuário:** a apresentação é do front; a entrega dos dados segundo a regra é do back.
+2. **[Código] Honestidade testável nos dois lados:**
+   - o back garante que cada motivo de grupo e de ordem cita exatamente os valores que decidiram, nos 2.089 itens;
+   - os catálogos garantem que todo número da frase vem desses valores e que nenhum termo proibido aparece.
+3. **[Código] O núcleo Python continua necessário:** a regra servida é a mesma que o backtest avalia (`scripts/backtest.py` importa o núcleo), e a lógica é de dados (pandas).
+
+#### Trade-offs
+
+**Benefícios:**
+
+- O front muda textos e layout sem tocar no back.
+- Tipos gerados do contrato.
+- Erro de contrato visível.
+- A CLI deixa de depender de campos de texto.
+
+**Limitações aceitas:**
+
+- **Dois catálogos de texto:** cada um tem seu teste de vocabulário e de cobertura de códigos.
+- **Três artefatos gerados a manter atualizados:** snapshot, fixtures e `lib/contract`. Testes nos dois lados falham quando ficam velhos.
+- **Ferramentas do front fixadas para Node 22.12:** Vite 7, jsdom 28 e `@hey-api/openapi-ts` 0.95.
+
+#### Consequências para a implementação
+
+- **Núcleo:**
+  - `explain.py` emite só códigos;
+  - `policy.py` não tem texto de tela;
+  - os estados são as próprias chaves (`focar` … `nao_pontuavel`);
+  - as etapas de junção usam chaves, e os rótulos estão na CLI.
+- **API:** `response_model` nas quatro rotas, com corpo de erro único.
+- **Front:**
+  - TypeScript;
+  - cliente que valida cada resposta (`lib/api.ts`);
+  - catálogo com `switch` exaustivos, de modo que um código novo sem texto falha o `typecheck`.
+- **CLI:** `cli_text.py` monta `list`, `explain` e `check-data`. A saída de `list` ficou idêntica byte a byte à anterior, e a de `explain` mudou só nas duas frases corrigidas.
+
+#### Validação
+
+| # | Teste | Onde |
+| --- | --- | --- |
+| 1 | O snapshot e as respostas sintéticas estão atualizados; toda rota responde com modelo tipado, sem objeto solto | `tests/test_contract.py` |
+| 2 | O payload não traz nenhum campo de texto pronto | `tests/test_contract.py` |
+| 3 | Os motivos de grupo e de ordem citam os valores que decidiram; nenhum desfecho entra no que decide; `ordering` descreve a ordem real | `tests/test_codes.py` |
+| 4 | O núcleo e o schema listam os mesmos códigos; todo erro do núcleo tem código do contrato | `tests/test_codes.py` |
+| 5 | Todo código tem texto na CLI; vocabulário; números só dos parâmetros | `tests/test_cli_text.py` |
+| 6 | As respostas passam na validação gerada; código desconhecido é recusado; `lib/contract` está atualizado | `web/tests/contract.test.ts` |
+| 7 | Todo código tem texto na tela; vocabulário; números só dos parâmetros; textos de referência | `web/tests/copy.test.ts` |
+| 8 | A tela renderiza lista, painel e vazios; resposta fora do contrato e erro da API viram mensagem | `web/tests/render.test.tsx` |
+
+#### Condição para revisitar a decisão
+
+- **Mais de um front ou um time grande de front:** considerar uma camada BFF (alternativa C).
+- **A CLI deixar de ser usada:** remover `cli_text.py`.
+- **Necessidade de idiomas:** os catálogos viram arquivos por idioma.
 
 ---
 

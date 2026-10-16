@@ -1,6 +1,6 @@
 # PRD — Challenge 003 | Lead Scorer
 
-**Status:** escopo congelado para build em 15/10/2026 · **Dona:** Maria Alice Dantas · **Base:** [architecture.md](./architecture.md) (ADR-001 a ADR-003), [data-audit.md](./data-audit.md) e [discovery.md](./discovery.md). Este PRD não reabre o discovery: reduz os seis P0 da arquitetura a três e fixa aceite, dados, comandos e ordem de construção. **Revisão 1** (teste de mesa, 15/10/2026): próximos passos, legenda de ordem, frase de posição e AC-2.12.
+**Status:** escopo congelado para build em 15/10/2026 · **Dona:** Maria Alice Dantas · **Base:** [architecture.md](./architecture.md) (ADR-001 a ADR-003), [data-audit.md](./data-audit.md) e [discovery.md](./discovery.md). Este PRD não reabre o discovery: reduz os seis P0 da arquitetura a três e fixa aceite, dados, comandos e ordem de construção. **Revisão 1** (teste de mesa, 15/10/2026): próximos passos, legenda de ordem, frase de posição e AC-2.12. **Revisão 2** (16/10/2026): contrato orientado a dados ([ADR-004](./architecture.md#adr-004)). Os critérios de texto passam a ser de código no back e de texto nos catálogos da tela e da CLI; entram os AC-4.x do contrato e o backtest com todas as abertas em cada corte.
 
 ## 1. Problema e valor
 
@@ -31,16 +31,26 @@
 **P0-2 · Lista "Onde focar" por vendedor.** Origem: F-01 e F-04; RB-04, RB-06, RD-06, RE-02, Q-01; ADR-001 e ADR-003.
 - **Descrição:** a carteira de um vendedor em ordem única e declarada, com resumo por estado.
 - **Entradas:** saída de P0-1, `seller` e `as_of`; `manager` e `office` só na API.
-- **Saídas:** `GET /api/meta`; `/api/sellers` (ordem alfabética); `/api/sellers/{seller}/pipeline?as_of=` (`summary`, `account_warning` e grupos com itens e `empty_message`); `/api/pipeline?manager=&office=`; uma página Next.js; CLI `python -m leadscorer list`.
-- **Lógica:** estado → faixa de valor de tabela (alto ≥ 3.000; médio de 500 a 2.999; baixo < 500) → preço decrescente → ID, só para estabilidade. A idade é coluna; mesmo estado e produto é empate agrupado; vendedores nunca são ordenados. Acima da lista vai a legenda fixa "Ordem: Focar → Revisar → Qualificar → Não pontuável; em cada grupo, maior valor de tabela primeiro; a idade aparece, mas não muda a ordem." Faixas e limite são política provisória (U-06).
+- **Saídas:** `GET /api/meta`; `/api/sellers` (ordem alfabética); `/api/sellers/{seller}/pipeline?as_of=` (`summary`, `ordering`, `empty` e grupos com itens, `empty` e `next_action`, em códigos; ver ADR-004); `/api/pipeline?manager=&office=`; uma página Next.js; CLI `python -m leadscorer list`.
+- **Lógica:** estado → faixa de valor de tabela (alto ≥ 3.000; médio de 500 a 2.999; baixo < 500) → preço decrescente → ID, só para estabilidade. A idade é coluna; mesmo estado e produto é empate agrupado; vendedores nunca são ordenados. A ordem vai no payload como dado (`ordering`), e a tela e a CLI escrevem acima da lista a legenda "Ordem: Focar → Revisar → Qualificar → Não pontuável; em cada grupo, maior valor de tabela primeiro; a idade aparece, mas não muda a ordem." Faixas e limite são política provisória (U-06).
 - **Dados ausentes:** vendedor inexistente → 404; vendedor sem abertas (8), grupo vazio ou filtro vazio → mensagem própria; Focar vazio (6 vendedores) ainda aponta o próximo grupo com oportunidades; conta nula → "sem cliente registrado" (AC-2.4 a 2.7 e 2.10).
 - **Pronto quando:** AC-2.x verdes, CLI igual à API e a jornada rodando sem intervenção.
 
 **P0-3 · "Por que está aqui".** Origem: F-02 e a frase mínima de F-09; RB-03, RE-04, RD-01, RD-05, RJ-07, Q-03.
 - **Descrição:** explica cada posição com frases de modelo fixo, preenchidas com campos, e dá o próximo passo.
-- **Entradas e saídas:** linha e `meta` de P0-1 → `explanation: [{factor, text, fields}]` na API, na tela e na CLI.
-- **Lógica:** sem LLM. Frases: posição ("<Estado> porque <está em negociação há X dias, dentro/acima do maior ciclo já fechado (138 d) | ainda não tem data de engajamento | falta <campo>>"); valor de tabela ("preço de catálogo, não valor negociado"); idade × P90 das ganhas do produto (com N) e o limite; e a fixa "Não sabemos a chance de fechar: cerca de 63% das fechadas foram ganhas (48% a 72% contando as abertas), e isso não diferencia uma da outra".
-- **Próximo passo:** Focar, "Trabalhe primeiro os de maior valor de tabela; empates do mesmo produto valem o mesmo." Revisar, "Confirme no CRM se segue ativa: idade acima do ciclo não prova que o negócio terminou." Qualificar, "Ainda em prospecção: avance no CRM os de maior valor de tabela e registre a data de engajamento quando houver contato." Não pontuável, "Corrija <campo> no CRM." Focar vazio: "Nenhuma oportunidade dentro do ciclo observado (até 138 d). Comece por Revisar: confirme no CRM quais seguem ativas." (Se Revisar também estiver vazio, aponta Qualificar.) Vocabulário proibido: AC-3.8.
+- **Entradas e saídas:** linha e `meta` de P0-1 → `reasons: [{code, role, params}]` e `next_action: {code, params}` na API. A tela (`copy/pt-BR.ts`) e a CLI (`cli_text.py`) escrevem as frases (ADR-004).
+- **Lógica:** sem LLM. Motivos:
+  - **grupo** (`role: group`): idade × maior ciclo já fechado, estágio Prospecting ou campo ausente;
+  - **ordem** (`role: order`): faixa e preço de tabela;
+  - **contexto** (`role: context`): idade × P90 das ganhas do produto, com N, e o limite; taxa das fechadas.
+- **Frases da tela e da CLI:**
+  - "<Grupo> porque <está em negociação há X dias, dentro/acima do maior ciclo já fechado (138 d) | ainda está em prospecção | falta <campo>>";
+  - "preço de catálogo, não valor negociado";
+  - "Não sabemos a chance de fechar desta oportunidade: cerca de 63% das fechadas foram ganhas (48% a 72% contando as abertas)".
+- **Duas frases corrigidas na Revisão 2,** porque diziam mais do que o código:
+  - "ainda não tem data de engajamento" virou "ainda está em prospecção";
+  - "e isso não diferencia uma da outra" saiu.
+- **Próximo passo** (códigos `work_highest_list_price_first`, `confirm_still_active`, `advance_prospecting` e `fix_missing_field`; o texto é da tela e da CLI): Focar, "Trabalhe primeiro os de maior valor de tabela; empates do mesmo produto valem o mesmo." Revisar, "Confirme no CRM se segue ativa: idade acima do ciclo não prova que o negócio terminou." Qualificar, "Ainda em prospecção: avance no CRM os de maior valor de tabela e registre a data de engajamento quando houver contato." Não pontuável, "Corrija <campo> no CRM." Focar vazio: "Nenhuma oportunidade dentro do ciclo observado (até 138 d). Comece por Revisar: confirme no CRM quais seguem ativas." (Se Revisar também estiver vazio, aponta Qualificar.) Vocabulário proibido: AC-3.8.
 - **Dados ausentes:** sem idade, com menos de 30 ganhas do produto (GTK 500 tem 15) ou sem nenhuma ganha → frase própria, sem número inventado; conta nula → só o aviso do cabeçalho (AC-3.3 a 3.5).
 - **Pronto quando:** AC-3.x verdes e 100% dos itens explicados.
 
@@ -52,7 +62,7 @@
 
 **Oráculos:** os números e registros de AC-1.1, AC-1.8, AC-2.1, AC-2.4, AC-3.1 e AC-3.3 foram conferidos nos CSVs em 15/10/2026, por consulta fora do repositório (CP-01).
 
-**Dependências:** Python 3.9.6 com pandas 2.2.3 e numpy 2.0.2; FastAPI, uvicorn, pytest e httpx fixados na fatia 0; scipy e scikit-learn só no backtest; Node 22.12 e npm 11.5 com Next.js e lockfile. Sem banco, sem segredo, sem LLM e sem rede em execução.
+**Dependências:** Python 3.9.6 com pandas 2.2.3 e numpy 2.0.2; FastAPI, pydantic, uvicorn, pytest e httpx fixados na fatia 0; scipy e scikit-learn só no backtest; Node 22.12 e npm 11.5 com Next.js e lockfile; no front, TypeScript 6, zod 4, Vitest 5 (com Vite 7), jsdom 28 e `@hey-api/openapi-ts` 0.95, que gera tipos e validação do contrato. Sem banco, sem segredo, sem LLM e sem rede em execução.
 
 **Comandos do avaliador** (em `submissions/alice-dantas/challenge-003-lead-scorer/solution/`):
 
@@ -63,7 +73,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/pytest
 .venv/bin/uvicorn api.main:app --port 8000
 cd web && npm ci && npm run dev                    # http://localhost:3000
+cd web && npm run typecheck && npm test            # testes do front, sem a API no ar
 .venv/bin/python -m leadscorer list --seller "Zane Levy"   # caminho sem Node
+# Se o contrato mudar: export_openapi.py, export_fixtures.py e, em web/, npm run contract
 ```
 
 | Artefato | Risco | Regra |
@@ -79,9 +91,10 @@ cd web && npm ci && npm run dev                    # http://localhost:3000
 | Testável hoje | Como | Critério |
 | --- | --- | --- |
 | Execução | Setup do zero pelo README | Nenhum passo fora do README |
-| Funcionalidade | pytest e a jornada da seção 2 | 100% verde; jornada em até 2 min |
-| Lógica | Partição, reconciliação, `as_of`, invariância e texto | Bate com os oráculos |
-| Ranking offline válido | Backtest em 5 cortes, só com o que se sabia em cada um; AUC com IC contra taxa global, por produto, aleatório e só valor; valor capturado à parte | Sem vazamento e reprodutível; AUC perto de 0,5 é esperado e reportado; a armadilha do mês de fechamento só chega a ~0,64 com o campo proibido |
+| Funcionalidade | pytest, `npm test`, `npm run typecheck` e a jornada da seção 2 | 100% verde; jornada em até 2 min |
+| Lógica | Partição, reconciliação, `as_of`, invariância, códigos e textos | Bate com os oráculos |
+| Contrato | Schema tipado, snapshot e respostas sintéticas atualizados; validação no front | AC-4.1 a 4.4 |
+| Ranking offline válido | Backtest em 7 cortes com todas as Engaging abertas em T e desfecho em 90 dias, só com o que se sabia em cada corte; AUC com IC; P@10, Lift@10 e Val@10 por vendedor, com IC por bootstrap de vendedores; sensibilidade sem as negociações que nunca fecham | Sem vazamento e reprodutível; produto e preço perto de 0,5; a vantagem da idade é reportada junto com a sensibilidade; a armadilha do mês de fechamento só funciona com o campo proibido |
 | Compreensão | 3 a 5 pessoas não técnicas: "quais 3 você abre, e por quê?" | 4 de 5 explicam a posição e o limite da ferramenta |
 
 **Só em piloto** (exige F-07 e grupo de controle, F-13): adoção semanal; % de deals trabalhados que estavam em Focar; horas economizadas e tempo para decidir o foco; conversão e valor ganho com e sem a ferramenta; % de Revisar resolvidos em 30 dias. Nenhuma dessas métricas pode ser afirmada com o dataset.
@@ -99,8 +112,16 @@ Cada fatia termina com os seus testes verdes.
 6. **P0-2c:** tela e ensaio cronometrado da jornada (AC-2.12).
 7. **Validação offline:** backtest, armadilha e scripts das consultas diretas (fecha CP-01).
 8. **Entrega:** README, process log e commit.
+9. **Contrato (Revisão 2, ADR-004):**
+   - schemas tipados;
+   - códigos no back;
+   - catálogos de texto na tela e na CLI;
+   - payload sem texto (AC-4.1 a 4.4).
 
-**Decisões desta versão:** **D-1** os seis P0 da arquitetura viram três, e o backtest de F-06 vira evidência (fatia 7). **D-2** os CSVs ficam fora do PR. **D-3** as 4 a 6 h são estimativa, sem gatilho de tempo (fecha a falha 4 do PL-021). **D-4** o `as_of` mínimo é `max(close_date)`; o cenário 2017-12-27 do ADR-002 (Focar 351) sai do aceite, porque tira da carteira deals que só fecharam depois do `as_of`. **D-5** rótulo de produto desconhecido gera erro; produto vazio vira Não pontuável.
+**Decisões desta versão:** **D-1** os seis P0 da arquitetura viram três, e o backtest de F-06 vira evidência (fatia 7). **D-2** os CSVs ficam fora do PR. **D-3** as 4 a 6 h são estimativa, sem gatilho de tempo (fecha a falha 4 do PL-021). **D-4** o `as_of` mínimo é `max(close_date)`; o cenário 2017-12-27 do ADR-002 (Focar 351) sai do aceite, porque tira da carteira deals que só fecharam depois do `as_of`. **D-5** rótulo de produto desconhecido gera erro; produto vazio vira Não pontuável. **D-6** (Revisão 2):
+- o back entrega códigos, e o texto é da tela e da CLI;
+- `contract_version` 3 sinaliza a saída dos campos de texto;
+- as duas frases que diziam mais do que o código foram corrigidas.
 
 ---
 
@@ -114,34 +135,38 @@ Fixture = arquivo sintético de teste. Os demais casos rodam nos CSVs reais com 
 | AC-1.2 | P0-1 | Arquivo ausente | sem `products.csv` em `data/raw/` | a carga roda (CLI ou API) | erro com o nome do arquivo, a pasta esperada e o passo de download; nenhuma lista parcial; API com status 503 e a mesma mensagem |
 | AC-1.3 | P0-1 | Arquivo inválido | `sales_pipeline.csv` vazio, que não seja CSV ou sem a coluna `engage_date` | a carga roda | erro com o arquivo e as colunas faltantes; nenhuma lista parcial |
 | AC-1.4 | P0-1 | Contrato de rótulo | fixture com o produto `GTX Ultra`; e, à parte, a carga sem o mapa de normalização | a carga roda | erro lista o rótulo e as IDs, sem descarte; sem o mapa, 1.480 não casadas, e com o mapa, 0 |
-| AC-1.5 | P0-1 | Arquivo divergente | CSVs com schema válido e SHA-256 diferente do auditado | a carga roda | aviso visível "dados diferentes da versão auditada"; os oráculos deixam de ser garantidos |
+| AC-1.5 | P0-1 | Arquivo divergente | CSVs com schema válido e SHA-256 diferente do auditado | a carga roda | `meta.audited` falso; a tela e a CLI mostram o aviso "dados diferentes da versão auditada"; os oráculos deixam de ser garantidos |
 | AC-1.6 | P0-1 | Campo nulo | fixture com uma Engaging sem `engage_date` e uma aberta sem `product` | a classificação roda | as duas em Não pontuável, com os motivos "sem data de engajamento" e "sem produto"; a soma dos estados é igual ao total |
 | AC-1.7 | P0-1 | Campo nulo (conta) | as 1.425 abertas sem conta | a classificação roda | o estado e a ordem são iguais aos da mesma linha com conta; a conta só alimenta o aviso |
 | AC-1.8 | P0-1 | Valor extremo | `as_of` 2018-01-31, 2018-03-31 e 2030-01-01; depois `2017-12-30` e `31/12/2017` | a classificação roda | Focar 160, 34 e 0, sempre com 2.089 na partição; os dois últimos dão erro de validação com o mínimo aceito e o formato AAAA-MM-DD |
 | AC-1.9 | P0-1 | Fronteira | fixture com Engaging de 138 e de 139 dias | a classificação roda | 138 d em Focar e 139 d em Revisar |
 | AC-1.10 | P0-1 | Vazamento | linhas, `opportunity_id` e `close_value` das fechadas embaralhados; uma Won extra com `close_date` > `as_of` | a classificação roda | nenhum estado, faixa ou ordem muda; o limite continua em 138 d |
 | AC-1.11 | P0-1 | Determinismo | a mesma entrada e a mesma política | duas execuções | saídas com o mesmo hash |
-| AC-2.1 | P0-2 | Sucesso | Zane Levy | a lista é pedida | 88 = 31 + 57 + 0 + 0; Focar na ordem alto (11) → médio (17) → baixo (3); na mesma faixa, preço decrescente e depois ID; a legenda "Ordem: Focar → Revisar → Qualificar → Não pontuável; em cada grupo, maior valor de tabela primeiro; a idade aparece, mas não muda a ordem." acompanha a lista na CLI, na API e na tela |
+| AC-2.1 | P0-2 | Sucesso | Zane Levy | a lista é pedida | 88 = 31 + 57 + 0 + 0 em `summary`; Focar na ordem alto (11) → médio (17) → baixo (3); na mesma faixa, preço decrescente e depois ID; `ordering` traz grupos focar → revisar → qualificar → nao_pontuavel, dentro do grupo faixa → preço → ID, com `age_affects_order` falso; a tela e a CLI escrevem a partir dele a legenda "Ordem: Focar → Revisar → Qualificar → Não pontuável; em cada grupo, maior valor de tabela primeiro; a idade aparece, mas não muda a ordem." |
 | AC-2.2 | P0-2 | Ordem declarada (a idade não ordena) | deals do mesmo estado e produto, com `engage_date` embaralhada entre eles | a lista é pedida | a ordem não muda; a idade aparece como coluna em Focar e Revisar |
-| AC-2.3 | P0-2 | Empate | 2 ou mais deals com o mesmo estado e produto | a lista é exibida | aparecem agrupados como "N oportunidades de mesmo valor de tabela" |
-| AC-2.4 | P0-2 | Resultado vazio (grupo) | Darcel Schlecht | a lista é pedida | Focar vazio com "Nenhuma oportunidade dentro do ciclo observado (até 138 d). Comece por Revisar: confirme no CRM quais seguem ativas."; 83 Revisar e 111 Qualificar visíveis |
-| AC-2.5 | P0-2 | Resultado vazio (vendedor) | Carl Lin, sem abertas | a lista é pedida | status 200, resumo zerado e "Nenhuma oportunidade aberta para este vendedor" |
-| AC-2.6 | P0-2 | Entrada inválida | `seller=Fulano` | a API é chamada | 404 com mensagem; a tela só oferece nomes de `sales_teams` |
-| AC-2.7 | P0-2 | Campo nulo | linha sem conta | a lista é exibida | ID, produto, `engage_date` e "sem cliente registrado"; o aviso de conta aparece uma vez, no cabeçalho |
-| AC-2.8 | P0-2 | Contrato | qualquer vendedor e `as_of` válido | API e CLI são comparadas | itens, ordem e contagens idênticos; a soma dos 35 vendedores é 2.089 |
+| AC-2.3 | P0-2 | Empate | 2 ou mais deals com o mesmo estado e produto | a lista é exibida | `tie_size` > 1; a tela e a CLI os agrupam como "N oportunidades de mesmo valor de tabela" |
+| AC-2.4 | P0-2 | Resultado vazio (grupo) | Darcel Schlecht | a lista é pedida | grupo focar com `empty` = `start_with_group` (grupo revisar, ação `confirm_still_active`, 138 d); a tela e a CLI mostram "Nenhuma oportunidade dentro do ciclo observado (até 138 d). Comece por Revisar: confirme no CRM quais seguem ativas."; 83 Revisar e 111 Qualificar visíveis |
+| AC-2.5 | P0-2 | Resultado vazio (vendedor) | Carl Lin, sem abertas | a lista é pedida | status 200, resumo zerado e `empty.code` = `no_open_for_seller`; a tela e a CLI mostram "Nenhuma oportunidade aberta para este vendedor" |
+| AC-2.6 | P0-2 | Entrada inválida | `seller=Fulano` | a API é chamada | 404 com `code` = `seller_not_found` e `params.seller`; a tela só oferece nomes de `sales_teams` |
+| AC-2.7 | P0-2 | Campo nulo | linha sem conta | a lista é exibida | `account` nulo, contado em `summary.without_account`; a tela e a CLI mostram ID, produto, `engage_date` e "sem cliente registrado", e o aviso de conta uma vez, no cabeçalho |
+| AC-2.8 | P0-2 | Contrato | qualquer vendedor e `as_of` válido | API e CLI são comparadas | itens, ordem e contagens idênticos; a soma dos 35 vendedores é 2.089; toda resposta passa pelo modelo tipado de `api/schemas.py` |
 | AC-2.9 | P0-2 | Sem ranking de pessoas | `GET /api/sellers` | a lista é pedida | ordem alfabética; nenhuma tela ou endpoint ordena vendedores por resultado |
-| AC-2.10 | P0-2 | Filtro vazio | `manager` inexistente ou combinação sem abertas | o filtro é aplicado | lista vazia com mensagem; nunca 500 |
-| AC-2.11 | P0-2 | Valor extremo | `as_of` 2030-01-01 | a lista de qualquer vendedor é pedida | Focar vazio com mensagem e todas as Engaging em Revisar |
+| AC-2.10 | P0-2 | Filtro vazio | `manager` inexistente ou combinação sem abertas | o filtro é aplicado | lista vazia com `empty.code` = `no_open_for_filter`; nunca 500 |
+| AC-2.11 | P0-2 | Valor extremo | `as_of` 2030-01-01 | a lista de qualquer vendedor é pedida | grupo focar vazio (`empty`) e todas as Engaging em Revisar |
 | AC-2.12 | P0-2 | Tela (roteiro manual, fatia 6) | API e tela no ar com os CSVs auditados | a jornada da seção 2 é seguida | aparecem "Dados até 31/12/2017" no cabeçalho, o resumo 88 = 31 + 57 + 0 + 0, o aviso de conta uma única vez, a legenda de ordem, o painel de `01XZ9CRY` com as frases e o próximo passo, e Darcel com Focar vazio e próximo passo; a lista aparece em menos de 1 s após escolher o vendedor; nenhum erro; jornada em até 2 min |
-| AC-3.1 | P0-3 | Explicação da prioridade | a Focar `01XZ9CRY` (GTX Plus Pro, Initech, engajada em 2017-09-18) | o painel é aberto | frase 1 "Focar porque está em negociação há 104 dias, dentro do maior ciclo já fechado (138 d)"; "valor de tabela 5.482 (valor de tabela alto)"; P90 de 105 d com N = 479; a frase "Não sabemos a chance"; próximo passo "Trabalhe primeiro os de maior valor de tabela; empates do mesmo produto valem o mesmo." |
-| AC-3.2 | P0-3 | Revisar | uma Revisar | o painel é aberto | idade, limite e "confirme no CRM se segue ativa"; sem "perdida" nem "encerre" |
-| AC-3.3 | P0-3 | Campo nulo | a Qualificar `28EJ0L9T` (GTX Plus Pro, sem cliente, sem data) | o painel é aberto | frase 1 "Qualificar porque ainda não tem data de engajamento"; "sem data de engajamento: não há idade para comparar"; nenhuma idade inventada; próximo passo "Ainda em prospecção: avance no CRM os de maior valor de tabela e registre a data de engajamento quando houver contato." |
-| AC-3.4 | P0-3 | Valor extremo | uma aberta de GTK 500 (26.768; 15 ganhas) | o painel é aberto | mostra N = 15 e "poucos casos; leia como indicação" |
-| AC-3.5 | P0-3 | Sem referência | fixture com um produto sem ganhas até o `as_of` | o painel é aberto | "sem vendas ganhas deste produto até <as_of>", sem erro |
-| AC-3.6 | P0-3 | Não pontuável | item Não pontuável da fixture | o painel é aberto | o motivo e "corrija <campo> no CRM" |
-| AC-3.7 | P0-3 | Verificabilidade | as 2.089 explicações | o teste compara textos e campos | 100% dos números coincidem com os campos, e cada frase lista seus `fields` |
-| AC-3.8 | P0-3 | Vocabulário | todos os textos da API, da CLI e da tela | o teste varre os textos | nenhum termo proibido; faixas só com "de tabela"; a frase da taxa-base em 100% dos itens |
-| AC-3.9 | P0-3 | Resultado vazio | um grupo vazio | a tela é exibida | só a mensagem do grupo, sem painel de explicação vazio |
+| AC-3.1 | P0-3 | Explicação da prioridade | a Focar `01XZ9CRY` (GTX Plus Pro, Initech, engajada em 2017-09-18) | o painel é aberto | `reasons`: `age_within_cycle_limit` (104 d, 138 d), `list_price` (5.482, alto), `won_cycle_reference` (P90 de 105 d, N = 479) e `closed_base_rate` (63%, de 48% a 72%); `next_action` = `work_highest_list_price_first`. A tela e a CLI mostram "Focar porque está em negociação há 104 dias, dentro do maior ciclo já fechado (138 d)", "valor de tabela 5.482 (valor de tabela alto)", a referência de 105 d com N = 479, "Não sabemos a chance de fechar desta oportunidade: cerca de 63%…" e "Trabalhe primeiro os de maior valor de tabela; empates do mesmo produto valem o mesmo." |
+| AC-3.2 | P0-3 | Revisar | uma Revisar | o painel é aberto | motivo `age_above_cycle_limit` com idade e limite; `next_action` = `confirm_still_active`; texto "confirme no CRM se segue ativa", sem "perdida" nem "encerre" |
+| AC-3.3 | P0-3 | Campo nulo | a Qualificar `28EJ0L9T` (GTX Plus Pro, sem cliente, sem data) | o painel é aberto | motivo `prospecting_stage` (a regra é o estágio) e contexto `no_cycle_reference` com causa `no_age`; nenhuma idade inventada; textos "Qualificar porque ainda está em prospecção" e "Sem data de engajamento: não há idade para comparar"; `next_action` = `advance_prospecting` |
+| AC-3.4 | P0-3 | Valor extremo | uma aberta de GTK 500 (26.768; 15 ganhas) | o painel é aberto | `won_cycle_reference` com N = 15 e `few_cases` verdadeiro; texto "poucos casos; leia como indicação" |
+| AC-3.5 | P0-3 | Sem referência | fixture com um produto sem ganhas até o `as_of` | o painel é aberto | `no_cycle_reference` com causa `no_wins` e o `as_of`; texto "sem vendas ganhas deste produto até <as_of>", sem erro |
+| AC-3.6 | P0-3 | Não pontuável | item Não pontuável da fixture | o painel é aberto | motivo `missing_field` com o campo; `next_action` = `fix_missing_field`; texto "Corrija <campo> no CRM" |
+| AC-3.7 | P0-3 | Verificabilidade | os 2.089 itens | os testes comparam códigos, valores e textos | os motivos de grupo e de ordem citam exatamente os valores que decidiram (back); todo número das frases da tela e da CLI vem dos parâmetros do código (front e CLI) |
+| AC-3.8 | P0-3 | Vocabulário | os catálogos de texto da tela e da CLI e tudo o que eles mostram | os testes varrem os textos | nenhum termo proibido; faixas só com "de tabela"; o payload não traz texto de tela |
+| AC-3.9 | P0-3 | Resultado vazio | um grupo vazio | a tela é exibida | `empty` = `group_empty` e só a mensagem do grupo, sem painel de explicação vazio |
+| AC-4.1 | Contrato | Schema | as 4 rotas | o `openapi.json` é gerado | toda resposta e todo erro têm modelo tipado, sem objeto solto; o snapshot em `web/contract/` e as respostas sintéticas em `web/tests/fixtures/` estão atualizados |
+| AC-4.2 | Contrato | Resposta fora do contrato | código desconhecido, tipo errado ou campo obrigatório ausente | a tela recebe a resposta | a validação zod recusa e a tela mostra a mensagem de erro; campo novo é tolerado |
+| AC-4.3 | Contrato | Cobertura de textos | todos os códigos do contrato | os testes dos catálogos rodam | cada código tem texto na tela e na CLI; um código novo sem texto quebra o `typecheck` (tela) e o `pytest` (CLI) |
+| AC-4.4 | Contrato | Sem texto no payload | qualquer resposta | o payload é inspecionado | nenhum campo de texto pronto (`legend`, `label`, `explanation`, `next_step`, `empty_message`…); `meta.contract_version` = 3 |
 
 ---
 

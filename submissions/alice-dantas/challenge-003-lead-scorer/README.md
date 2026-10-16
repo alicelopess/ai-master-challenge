@@ -6,7 +6,7 @@ _Em 3-5 frases: o que você fez, o que encontrou, e qual a principal recomendaç
 
 ### Setup
 
-**Requisitos:** Python 3.9 ou superior (testado em 3.9.6) e, só para a tela, Node 20.9 ou superior (testado em 22.12). Sem banco, sem segredo e sem LLM.
+**Requisitos:** Python 3.9 ou superior (testado em 3.9.6) e, para a tela e os testes do front, Node 22.12 ou superior (testado em 22.12). Sem banco, sem segredo e sem LLM.
 
 **Dados:** os CSVs não estão no repositório. Baixe o dataset [CRM Sales Predictive Analytics](https://www.kaggle.com/datasets/agungpambudi/crm-sales-predictive-analytics) (CC0) pelo navegador e copie `sales_pipeline.csv`, `products.csv`, `sales_teams.csv` e `accounts.csv` para `solution/data/raw/`. O [README da pasta](./solution/data/raw/README.md) traz o SHA-256 da versão auditada.
 
@@ -18,12 +18,22 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/pytest                                             # testes
 .venv/bin/python -m leadscorer list --seller "Zane Levy"     # lista de um vendedor, sem Node
 .venv/bin/python -m leadscorer explain --id 01XZ9CRY         # "Por que está aqui"
-.venv/bin/python scripts/backtest.py                         # validação offline (5 cortes)
-.venv/bin/uvicorn api.main:app --port 8000                   # API (deixe rodando)
+.venv/bin/python scripts/backtest.py                         # validação offline (7 cortes)
+.venv/bin/uvicorn api.main:app --port 8000                   # API (deixe rodando; contrato em /docs)
 cd web && npm ci && npm run dev                              # tela em http://localhost:3000 (outro terminal)
 ```
 
-O que esperar: `check-data` mostra 8.800 linhas após cada junção, 1.480 linhas que se perderiam sem o mapa `GTXPro` → `GTX Pro`, hash 4 de 4 igual ao auditado e 2.089 abertas. Sem os CSVs, todos os comandos param com uma mensagem que diz qual arquivo falta e onde baixá-lo, e o `pytest` pula com aviso os testes que dependem dos dados reais.
+**Testes do front** (em `solution/web/`, sem a API no ar): `npm run typecheck` confere os tipos e `npm test` roda o Vitest contra respostas sintéticas da API.
+
+**Quando o contrato da API mudar** (um campo ou código novo em `api/schemas.py` ou `leadscorer/codes.py`), regenere os artefatos que o front usa. Os testes dos dois lados falham se algum deles ficar desatualizado.
+
+```bash
+.venv/bin/python scripts/export_openapi.py     # web/contract/openapi.json
+.venv/bin/python scripts/export_fixtures.py    # web/tests/fixtures/ (dados sintéticos)
+cd web && npm run contract                     # web/lib/contract/ (tipos e validação zod)
+```
+
+O que esperar: `check-data` mostra 8.800 linhas após cada junção, 1.480 linhas que se perderiam sem o mapa `GTXPro` → `GTX Pro`, hash 4 de 4 igual ao auditado e 2.089 abertas. Sem os CSVs, todos os comandos param com uma mensagem que diz qual arquivo falta e onde baixá-lo, e o `pytest` pula com aviso os testes que dependem dos dados reais. Os testes do front não precisam dos CSVs.
 
 ### Solução
 
@@ -31,18 +41,23 @@ Uma ferramenta de **triagem explicável** da carteira aberta: o vendedor escolhe
 
 | Camada | O que faz | Onde |
 | --- | --- | --- |
-| Núcleo Python (pandas) | Carga, normalização, estados, ordem e explicação; funções puras, sem web | `solution/leadscorer/` |
-| CLI | `check-data`, `list --seller` (texto ou `--json`) e `explain --id`; entrega tudo sem Node | `python -m leadscorer` |
-| API FastAPI | `GET /api/meta`, `/api/sellers`, `/api/sellers/{seller}/pipeline`, `/api/pipeline?manager=&office=`; erros 404, 422 e 503 com mensagem | `solution/api/main.py` |
-| Tela Next.js | Uma página: vendedor, resumo, grupos e painel "Por que está aqui" | `solution/web/` |
+| Núcleo Python (pandas) | Carga, normalização, estados, ordem e motivos em código; funções puras, sem web e sem texto de tela | `solution/leadscorer/` |
+| CLI | `check-data`, `list --seller` (texto ou `--json`) e `explain --id`; escreve os textos a partir dos códigos (`cli_text.py`) e entrega tudo sem Node | `python -m leadscorer` |
+| API FastAPI | `GET /api/meta`, `/api/sellers`, `/api/sellers/{seller}/pipeline`, `/api/pipeline?manager=&office=`; respostas tipadas (pydantic, descritas em `/docs`); erros 404, 422 e 503 com `code`, `params` e `detail` | `solution/api/` |
+| Tela Next.js (TypeScript) | Uma página: vendedor, resumo, grupos e painel "Por que está aqui"; valida cada resposta contra o contrato e escreve os textos a partir dos códigos (`copy/pt-BR.ts`) | `solution/web/` |
 
 CLI, API e tela consomem **o mesmo payload**, então a lista é idêntica nas três saídas (testado para os 35 vendedores).
+
+**Contrato entre back e front** ([ADR-004](./docs/architecture.md#adr-004)):
+- **O back entrega dados e decisões da regra:** o grupo de cada oportunidade, a ordem, os motivos como código com os valores que decidiram (`reasons: [{code, role, params}]`), a ação sugerida (`next_action`) e os números.
+- **O front decide como dizer:** nomes, frases, formatação e layout.
+- **O mesmo contrato serve aos dois lados:** o schema fica em `web/contract/openapi.json`; o front gera dele os tipos e a validação, e testa contra respostas sintéticas exportadas pelo back.
 
 **Jornada de 2 minutos:** abra `localhost:3000` e escolha Zane Levy. Veja "88 abertas = 31 Focar + 57 Revisar + 0 Qualificar + 0 Não pontuável" e abra `01XZ9CRY` para ler o motivo. Depois abra "Revisar" e troque para Darcel Schlecht, que não tem nada em Focar e recebe a indicação de começar por Revisar.
 
 ### Lógica de Scoring
 
-A auditoria mostrou que **nenhum campo disponível prevê ganho melhor que o acaso**: AUC de 0,47 a 0,57 em backtest temporal. O único sinal forte é o mês de fechamento (AUC de cerca de 0,64), que é vazamento, porque só existe depois do resultado. Por isso a ferramenta **não calcula probabilidade nem nota**. Ela classifica e ordena por regras declaradas, com o que os dados sustentam ([ADR-001](./docs/architecture.md#adr-001)).
+A auditoria mostrou que **produto, vendedor, conta, setor e região não separam quem ganha de quem perde** (AUC entre 0,48 e 0,51 fora do tempo). O único sinal legítimo é **há quanto tempo a negociação está aberta**, e ele aparece só por causa das negociações que nunca recebem desfecho na base (ver Resultados). O sinal mais forte é o mês de fechamento, que é vazamento, porque só existe depois do resultado. Por isso a ferramenta **não calcula probabilidade nem nota**. Ela classifica e ordena por regras declaradas, com o que os dados sustentam ([ADR-001](./docs/architecture.md#adr-001)).
 
 **1. Estado** (cada aberta cai em exatamente um):
 
@@ -55,7 +70,11 @@ A auditoria mostrou que **nenhum campo disponível prevê ganho melhor que o aca
 
 **2. Ordem dentro do estado:** faixa de valor de tabela (alto ≥ 3.000; médio de 500 a 2.999; baixo < 500) → preço de tabela decrescente → ID, só para a ordem ficar estável. O preço de tabela reproduz o valor fechado com ±20% em 95,9% das vendas ganhas. **A idade aparece, mas não muda a ordem**, porque não mostrou sinal estável. Deals do mesmo estado e produto são empate e aparecem agrupados.
 
-**3. Explicação:** quatro frases de modelo fixo por oportunidade, preenchidas só com campos verificáveis. Elas cobrem a posição em relação ao ciclo, o valor de tabela, a referência do produto (P90 do ciclo das ganhas, com N e aviso quando N < 30) e a frase fixa "Não sabemos a chance de fechar: cerca de 63% das fechadas foram ganhas (48% a 72% contando as abertas)". Cada frase traz o próximo passo do estado.
+**3. Explicação:** quatro motivos por oportunidade, cada um com um papel.
+- **Os que decidem:** o motivo do grupo (idade × maior ciclo, estágio Prospecting ou campo ausente) e o da ordem (faixa e preço de tabela).
+- **Os de contexto:** a referência do produto (P90 do ciclo das ganhas, com N e aviso quando N < 30) e a taxa das fechadas ("Não sabemos a chance de fechar desta oportunidade: cerca de 63% das fechadas foram ganhas (48% a 72% contando as abertas)").
+- **O próximo passo** vem do grupo.
+- **Os valores são os da regra:** a API entrega cada motivo como código, com exatamente os valores que a regra usou, e a tela e a CLI escrevem a frase.
 
 **Premissas e guardas:**
 - `as_of` (o "hoje") é parâmetro, com padrão em 31/12/2017, o último fechamento do dataset.
@@ -74,35 +93,38 @@ _Como você atacou o problema. Por onde começou? Como decompôs? O que priorizo
 
 | O que foi verificado | Resultado |
 | --- | --- |
-| Testes automatizados (`pytest`) | 99 verdes com os CSVs; sem eles, 73 verdes e 26 pulados com aviso |
+| Testes automatizados | `pytest`: 132 verdes com os CSVs; sem eles, 101 verdes e 31 pulados com aviso. `npm test`: 41 verdes; `npm run typecheck` sem erros |
 | Reconciliação | 8.800 linhas após cada junção; 2.089 abertas = 298 + 1.291 + 500 + 0 |
-| Explicações | Nas 2.089, todo número do texto confere com os campos; nenhum termo proibido ("probabilidade", "perdida", "encerre", "score"…) na API, na CLI ou na tela |
+| Explicações | Nas 2.089, cada motivo de grupo e de ordem cita exatamente os valores que decidiram; todo número das frases vem desses valores; nenhum termo proibido ("probabilidade", "perdida", "encerre", "score"…) nos textos da CLI ou da tela |
+| Contrato | Todas as respostas passam pelos modelos tipados; todo código tem texto na tela e na CLI; resposta fora do contrato vira mensagem de erro na tela |
 | Paridade | CLI = API = núcleo para os 35 vendedores; soma = 2.089 |
 | Robustez | Arquivo ausente, vazio ou inválido, rótulo desconhecido, data ou preço fora do formato e `as_of` inválido param com mensagem; nenhuma lista parcial |
 | Ensaio da jornada (tela) | Todos os itens do roteiro apareceram; lista visível de 38 a 116 ms após escolher o vendedor; nenhum erro no console; sem transbordo horizontal em 375 px |
-| Backtest temporal (5 cortes) | Nenhuma ordenação legítima supera o acaso; só a armadilha do mês de fechamento passa de 0,6 (detalhes abaixo) |
+| Backtest temporal (7 cortes) | Produto e preço não separam quem ganha; a regra da ferramenta concentra mais valor ganho que ordenar só por preço, por causa das negociações sem desfecho (detalhes abaixo) |
 
 **Validação offline** ([relatório completo](./solution/data/processed/backtest_report.md), gerado por `scripts/backtest.py`):
-- **Desenho**, o mesmo da sonda de [data-audit.md, seção 2.9](./docs/data-audit.md#a-2-9):
-  - em cada corte T (fim de maio a fim de setembro de 2017), o treino são as fechadas até T;
-  - o teste são as negociações já engajadas em T que fecharam depois (de 893 a 1.139 por corte);
-  - os ordenadores legítimos só recebem o que se sabia em T;
-  - o IC95% do AUC vem de bootstrap com 300 reamostras.
-- **Reprodução:** tamanhos de teste e AUC por produto idênticos aos da auditoria.
+- **População:** em cada corte T (fim de março a fim de setembro de 2017), todas as negociações em Engaging abertas em T, inclusive as que nunca fecham na base (1.330 a 2.409 por corte).
+- **Desfecho:** ganhou em até 90 dias. Como T + 90 dias cai dentro da base, "não ganhou" é observado, não imputado.
+- **Sem vazamento:** os ordenadores legítimos só recebem o que se sabia em T.
+- **Lista do vendedor:** as 10 primeiras de cada vendedor.
+  - **P@10:** quantas das 10 foram ganhas.
+  - **Val@10:** valor ganho nas 10 sobre o valor das 10 melhores possíveis, sabendo o futuro.
+- **Incerteza:** os cortes se sobrepõem, então as diferenças têm IC95% por bootstrap de vendedores.
+- **Não coberto:** Prospecting não tem data e fica de fora.
 
-| Ordenador | AUC médio (mín.–máx. nos 5 cortes) | Cortes com IC acima de 0,5 | Valor ganho nos 20% primeiros |
-| --- | --- | --- | --- |
-| Taxa global | 0,500 | 0 de 5 | 21,9% |
-| Taxa por produto | 0,506 (0,495–0,533) | 0 de 5 | 11,1% |
-| Aleatório | 0,495 (0,467–0,527) | 0 de 5 | 19,2% |
-| Só valor de tabela | 0,495 (0,478–0,510) | 0 de 5 | 49,7% |
-| Regra da ferramenta | 0,495 (0,478–0,510) | 0 de 5 | 49,7% |
-| [Vazamento] fechou no 3º mês do trimestre | 0,632 (0,614–0,650) | 5 de 5 | 23,6% |
+| Ordenador | AUC média | P@10 | Val@10 | Δ Val@10 contra a regra da ferramenta (IC95%) |
+| --- | --- | --- | --- | --- |
+| Aleatório | 0,510 | 38,9% | 23,2% | −33,7 pp |
+| Taxa por produto | 0,494 | 37,7% | 14,0% | −43,0 pp |
+| Só valor de tabela | 0,505 | 38,7% | 53,8% | −3,1 pp (−4,4 a −1,9) |
+| **Regra da ferramenta** (até o maior ciclo → preço) | 0,574 | 41,2% | 56,9% | — |
+| Alternativa avaliada, não implementada: até o P90 das ganhas → até o maior ciclo → preço | 0,604 | 43,0% | 58,4% | +1,5 pp (+0,2 a +2,7) |
+| [Vazamento] fechou no 3º mês do trimestre | 0,711 | — | — | — |
 
 Como ler:
-1. **Habilidade:** nenhuma ordenação legítima separa quem ganha de quem perde (AUC perto de 0,5, com o IC sempre incluindo 0,5). A única que parece funcionar usa a data de fechamento, que só existe depois do resultado.
-2. **Valor capturado:** ordenar por valor de tabela põe cerca de 50% do valor ganho nos 20% primeiros, contra cerca de 20% ao acaso. Isso acontece **por construção** (negócio caro no topo), não por prever quem fecha, e por isso aparece em coluna separada.
-3. **Por que a regra coincide com "só valor":** nenhuma negociação fechada passou de 138 dias, então todo o teste estava em Focar no corte. A divisão Focar/Revisar não tem rótulo para ser avaliada.
+1. **Produto e preço não preveem quem ganha** (AUC perto de 0,5). O que separa é a idade: o grupo Revisar não teve nenhuma negociação ganha nem perdida depois de passar dos 138 dias.
+2. **Por que a regra captura mais valor que "só preço":** ela põe abaixo as negociações paradas, que nunca fecham na base. Sem elas, a vantagem some: a regra empata com "só preço" (Val@10 de 79,1% nos dois), e a alternativa pelo P90 fica 1,0 pp abaixo (IC −1,9 a −0,3). Essas negociações têm sinais de vir da construção da base, então o ganho é condicional a elas.
+3. **Valor capturado não é efeito causal.** O backtest mede quem teria ganhado de qualquer forma. O efeito de trabalhar a lista só um piloto com grupo de controle mostra.
 
 Critérios de aceite e oráculos: [PRD](./docs/prd.md). Plano de build, desvios e cortes: [build-plan.md](./docs/build-plan.md). Auditoria dos dados: [data-audit.md](./docs/data-audit.md).
 
@@ -113,7 +135,7 @@ _O que a empresa deveria fazer com base nos seus findings. Priorize._
 ### Limitações
 
 **O que a ferramenta não faz:**
-- **Não prevê quem vai fechar.** Com estes campos, nenhuma regra ou modelo superou o acaso, e a ferramenta não promete fazer isso.
+- **Não prevê quem vai fechar.** Com estes campos, só a idade separa os grupos, e só por causa das negociações sem desfecho na base. A ferramenta não dá chance por oportunidade.
 - **Não comprova ganho de resultado.** O ganho sobre "ordenar por preço" é pequeno e inverificável aqui; só um piloto com grupo de controle mede efeito.
 - **Não detecta esfriamento nem sugere reativação:** o dataset não tem atividade nem histórico de estágio.
 - **Não escreve no CRM, não registra uso** (marcações "vou trabalhar", "revisei") e não tem autenticação; serve um usuário, com CSV em memória.
@@ -128,7 +150,8 @@ _O que a empresa deveria fazer com base nos seus findings. Priorize._
 
 **O que não foi verificado:**
 - **Compreensão:** o teste com 3 a 5 pessoas não técnicas ainda não foi feito.
-- **Focar × Revisar:** o backtest não consegue avaliar essa divisão, porque nenhuma negociação fechada passou de 138 dias, e "Revisar" segue como heurística. O backtest também só cobre negociações que acabaram fechando: as que seguem abertas não têm desfecho para medir.
+- **Focar × Revisar:** o backtest agora avalia essa divisão. A vantagem dela depende das negociações que nunca recebem desfecho, e não dá para saber se elas estão de fato encerradas ou se são registros sem atualização.
+- **Qualificar:** Prospecting não tem data, então o grupo não é avaliado no backtest.
 
 **Para escalar:**
 1. Fonte viva (API do CRM) no lugar do CSV.
@@ -140,7 +163,12 @@ _O que a empresa deveria fazer com base nos seus findings. Priorize._
 
 **Desvios em relação ao ADR-003 e ao PRD** (detalhes em [build-plan.md](./docs/build-plan.md#2-ambiente-instalação-e-reprodução)):
 - A CLI imprime no terminal, sem gerar CSV.
-- A tela é Next.js em JavaScript puro (sem TypeScript, Tailwind ou ESLint), com `agentRules: false` no `next.config.mjs` para o `next dev` não criar um `AGENTS.md`.
+- A tela é Next.js com TypeScript (sem Tailwind ou ESLint), com `agentRules: false` no `next.config.mjs` para o `next dev` não criar um `AGENTS.md`. O `next-env.d.ts` é gerado pelo `next dev` e não vai para o repositório.
+- **Contrato orientado a dados ([ADR-004](./docs/architecture.md#adr-004)):** o payload leva só chaves, códigos e números (`contract_version` 3), e os textos ficam na tela e na CLI.
+- **Ferramentas do front, escolhidas para rodar em Node 22.12:**
+  - Vitest com Vite 7 fixado (o Vite 8 não trouxe o binário nativo nesta máquina);
+  - jsdom 28;
+  - `@hey-api/openapi-ts` 0.95, que gera os tipos e a validação zod.
 - A validação do `as_of` fica na entrada (CLI e API), e o núcleo aceita qualquer data. Assim, o teste de vazamento com uma venda futura (AC-1.10) não conflita com o `as_of` mínimo (D-4).
 - A API carrega os dados uma vez e calcula a lista a cada chamada (cerca de 25 ms).
 
