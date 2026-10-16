@@ -8,94 +8,95 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import pandas as pd
-
-from . import data, policy, views
+from . import cli_text, data, policy, views
 from .errors import LeadScorerError
-from .fmt import fmt_date, fmt_int
+from .fmt import fmt_int
 
 
 def check_data(raw_dir: Path) -> int:
     dataset = data.load(raw_dir)
     frame = dataset.opportunities
     audited = sum(dataset.hashes[t] == policy.AUDITED_SHA256[t] for t in data.TABLES)
-    print(f"Dados: {data.display_path(raw_dir)}")
-    print(f"Hash: {audited} de {len(data.TABLES)} arquivos iguais à versão auditada")
+    text = cli_text.CHECK_DATA
+    print(text["folder"].format(folder=data.display_path(raw_dir)))
+    print(text["hash"].format(audited=audited, total=len(data.TABLES)))
     if not dataset.audited:
-        print(policy.DATA_WARNING)
-    print("Junções (linhas após cada passo):")
+        print(cli_text.DATA_WARNING)
+    print(text["joins"])
     for step in dataset.steps:
-        gap = f"   {step.gap_label}: {fmt_int(step.gap_count)}" if step.gap_label else ""
-        print(f"  {step.label:<16} {fmt_int(step.rows):>6}{gap}")
-    print(f"  sem o mapa GTXPro → GTX Pro: {fmt_int(dataset.unmatched_without_map)} não casadas")
+        gap = f"   {cli_text.JOIN_GAPS[step.gap]}: {fmt_int(step.gap_count)}" if step.gap else ""
+        print(f"  {cli_text.JOIN_STEPS[step.table]:<16} {fmt_int(step.rows):>6}{gap}")
+    print(text["unmatched"].format(count=fmt_int(dataset.unmatched_without_map)))
     stages = frame["deal_stage"].value_counts()
     parts = " + ".join(f"{fmt_int(stages.get(s, 0))} {s}" for s in policy.CLOSED_STAGES + policy.OPEN_STAGES)
-    print(f"Oportunidades: {fmt_int(len(frame))} = {parts}")
+    print(text["opportunities"].format(total=fmt_int(len(frame)), parts=parts))
     is_open = frame["deal_stage"].isin(policy.OPEN_STAGES)
-    print(f"Abertas: {fmt_int(is_open.sum())}")
+    print(text["open"].format(count=fmt_int(is_open.sum())))
     return 0
 
 
 def render_item(entry: Dict[str, Any], indent: str) -> str:
     age = "—" if entry["age_days"] is None else f"{entry['age_days']} d"
-    engaged = "—" if entry["engage_date"] is None else fmt_date(pd.Timestamp(entry["engage_date"]))
+    engaged = "—" if entry["engage_date"] is None else cli_text.iso_date(entry["engage_date"])
     price = "—" if entry["sales_price"] is None else fmt_int(entry["sales_price"])
-    line = (f"{indent}{entry['opportunity_id']:<10}{entry['product'] or '—':<16}{entry['client']:<26}"
+    line = (f"{indent}{entry['opportunity_id']:<10}{entry['product'] or '—':<16}{cli_text.client_text(entry):<26}"
             f"{price:>8}   {engaged:<12}{age:>6}")
-    return f"{line}   ({entry['reason']})" if entry["reason"] else line
-
-
-def band_title(entry: Dict[str, Any]) -> str:
-    return entry["value_label"].capitalize() if entry["value_label"] else "Sem valor de tabela"
+    missing = entry["missing_field"]
+    return f"{line}   ({cli_text.missing_short(missing)})" if missing else line
 
 
 def render_list(payload: Dict[str, Any]) -> str:
-    summary = payload["summary"]
-    counts = " + ".join(f"{summary[group['state']]} {group['label']}" for group in payload["groups"])
-    lines = [payload["meta"]["data_warning"]] if payload["meta"]["data_warning"] else []
+    """Lista do vendedor montada só com chaves, códigos e números do payload."""
+    summary, meta = payload["summary"], payload["meta"]
+    lines = [] if meta["audited"] else [cli_text.DATA_WARNING]
     lines += [
-        f"{payload['seller']} · {payload['meta']['data_label']}",
-        f"{summary['total']} abertas = {counts}",
+        f"{payload['seller']} · {cli_text.data_label(meta)}",
+        f"{summary['total']} {cli_text.OPEN} = {cli_text.summary_counts(payload)}",
     ]
-    if payload["empty_message"]:
-        return "\n".join(lines + ["", payload["empty_message"]])
-    if payload["account_warning"]:
-        lines.append(f"Aviso: {payload['account_warning']}")
-    lines.append(payload["legend"])
-    header = f"      {'ID':<10}{'Produto':<16}{'Cliente':<26}{'Preço':>8}   {'Engajada em':<12}{'Idade':>6}"
+    if payload["empty"]:
+        return "\n".join(lines + ["", cli_text.empty_text(payload["empty"])])
+    if summary["without_account"]:
+        lines.append(f"{cli_text.WARNING}: {cli_text.account_warning(summary)}")
+    lines.append(cli_text.legend_text(payload["ordering"]))
+    widths = (10, 16, 26, 8, 12, 6)
+    names = cli_text.COLUMNS
+    header = (f"      {names[0]:<{widths[0]}}{names[1]:<{widths[1]}}{names[2]:<{widths[2]}}{names[3]:>{widths[3]}}   "
+              f"{names[4]:<{widths[4]}}{names[5]:>{widths[5]}}")
 
     for group in payload["groups"]:
-        lines += ["", f"{group['label'].upper()} ({group['count']})"]
+        lines += ["", f"{cli_text.GROUP_LABELS[group['state']].upper()} ({group['count']})"]
         if not group["items"]:
-            lines.append(f"  {group['empty_message']}")
+            lines.append(f"  {cli_text.empty_text(group['empty'])}")
             continue
-        lines += [f"  Próximo passo: {group['next_step']}", header]
-        band_counts = Counter(band_title(entry) for entry in group["items"])
+        lines += [f"  {cli_text.NEXT_STEP}: {cli_text.action_text(group['next_action'])}", header]
+        band_counts = Counter(cli_text.band_title(entry["value_band"]) for entry in group["items"])
         band = product = None
         for entry in group["items"]:
-            if band_title(entry) != band:
-                band, product = band_title(entry), None
+            title = cli_text.band_title(entry["value_band"])
+            if title != band:
+                band, product = title, None
                 lines.append(f"  {band} ({band_counts[band]})")
             tied = entry["tie_size"] > 1 and entry["sales_price"] is not None
             if tied and entry["product"] != product:
-                lines.append(f"    ▸ {entry['tie_size']} oportunidades de mesmo valor de tabela "
-                             f"({entry['product']}, {fmt_int(entry['sales_price'])})")
+                lines.append(f"    ▸ {cli_text.tie_text(entry['tie_size'], entry['product'], entry['sales_price'])}")
             product = entry["product"]
             lines.append(render_item(entry, "        " if tied else "      "))
     return "\n".join(lines)
 
 
 def render_detail(detail: Dict[str, Any]) -> str:
-    entry = detail["item"]
-    lines = [detail["meta"]["data_warning"]] if detail["meta"]["data_warning"] else []
+    """"Por que está aqui" de uma oportunidade, montado só com os códigos do item."""
+    entry, meta = detail["item"], detail["meta"]
+    lines = [] if meta["audited"] else [cli_text.DATA_WARNING]
     lines += [
-        f"{entry['opportunity_id']} · {entry['product'] or 'sem produto'} · {entry['client']} · {detail['seller']}",
-        detail["meta"]["data_label"],
+        f"{entry['opportunity_id']} · {entry['product'] or cli_text.NO_PRODUCT} · {cli_text.client_text(entry)} · "
+        f"{detail['seller']}",
+        cli_text.data_label(meta),
         "",
-        "Por que está aqui",
+        cli_text.WHY_HERE,
     ]
-    lines += [f"  • {sentence['text']}" for sentence in entry["explanation"]]
-    lines += ["", f"Próximo passo: {entry['next_step']}"]
+    lines += [f"  • {cli_text.reason_text(reason)}" for reason in entry["reasons"]]
+    lines += ["", f"{cli_text.NEXT_STEP}: {cli_text.action_text(entry['next_action'])}"]
     return "\n".join(lines)
 
 
@@ -112,18 +113,19 @@ def explain_opportunity(raw_dir: Path, opportunity_id: str, as_of: Optional[str]
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    help_ = cli_text.HELP
     parser = argparse.ArgumentParser(prog="python -m leadscorer")
-    parser.add_argument("--raw", type=Path, default=policy.RAW_DIR, help="pasta com os CSVs")
+    parser.add_argument("--raw", type=Path, default=policy.RAW_DIR, help=help_["raw"])
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("check-data", help="presença, hash e reconciliação dos dados")
-    listing = commands.add_parser("list", help='lista "Onde focar" de um vendedor')
-    listing.add_argument("--seller", required=True, help='nome exato, ex.: "Zane Levy"')
-    listing.add_argument("--as-of", help="data de referência AAAA-MM-DD (padrão: último fechamento)")
-    listing.add_argument("--json", action="store_true", help="imprime o payload da API")
-    explaining = commands.add_parser("explain", help='"Por que está aqui" de uma oportunidade aberta')
-    explaining.add_argument("--id", required=True, dest="opportunity_id", help="ex.: 01XZ9CRY")
-    explaining.add_argument("--as-of", help="data de referência AAAA-MM-DD (padrão: último fechamento)")
-    explaining.add_argument("--json", action="store_true", help="imprime o payload da API")
+    commands.add_parser("check-data", help=help_["check-data"])
+    listing = commands.add_parser("list", help=help_["list"])
+    listing.add_argument("--seller", required=True, help=help_["seller"])
+    listing.add_argument("--as-of", help=help_["as-of"])
+    listing.add_argument("--json", action="store_true", help=help_["json"])
+    explaining = commands.add_parser("explain", help=help_["explain"])
+    explaining.add_argument("--id", required=True, dest="opportunity_id", help=help_["id"])
+    explaining.add_argument("--as-of", help=help_["as-of"])
+    explaining.add_argument("--json", action="store_true", help=help_["json"])
     args = parser.parse_args(argv)
 
     try:
@@ -135,7 +137,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             return explain_opportunity(args.raw, args.opportunity_id, args.as_of, args.json)
     except LeadScorerError as error:
         # Nenhuma lista parcial: o erro sai sozinho, com a mensagem para o usuário.
-        print(f"Erro: {error}", file=sys.stderr)
+        print(f"{cli_text.ERROR}: {error}", file=sys.stderr)
         return 1
     return 2
 

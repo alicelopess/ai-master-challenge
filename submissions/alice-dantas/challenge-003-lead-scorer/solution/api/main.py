@@ -14,8 +14,15 @@ from fastapi.responses import JSONResponse
 from leadscorer import data, policy, views
 from leadscorer.errors import DataError, LeadScorerError, NotFoundError, PolicyError
 
+from .schemas import ErrorBody, Meta, SellerList, SellerPipeline, TeamPipeline
+
 WEB_ORIGIN = "http://localhost:3000"
 STATUS = ((DataError, 503), (PolicyError, 422), (NotFoundError, 404))
+
+# Erros que cada rota pode devolver, todos com o mesmo corpo {"detail", "code", "params"}.
+DATA_ERROR = {503: {"model": ErrorBody, "description": "CSVs ausentes ou inválidos"}}
+AS_OF_ERROR = {422: {"model": ErrorBody, "description": "as_of inválido"}}
+NOT_FOUND = {404: {"model": ErrorBody, "description": "Vendedor não encontrado"}}
 
 
 def create_app(raw_dir: Path = policy.RAW_DIR) -> FastAPI:
@@ -32,22 +39,26 @@ def create_app(raw_dir: Path = policy.RAW_DIR) -> FastAPI:
     @app.exception_handler(LeadScorerError)
     async def user_error(_: Request, error: LeadScorerError) -> JSONResponse:
         status = next((code for kind, code in STATUS if isinstance(error, kind)), 500)
-        return JSONResponse(status_code=status, content={"detail": str(error)})
+        return JSONResponse(status_code=status,
+                            content={"detail": str(error), "code": error.code, "params": error.params})
 
-    @app.get("/api/meta")
+    # As frases da explicação citam só alguns campos: `exclude_unset` mantém de fora os ausentes.
+    @app.get("/api/meta", response_model=Meta, responses={**DATA_ERROR, **AS_OF_ERROR})
     def get_meta(as_of: Optional[str] = None) -> Dict[str, Any]:
         current = dataset()
         return views.meta(current, views.context(current, as_of))
 
-    @app.get("/api/sellers")
+    @app.get("/api/sellers", response_model=SellerList, responses=DATA_ERROR)
     def get_sellers() -> Dict[str, Any]:
         return {"sellers": views.sellers(dataset())}
 
-    @app.get("/api/sellers/{seller}/pipeline")
+    @app.get("/api/sellers/{seller}/pipeline", response_model=SellerPipeline, response_model_exclude_unset=True,
+             responses={**DATA_ERROR, **AS_OF_ERROR, **NOT_FOUND})
     def get_seller_pipeline(seller: str, as_of: Optional[str] = None) -> Dict[str, Any]:
         return views.seller_pipeline(dataset(), seller, as_of)
 
-    @app.get("/api/pipeline")
+    @app.get("/api/pipeline", response_model=TeamPipeline, response_model_exclude_unset=True,
+             responses={**DATA_ERROR, **AS_OF_ERROR})
     def get_pipeline(manager: Optional[str] = None, office: Optional[str] = None,
                      as_of: Optional[str] = None) -> Dict[str, Any]:
         return views.team_pipeline(dataset(), manager, office, as_of)

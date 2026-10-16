@@ -77,7 +77,7 @@ def test_repeated_dimension_key_fails(tmp_path):
 
 def test_divergent_hash_warns_everywhere(raw_dir, capsys):  # AC-1.5
     payload = views.seller_pipeline(data.load(raw_dir), "Ana Alfa")
-    assert payload["meta"]["data_warning"] == policy.DATA_WARNING
+    assert payload["meta"]["audited"] is False
     for args in (("check-data",), ("list", "--seller", "Ana Alfa"), ("explain", "--id", "E138")):
         code, out, _ = run_cli(raw_dir, capsys, *args)
         assert code == 0 and "dados diferentes da versão auditada" in out
@@ -105,7 +105,7 @@ def test_unknown_seller(raw_dir, capsys):
 
 @pytest.mark.real_data
 def test_real_data_has_no_warning(real_dataset):
-    assert views.seller_pipeline(real_dataset, "Zane Levy")["meta"]["data_warning"] is None
+    assert views.seller_pipeline(real_dataset, "Zane Levy")["meta"]["audited"] is True
 
 
 @pytest.mark.real_data

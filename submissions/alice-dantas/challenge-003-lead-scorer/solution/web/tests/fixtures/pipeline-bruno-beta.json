@@ -1,0 +1,163 @@
+{
+  "seller": "Bruno Beta",
+  "meta": {
+    "as_of": "2017-12-31",
+    "cycle_limit_days": 138,
+    "cycle_percentile": 90,
+    "min_cases": 30,
+    "cycle_references": {
+      "GTX Basic": {
+        "p90_days": 138,
+        "won_n": 1
+      },
+      "GTX Plus Pro": {
+        "p90_days": null,
+        "won_n": 0
+      },
+      "GTX Pro": {
+        "p90_days": 59,
+        "won_n": 1
+      },
+      "MG Special": {
+        "p90_days": null,
+        "won_n": 0
+      }
+    },
+    "base_rate": {
+      "won": 2,
+      "closed": 3,
+      "open": 7,
+      "pct": 67,
+      "low_pct": 20,
+      "high_pct": 90
+    },
+    "audited": false,
+    "contract_version": 3
+  },
+  "ordering": {
+    "group_order": [
+      "focar",
+      "revisar",
+      "qualificar",
+      "nao_pontuavel"
+    ],
+    "within_group": [
+      "value_band",
+      "sales_price_desc",
+      "opportunity_id"
+    ],
+    "age_affects_order": false
+  },
+  "summary": {
+    "total": 1,
+    "focar": 0,
+    "revisar": 0,
+    "qualificar": 1,
+    "nao_pontuavel": 0,
+    "without_account": 1
+  },
+  "empty": null,
+  "groups": [
+    {
+      "state": "focar",
+      "count": 0,
+      "empty": {
+        "code": "start_with_group",
+        "params": {
+          "group": "qualificar",
+          "action": "advance_prospecting",
+          "cycle_limit_days": 138
+        }
+      },
+      "next_action": null,
+      "items": []
+    },
+    {
+      "state": "revisar",
+      "count": 0,
+      "empty": {
+        "code": "group_empty",
+        "params": {}
+      },
+      "next_action": null,
+      "items": []
+    },
+    {
+      "state": "qualificar",
+      "count": 1,
+      "empty": null,
+      "next_action": {
+        "code": "advance_prospecting",
+        "params": {}
+      },
+      "items": [
+        {
+          "opportunity_id": "P1",
+          "sales_agent": "Bruno Beta",
+          "product": "GTX Pro",
+          "account": null,
+          "sales_price": 4821,
+          "value_band": "alto",
+          "engage_date": null,
+          "age_days": null,
+          "group": "qualificar",
+          "deal_stage": "Prospecting",
+          "missing_field": null,
+          "tie_size": 1,
+          "reasons": [
+            {
+              "code": "prospecting_stage",
+              "role": "group",
+              "params": {
+                "deal_stage": "Prospecting"
+              }
+            },
+            {
+              "code": "list_price",
+              "role": "order",
+              "params": {
+                "product": "GTX Pro",
+                "sales_price": 4821,
+                "value_band": "alto"
+              }
+            },
+            {
+              "code": "no_cycle_reference",
+              "role": "context",
+              "params": {
+                "cause": "no_age",
+                "product": "GTX Pro"
+              }
+            },
+            {
+              "code": "closed_base_rate",
+              "role": "context",
+              "params": {
+                "won": 2,
+                "closed": 3,
+                "open": 7,
+                "pct": 67,
+                "low_pct": 20,
+                "high_pct": 90
+              }
+            }
+          ],
+          "next_action": {
+            "code": "advance_prospecting",
+            "params": {}
+          }
+        }
+      ]
+    },
+    {
+      "state": "nao_pontuavel",
+      "count": 0,
+      "empty": {
+        "code": "group_empty",
+        "params": {}
+      },
+      "next_action": null,
+      "items": []
+    }
+  ]
+}

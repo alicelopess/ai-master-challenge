@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from . import codes
+
 SOLUTION_DIR = Path(__file__).resolve().parents[1]
 RAW_DIR = SOLUTION_DIR / "data" / "raw"
 DATASET_URL = "https://www.kaggle.com/datasets/agungpambudi/crm-sales-predictive-analytics"
@@ -36,9 +38,6 @@ PRODUCT_MAP = {"GTXPro": "GTX Pro"}
 OPEN_STAGES = ("Engaging", "Prospecting")
 CLOSED_STAGES = ("Won", "Lost")
 
-DATA_WARNING = ("Atenção: dados diferentes da versão auditada; os números conferidos "
-                "no PRD deixam de ser garantidos.")
-
 # Únicos campos que a classificação enxerga (RD-02). `close_date` entra só
 # na régua de ciclo, e só de fechadas até o as_of.
 CLASSIFICATION_FIELDS = (
@@ -46,54 +45,34 @@ CLASSIFICATION_FIELDS = (
     "product", "sales_price", "account", "deal_stage", "engage_date",
 )
 
-FOCAR, REVISAR, QUALIFICAR, NAO_PONTUAVEL = "Focar", "Revisar", "Qualificar", "Não pontuável"
+# Estados (grupos), na ordem da lista. São chaves: o nome de cada grupo é de quem apresenta.
+FOCAR, REVISAR, QUALIFICAR, NAO_PONTUAVEL = "focar", "revisar", "qualificar", "nao_pontuavel"
 STATES = (FOCAR, REVISAR, QUALIFICAR, NAO_PONTUAVEL)
-# Chaves estáveis (sem acento) do payload da CLI e da API.
-STATE_KEYS = {FOCAR: "focar", REVISAR: "revisar", QUALIFICAR: "qualificar", NAO_PONTUAVEL: "nao_pontuavel"}
 
-NO_ACCOUNT = "sem cliente registrado"
-EMPTY_GROUP = "Nenhuma oportunidade neste grupo."
-NO_OPEN_FOR_SELLER = "Nenhuma oportunidade aberta para este vendedor."
-NO_OPEN_FOR_FILTER = "Nenhuma oportunidade aberta para este filtro."
-
-# Campo que falta → (motivo, nome no texto). A ordem define qual é citado primeiro.
-MISSING_FIELDS = {
-    "product": ("sem produto", "o produto"),
-    "sales_price": ("sem preço de tabela", "o preço de tabela"),
-    "engage_date": ("sem data de engajamento", "a data de engajamento"),
-}
-
-# Focar vazio aponta o primeiro grupo seguinte que tem oportunidades (Q-01).
-FOCAR_EMPTY = "Nenhuma oportunidade dentro do ciclo observado (até {limit} d). Comece por {group}: {action}."
-START_ACTIONS = {
-    REVISAR: "confirme no CRM quais seguem ativas",
-    QUALIFICAR: "avance no CRM as de maior valor de tabela",
-    NAO_PONTUAVEL: "corrija o cadastro no CRM",
-}
+# Campos necessários para pontuar; a ordem define qual é citado primeiro (RD-03).
+MISSING_FIELDS = ("product", "sales_price", "engage_date")
 
 # Referência de ciclo por produto: P90 das ganhas até o as_of (quantil
 # linear, arredondado para dia inteiro); abaixo de MIN_CASES, só indicação.
 CYCLE_PERCENTILE = 90
 MIN_CASES = 30
 
-# Valor de tabela: alto >= 3.000; médio de 500 a 2.999; baixo < 500.
+# Faixa de valor de tabela: alto >= 3.000; médio de 500 a 2.999; baixo < 500.
 VALUE_BANDS = (("alto", 3000), ("médio", 500), ("baixo", 0))
 
-LEGEND = (
-    "Ordem: Focar → Revisar → Qualificar → Não pontuável; em cada grupo, maior "
-    "valor de tabela primeiro; a idade aparece, mas não muda a ordem."
-)
-
-# Próximo passo por estado (PRD, P0-3). A ferramenta só lê o CRM (RE-03).
-NEXT_STEPS = {
-    FOCAR: "Trabalhe primeiro os de maior valor de tabela; empates do mesmo produto valem o mesmo.",
-    REVISAR: "Confirme no CRM se segue ativa: idade acima do ciclo não prova que o negócio terminou.",
-    QUALIFICAR: ("Ainda em prospecção: avance no CRM os de maior valor de tabela e registre a "
-                 "data de engajamento quando houver contato."),
-    NAO_PONTUAVEL: "Corrija no CRM o campo indicado em cada oportunidade.",
+# Próximo passo por estado (PRD, P0-3), como código. A ferramenta só lê o CRM (RE-03).
+NEXT_ACTIONS = {
+    FOCAR: codes.WORK_HIGHEST_LIST_PRICE_FIRST,
+    REVISAR: codes.CONFIRM_STILL_ACTIVE,
+    QUALIFICAR: codes.ADVANCE_PROSPECTING,
 }
-# Por item, Não pontuável cita o campo: "Corrija <campo> no CRM."
-FIX_FIELD_STEP = "Corrija {field} no CRM."
+# Focar vazio aponta o primeiro grupo seguinte que tem oportunidades (Q-01), com esta ação.
+START_ACTION_CODES = {
+    REVISAR: codes.CONFIRM_STILL_ACTIVE,
+    QUALIFICAR: codes.ADVANCE_PROSPECTING,
+    NAO_PONTUAVEL: codes.FIX_MISSING_FIELDS,
+}
 
-# Nenhum texto mostrado ao vendedor pode conter estes termos (AC-3.8).
+# Nenhum texto mostrado ao vendedor pode conter estes termos (AC-3.8). Os catálogos
+# da tela e da CLI são verificados contra esta lista.
 FORBIDDEN_TERMS = ("probabilidade", "perdida", "encerre", "prioridade alta", "chance alta", "score")

@@ -5,12 +5,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import WEB_ORIGIN, create_app
-from leadscorer import data, policy, views
+from leadscorer import codes, data, policy, views
 from leadscorer.__main__ import main
 from leadscorer.errors import DataError
 
 from conftest import write_raw
-from test_explain import assert_vocabulary, user_texts
 
 
 def roundtrip(payload):
@@ -44,7 +43,7 @@ def test_seller_pipeline_is_the_core_payload(client, raw_dir, capsys):  # AC-2.8
 
 def test_seller_without_open_deals_is_200(client):  # AC-2.5
     body = client.get(pipeline_url("Carla Gama")).json()
-    assert body["summary"]["total"] == 0 and body["empty_message"] == policy.NO_OPEN_FOR_SELLER
+    assert body["summary"]["total"] == 0 and body["empty"] == {"code": codes.NO_OPEN_FOR_SELLER, "params": {}}
 
 
 def test_unknown_seller_is_404(client):  # AC-2.6
@@ -73,19 +72,17 @@ def test_missing_csv_is_503_with_cli_message_and_recovers(tmp_path):  # AC-1.2
 
 def test_filters_never_fail(client):  # AC-2.10
     by_manager = client.get("/api/pipeline?manager=Mara%20Um").json()
-    assert by_manager["summary"]["total"] == 7 and by_manager["empty_message"] is None
+    assert by_manager["summary"]["total"] == 7 and by_manager["empty"] is None
     for query in ("manager=Ninguem", "manager=Mara%20Um&office=East", "office=Marte"):
         response = client.get(f"/api/pipeline?{query}")
         assert response.status_code == 200
         body = response.json()
-        assert body["summary"]["total"] == 0 and body["empty_message"] == policy.NO_OPEN_FOR_FILTER
-        for text in user_texts(body):
-            assert_vocabulary(text)
+        assert body["summary"]["total"] == 0 and body["empty"] == {"code": codes.NO_OPEN_FOR_FILTER, "params": {}}
 
 
 def test_meta_follows_as_of(client):
     assert client.get("/api/meta").json()["as_of"] == "2017-12-31"
-    assert client.get("/api/meta?as_of=2030-01-01").json()["data_label"] == "Dados até 01/01/2030"
+    assert client.get("/api/meta?as_of=2030-01-01").json()["as_of"] == "2030-01-01"
 
 
 def test_cors_only_for_the_web_page(client):

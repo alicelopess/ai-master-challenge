@@ -4,7 +4,7 @@ import json
 import pandas as pd
 import pytest
 
-from leadscorer import data, policy, triage, views
+from leadscorer import cli_text, codes, data, policy, triage, views
 from leadscorer.__main__ import main, render_detail, render_list
 
 from conftest import PIPELINE, PRODUCTS, opp, write_raw
@@ -43,8 +43,8 @@ def test_missing_fields_become_unscorable_with_reason(unscorable_dir):  # AC-1.6
     assert opps.loc["N1", "state"] == opps.loc["N2", "state"] == policy.NAO_PONTUAVEL
     payload = views.seller_pipeline(data.load(unscorable_dir), "Bruno Beta")
     items = {e["opportunity_id"]: e for e in group(payload, "nao_pontuavel")["items"]}
-    assert items["N1"]["reason"] == "sem data de engajamento"
-    assert items["N2"]["reason"] == "sem produto"
+    assert items["N1"]["missing_field"] == "engage_date"
+    assert items["N2"]["missing_field"] == "product"
     assert sum(triage.summary(opps.reset_index()).values()) == len(opps)
 
 
@@ -52,10 +52,12 @@ def test_unscorable_panel_names_the_field(unscorable_dir):  # AC-3.6
     dataset = data.load(unscorable_dir)
     n1 = views.opportunity_detail(dataset, "N1")["item"]
     n2 = views.opportunity_detail(dataset, "N2")["item"]
-    assert n1["explanation"][0]["text"] == "Não pontuável porque falta a data de engajamento."
-    assert n1["next_step"] == "Corrija a data de engajamento no CRM."
-    assert n2["explanation"][0]["text"] == "Não pontuável porque falta o produto."
-    assert n2["next_step"] == "Corrija o produto no CRM."
+    assert n1["reasons"][0]["params"] == {"field": "engage_date"}
+    assert n1["next_action"] == {"code": codes.FIX_MISSING_FIELD, "params": {"field": "engage_date"}}
+    assert cli_text.reason_text(n1["reasons"][0]) == "Não pontuável porque falta a data de engajamento."
+    assert cli_text.action_text(n1["next_action"]) == "Corrija a data de engajamento no CRM."
+    assert cli_text.reason_text(n2["reasons"][0]) == "Não pontuável porque falta o produto."
+    assert cli_text.action_text(n2["next_action"]) == "Corrija o produto no CRM."
     assert n2["sales_price"] is None and n2["value_band"] is None
 
 
@@ -74,7 +76,7 @@ def test_catalog_product_without_price_is_unscorable(tmp_path):
     products = [dict(row) for row in PRODUCTS]
     products[0]["sales_price"] = ""                                   # GTX Plus Pro sem preço
     entry = views.opportunity_detail(data.load(write_raw(tmp_path / "raw", products=products)), "EPP")["item"]
-    assert (entry["state"], entry["reason"]) == (policy.NAO_PONTUAVEL, "sem preço de tabela")
+    assert (entry["group"], entry["missing_field"]) == (policy.NAO_PONTUAVEL, "sales_price")
 
 
 def test_account_does_not_change_state_or_order(raw_dir):  # AC-1.7
@@ -105,15 +107,19 @@ def test_same_input_same_output_hash(raw_dir):  # AC-1.11
 
 def test_focar_empty_points_to_next_group(raw_dir):
     payload = views.seller_pipeline(data.load(raw_dir), "Bruno Beta")  # só uma Prospecting
-    assert group(payload, "focar")["empty_message"] == (
+    empty = group(payload, "focar")["empty"]
+    assert empty == {"code": codes.START_WITH_GROUP, "params": {
+        "group": "qualificar", "action": codes.ADVANCE_PROSPECTING, "cycle_limit_days": 138}}
+    assert cli_text.empty_text(empty) == (
         "Nenhuma oportunidade dentro do ciclo observado (até 138 d). "
         "Comece por Qualificar: avance no CRM as de maior valor de tabela.")
 
 
 def test_seller_without_open_deals(raw_dir, capsys):  # AC-2.5
     payload = views.seller_pipeline(data.load(raw_dir), "Carla Gama")
-    assert payload["summary"] == {"total": 0, "focar": 0, "revisar": 0, "qualificar": 0, "nao_pontuavel": 0}
-    assert payload["empty_message"] == "Nenhuma oportunidade aberta para este vendedor."
+    assert payload["summary"] == {"total": 0, "focar": 0, "revisar": 0, "qualificar": 0, "nao_pontuavel": 0,
+                                  "without_account": 0}
+    assert payload["empty"] == {"code": codes.NO_OPEN_FOR_SELLER, "params": {}}
     assert main(["--raw", str(raw_dir), "list", "--seller", "Carla Gama"]) == 0
     assert "Nenhuma oportunidade aberta para este vendedor." in capsys.readouterr().out
 
@@ -121,7 +127,7 @@ def test_seller_without_open_deals(raw_dir, capsys):  # AC-2.5
 @pytest.mark.real_data
 def test_real_darcel_focar_empty(real_dataset):  # AC-2.4
     payload = views.seller_pipeline(real_dataset, "Darcel Schlecht")
-    assert group(payload, "focar")["empty_message"] == FOCAR_EMPTY_REVISAR
+    assert cli_text.empty_text(group(payload, "focar")["empty"]) == FOCAR_EMPTY_REVISAR
     assert (payload["summary"]["revisar"], payload["summary"]["qualificar"]) == (83, 111)
 
 
@@ -129,7 +135,7 @@ def test_real_darcel_focar_empty(real_dataset):  # AC-2.4
 def test_real_carl_lin_has_no_open_deals(real_dataset):  # AC-2.5
     payload = views.seller_pipeline(real_dataset, "Carl Lin")
     assert payload["summary"]["total"] == 0
-    assert payload["empty_message"] == "Nenhuma oportunidade aberta para este vendedor."
+    assert payload["empty"]["code"] == codes.NO_OPEN_FOR_SELLER
 
 
 @pytest.mark.real_data
@@ -141,7 +147,7 @@ def test_real_far_as_of_moves_every_engaging_to_revisar(real_dataset):  # AC-2.1
         assert payload["summary"]["focar"] == 0
         assert payload["summary"]["revisar"] == engaging.get(seller, 0)
         if payload["summary"]["revisar"]:
-            assert group(payload, "focar")["empty_message"] == FOCAR_EMPTY_REVISAR
+            assert cli_text.empty_text(group(payload, "focar")["empty"]) == FOCAR_EMPTY_REVISAR
 
 
 @pytest.mark.real_data

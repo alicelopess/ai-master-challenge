@@ -13,18 +13,22 @@ from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 
 import pandas as pd
 
-from . import policy
+from . import codes, policy
 from .errors import DataError
 
 TABLES = ("sales_pipeline", "products", "sales_teams", "accounts")
 MAX_IDS_IN_MESSAGE = 10
 
 
+# Lacunas que cada junção conta (chaves; o texto é da CLI).
+GAP_NULL_PRICE, GAP_NULL_MANAGER, GAP_ORPHAN_ACCOUNT = "null_price", "null_manager", "orphan_account"
+
+
 @dataclass(frozen=True)
 class JoinStep:
-    label: str
+    table: str
     rows: int
-    gap_label: Optional[str] = None
+    gap: Optional[str] = None
     gap_count: int = 0
 
 
@@ -73,7 +77,8 @@ def require_files(raw_dir: Path) -> None:
         raise DataError(
             f"Arquivo ausente: {', '.join(missing)}. Pasta esperada: {display_path(raw_dir)}/. "
             f"Baixe o dataset pelo navegador em {policy.DATASET_URL} e copie os CSVs para "
-            "essa pasta (passo a passo em data/raw/README.md)."
+            "essa pasta (passo a passo em data/raw/README.md).",
+            code=codes.DATA_FILE_MISSING, files=missing, folder=display_path(raw_dir),
         )
 
 
@@ -84,12 +89,15 @@ def read_table(raw_dir: Path, table: str) -> pd.DataFrame:
         # Tudo como texto; só a célula vazia vira nulo ("NA" continua sendo texto).
         frame = pd.read_csv(path, dtype=str, keep_default_na=False, na_values=[""])
     except pd.errors.EmptyDataError:
-        raise DataError(f"{table}.csv está vazio. Colunas esperadas: {expected}.") from None
+        raise DataError(f"{table}.csv está vazio. Colunas esperadas: {expected}.",
+                        code=codes.DATA_FILE_EMPTY, table=table) from None
     except (pd.errors.ParserError, UnicodeDecodeError):
-        raise DataError(f"{table}.csv não é um CSV válido. Colunas esperadas: {expected}.") from None
+        raise DataError(f"{table}.csv não é um CSV válido. Colunas esperadas: {expected}.",
+                        code=codes.DATA_FILE_INVALID, table=table) from None
     missing = [c for c in policy.REQUIRED_COLUMNS[table] if c not in frame.columns]
     if missing:
-        raise DataError(f"{table}.csv sem as colunas: {', '.join(missing)}.")
+        raise DataError(f"{table}.csv sem as colunas: {', '.join(missing)}.",
+                        code=codes.DATA_COLUMNS_MISSING, table=table, columns=missing)
     return frame
 
 
@@ -105,14 +113,18 @@ def check_labels(pipeline: pd.DataFrame, products: pd.DataFrame) -> None:
     if not bad_stage.empty:
         labels = sorted(bad_stage["deal_stage"].fillna("(vazio)").unique())
         raise DataError(f"Estágio desconhecido em sales_pipeline.csv: {', '.join(labels)} "
-                        f"(IDs: {id_list(bad_stage['opportunity_id'])}). Nenhuma linha foi descartada.")
+                        f"(IDs: {id_list(bad_stage['opportunity_id'])}). Nenhuma linha foi descartada.",
+                        code=codes.DATA_UNKNOWN_LABEL, table="sales_pipeline", column="deal_stage",
+                        labels=labels, ids=sorted(bad_stage["opportunity_id"]))
     unknown = unmatched_products(pipeline, products, policy.PRODUCT_MAP)
     if not unknown.empty:
         labels = sorted(unknown["product"].unique())
         raise DataError(
             f"Produto sem cadastro em products.csv: {', '.join(labels)} "
             f"(IDs: {id_list(unknown['opportunity_id'])}). Nenhuma linha foi descartada: inclua o "
-            "produto no catálogo ou a grafia em PRODUCT_MAP (leadscorer/policy.py)."
+            "produto no catálogo ou a grafia em PRODUCT_MAP (leadscorer/policy.py).",
+            code=codes.DATA_UNKNOWN_LABEL, table="sales_pipeline", column="product",
+            labels=labels, ids=sorted(unknown["opportunity_id"]),
         )
 
 
@@ -121,7 +133,9 @@ def parse_dates(frame: pd.DataFrame, column: str) -> pd.Series:
     bad = frame[frame[column].notna() & parsed.isna()]
     if not bad.empty:
         raise DataError(f"sales_pipeline.csv: {column} fora do formato AAAA-MM-DD "
-                        f"(IDs: {id_list(bad['opportunity_id'])}).")
+                        f"(IDs: {id_list(bad['opportunity_id'])}).",
+                        code=codes.DATA_BAD_DATE, table="sales_pipeline", column=column,
+                        ids=sorted(bad["opportunity_id"]))
     return parsed
 
 
@@ -130,7 +144,9 @@ def merge_m1(left: pd.DataFrame, right: pd.DataFrame, key: str, table: str, **kw
         return left.merge(right, on=key, how="left", validate="m:1", **kwargs)
     except pd.errors.MergeError:
         repeated = right[right[key].duplicated()][key].unique()
-        raise DataError(f"{table}.csv tem {key} repetido: {', '.join(map(str, repeated))}.") from None
+        raise DataError(f"{table}.csv tem {key} repetido: {', '.join(map(str, repeated))}.",
+                        code=codes.DATA_DUPLICATE_KEY, table=table, column=key,
+                        values=[str(v) for v in repeated]) from None
 
 
 def load(raw_dir: Path = policy.RAW_DIR) -> Dataset:
@@ -148,19 +164,20 @@ def load(raw_dir: Path = policy.RAW_DIR) -> Dataset:
     try:
         products = products.assign(sales_price=pd.to_numeric(products["sales_price"]).astype("Int64"))
     except (ValueError, TypeError):
-        raise DataError("products.csv: sales_price precisa ser um número inteiro.") from None
+        raise DataError("products.csv: sales_price precisa ser um número inteiro.",
+                        code=codes.DATA_BAD_PRICE, table="products", column="sales_price") from None
     frame = merge_m1(pipeline, products, "product", "products")
-    steps.append(JoinStep("+ products", len(frame), "preço nulo", int(frame["sales_price"].isna().sum())))
+    steps.append(JoinStep("products", len(frame), GAP_NULL_PRICE, int(frame["sales_price"].isna().sum())))
 
     teams = raw["sales_teams"].loc[:, list(policy.REQUIRED_COLUMNS["sales_teams"])]
     frame = merge_m1(frame, teams, "sales_agent", "sales_teams")
-    steps.append(JoinStep("+ sales_teams", len(frame), "manager nulo", int(frame["manager"].isna().sum())))
+    steps.append(JoinStep("sales_teams", len(frame), GAP_NULL_MANAGER, int(frame["manager"].isna().sum())))
 
     accounts = raw["accounts"].loc[:, ["account"]]
     frame = merge_m1(frame, accounts, "account", "accounts", indicator=True)
     orphans = int((frame["account"].notna() & (frame["_merge"] == "left_only")).sum())
     frame = frame.drop(columns="_merge")
-    steps.append(JoinStep("+ accounts", len(frame), "conta sem cadastro", orphans))
+    steps.append(JoinStep("accounts", len(frame), GAP_ORPHAN_ACCOUNT, orphans))
 
     frame["engage_date"] = parse_dates(frame, "engage_date")
     frame["close_date"] = parse_dates(frame, "close_date")

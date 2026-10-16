@@ -1,0 +1,1595 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Lead Scorer",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/meta": {
+      "get": {
+        "summary": "Get Meta",
+        "operationId": "get_meta_api_meta_get",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "CSVs ausentes ou inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "as_of inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sellers": {
+      "get": {
+        "summary": "Get Sellers",
+        "operationId": "get_sellers_api_sellers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerList"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "CSVs ausentes ou inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sellers/{seller}/pipeline": {
+      "get": {
+        "summary": "Get Seller Pipeline",
+        "operationId": "get_seller_pipeline_api_sellers__seller__pipeline_get",
+        "parameters": [
+          {
+            "name": "seller",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Seller"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerPipeline"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "CSVs ausentes ou inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "as_of inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vendedor não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pipeline": {
+      "get": {
+        "summary": "Get Pipeline",
+        "operationId": "get_pipeline_api_pipeline_get",
+        "parameters": [
+          {
+            "name": "manager",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Manager"
+            }
+          },
+          {
+            "name": "office",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Office"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamPipeline"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "CSVs ausentes ou inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "as_of inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgeAboveCycleLimit": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "age_above_cycle_limit",
+            "title": "Code"
+          },
+          "role": {
+            "type": "string",
+            "const": "group",
+            "title": "Role"
+          },
+          "params": {
+            "$ref": "#/components/schemas/AgeParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "role",
+          "params"
+        ],
+        "title": "AgeAboveCycleLimit",
+        "description": "Engaging com idade acima do maior ciclo fechado: grupo revisar."
+      },
+      "AgeParams": {
+        "properties": {
+          "age_days": {
+            "type": "integer",
+            "title": "Age Days",
+            "description": "Dias corridos desde engage_date até o as_of."
+          },
+          "cycle_limit_days": {
+            "type": "integer",
+            "title": "Cycle Limit Days",
+            "description": "Maior ciclo entre as fechadas até o as_of."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "age_days",
+          "cycle_limit_days"
+        ],
+        "title": "AgeParams"
+      },
+      "AgeWithinCycleLimit": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "age_within_cycle_limit",
+            "title": "Code"
+          },
+          "role": {
+            "type": "string",
+            "const": "group",
+            "title": "Role"
+          },
+          "params": {
+            "$ref": "#/components/schemas/AgeParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "role",
+          "params"
+        ],
+        "title": "AgeWithinCycleLimit",
+        "description": "Engaging com idade até o maior ciclo fechado: grupo focar."
+      },
+      "BaseRate": {
+        "properties": {
+          "won": {
+            "type": "integer",
+            "title": "Won"
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed"
+          },
+          "open": {
+            "type": "integer",
+            "title": "Open"
+          },
+          "pct": {
+            "type": "integer",
+            "title": "Pct",
+            "description": "Ganhas sobre fechadas, em %."
+          },
+          "low_pct": {
+            "type": "integer",
+            "title": "Low Pct",
+            "description": "Se todas as abertas fossem perdidas, em %."
+          },
+          "high_pct": {
+            "type": "integer",
+            "title": "High Pct",
+            "description": "Se todas as abertas fossem ganhas, em %."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "won",
+          "closed",
+          "open",
+          "pct",
+          "low_pct",
+          "high_pct"
+        ],
+        "title": "BaseRate"
+      },
+      "ClosedBaseRate": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "closed_base_rate",
+            "title": "Code"
+          },
+          "role": {
+            "type": "string",
+            "const": "context",
+            "title": "Role"
+          },
+          "params": {
+            "$ref": "#/components/schemas/BaseRate"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "role",
+          "params"
+        ],
+        "title": "ClosedBaseRate",
+        "description": "Taxa de ganho das fechadas: igual para todas as oportunidades, só contexto."
+      },
+      "CycleReference": {
+        "properties": {
+          "p90_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P90 Days"
+          },
+          "won_n": {
+            "type": "integer",
+            "title": "Won N"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "p90_days",
+          "won_n"
+        ],
+        "title": "CycleReference"
+      },
+      "ErrorBody": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "Mensagem do núcleo, a mesma da CLI."
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "data_file_missing",
+              "data_file_empty",
+              "data_file_invalid",
+              "data_columns_missing",
+              "data_unknown_label",
+              "data_bad_date",
+              "data_duplicate_key",
+              "data_bad_price",
+              "invalid_as_of_format",
+              "as_of_before_last_close",
+              "seller_not_found",
+              "opportunity_not_found"
+            ],
+            "title": "Code"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "Valores citados pelo erro, por código."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "detail",
+          "code",
+          "params"
+        ],
+        "title": "ErrorBody"
+      },
+      "FieldParams": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "product",
+              "sales_price",
+              "engage_date"
+            ],
+            "title": "Field"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field"
+        ],
+        "title": "FieldParams"
+      },
+      "FixFieldAction": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "fix_missing_field",
+            "title": "Code"
+          },
+          "params": {
+            "$ref": "#/components/schemas/FieldParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "params"
+        ],
+        "title": "FixFieldAction"
+      },
+      "Group": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "focar",
+              "revisar",
+              "qualificar",
+              "nao_pontuavel"
+            ],
+            "title": "State"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "empty": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/GroupEmpty"
+                  },
+                  {
+                    "$ref": "#/components/schemas/StartWithGroup"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "code",
+                  "mapping": {
+                    "group_empty": "#/components/schemas/GroupEmpty",
+                    "start_with_group": "#/components/schemas/StartWithGroup"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empty",
+            "description": "Nulo quando o grupo tem oportunidades."
+          },
+          "next_action": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/SimpleAction"
+                  },
+                  {
+                    "$ref": "#/components/schemas/FixFieldAction"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "code",
+                  "mapping": {
+                    "advance_prospecting": "#/components/schemas/SimpleAction",
+                    "confirm_still_active": "#/components/schemas/SimpleAction",
+                    "fix_missing_field": "#/components/schemas/FixFieldAction",
+                    "fix_missing_fields": "#/components/schemas/SimpleAction",
+                    "work_highest_list_price_first": "#/components/schemas/SimpleAction"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Action",
+            "description": "Nulo quando o grupo está vazio."
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "Na ordem de prioridade decidida pelo núcleo."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "count",
+          "empty",
+          "next_action",
+          "items"
+        ],
+        "title": "Group"
+      },
+      "GroupEmpty": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "group_empty",
+            "title": "Code"
+          },
+          "params": {
+            "$ref": "#/components/schemas/NoParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "params"
+        ],
+        "title": "GroupEmpty"
+      },
+      "Item": {
+        "properties": {
+          "opportunity_id": {
+            "type": "string",
+            "title": "Opportunity Id"
+          },
+          "sales_agent": {
+            "type": "string",
+            "title": "Sales Agent"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product"
+          },
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account",
+            "description": "Nulo quando a oportunidade não tem conta registrada."
+          },
+          "sales_price": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Price",
+            "description": "Preço de tabela do produto (catálogo, não valor negociado)."
+          },
+          "value_band": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "alto",
+                  "médio",
+                  "baixo"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Band"
+          },
+          "engage_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engage Date"
+          },
+          "age_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Days",
+            "description": "Dias corridos de engage_date até o as_of."
+          },
+          "group": {
+            "type": "string",
+            "enum": [
+              "focar",
+              "revisar",
+              "qualificar",
+              "nao_pontuavel"
+            ],
+            "title": "Group"
+          },
+          "deal_stage": {
+            "type": "string",
+            "enum": [
+              "Engaging",
+              "Prospecting"
+            ],
+            "title": "Deal Stage"
+          },
+          "missing_field": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "product",
+                  "sales_price",
+                  "engage_date"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing Field"
+          },
+          "tie_size": {
+            "type": "integer",
+            "title": "Tie Size",
+            "description": "Quantas oportunidades do mesmo grupo e produto (mesmo preço) há na carteira."
+          },
+          "reasons": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/AgeWithinCycleLimit"
+                },
+                {
+                  "$ref": "#/components/schemas/AgeAboveCycleLimit"
+                },
+                {
+                  "$ref": "#/components/schemas/ProspectingStage"
+                },
+                {
+                  "$ref": "#/components/schemas/MissingFieldReason"
+                },
+                {
+                  "$ref": "#/components/schemas/ListPrice"
+                },
+                {
+                  "$ref": "#/components/schemas/NoProduct"
+                },
+                {
+                  "$ref": "#/components/schemas/NoListPrice"
+                },
+                {
+                  "$ref": "#/components/schemas/WonCycleReference"
+                },
+                {
+                  "$ref": "#/components/schemas/NoCycleReference"
+                },
+                {
+                  "$ref": "#/components/schemas/ClosedBaseRate"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "code",
+                "mapping": {
+                  "age_above_cycle_limit": "#/components/schemas/AgeAboveCycleLimit",
+                  "age_within_cycle_limit": "#/components/schemas/AgeWithinCycleLimit",
+                  "closed_base_rate": "#/components/schemas/ClosedBaseRate",
+                  "list_price": "#/components/schemas/ListPrice",
+                  "missing_field": "#/components/schemas/MissingFieldReason",
+                  "no_cycle_reference": "#/components/schemas/NoCycleReference",
+                  "no_list_price": "#/components/schemas/NoListPrice",
+                  "no_product": "#/components/schemas/NoProduct",
+                  "prospecting_stage": "#/components/schemas/ProspectingStage",
+                  "won_cycle_reference": "#/components/schemas/WonCycleReference"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Reasons",
+            "description": "Um motivo de grupo, um de ordem e os de contexto, nesta ordem."
+          },
+          "next_action": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SimpleAction"
+              },
+              {
+                "$ref": "#/components/schemas/FixFieldAction"
+              }
+            ],
+            "title": "Next Action",
+            "discriminator": {
+              "propertyName": "code",
+              "mapping": {
+                "advance_prospecting": "#/components/schemas/SimpleAction",
+                "confirm_still_active": "#/components/schemas/SimpleAction",
+                "fix_missing_field": "#/components/schemas/FixFieldAction",
+                "fix_missing_fields": "#/components/schemas/SimpleAction",
+                "work_highest_list_price_first": "#/components/schemas/SimpleAction"
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "opportunity_id",
+          "sales_agent",
+          "product",
+          "account",
+          "sales_price",
+          "value_band",
+          "engage_date",
+          "age_days",
+          "group",
+          "deal_stage",
+          "missing_field",
+          "tie_size",
+          "reasons",
+          "next_action"
+        ],
+        "title": "Item"
+      },
+      "ListPrice": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "list_price",
+            "title": "Code"
+          },
+          "role": {
+            "type": "string",
+            "const": "order",
+            "title": "Role"
+          },
+          "params": {
+            "$ref": "#/components/schemas/ListPriceParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "role",
+          "params"
+        ],
+        "title": "ListPrice",
+        "description": "Faixa e preço de tabela: ordenam dentro do grupo."
+      },
+      "ListPriceParams": {
+        "properties": {
+          "product": {
+            "type": "string",
+            "title": "Product"
+          },
+          "sales_price": {
+            "type": "integer",
+            "title": "Sales Price",
+            "description": "Preço de tabela (catálogo, não valor negociado)."
+          },
+          "value_band": {
+            "type": "string",
+            "enum": [
+              "alto",
+              "médio",
+              "baixo"
+            ],
+            "title": "Value Band"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product",
+          "sales_price",
+          "value_band"
+        ],
+        "title": "ListPriceParams"
+      },
+      "Meta": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of"
+          },
+          "cycle_limit_days": {
+            "type": "integer",
+            "title": "Cycle Limit Days"
+          },
+          "cycle_percentile": {
+            "type": "integer",
+            "title": "Cycle Percentile"
+          },
+          "min_cases": {
+            "type": "integer",
+            "title": "Min Cases"
+          },
+          "cycle_references": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CycleReference"
+            },
+            "type": "object",
+            "title": "Cycle References"
+          },
+          "base_rate": {
+            "$ref": "#/components/schemas/BaseRate"
+          },
+          "audited": {
+            "type": "boolean",
+            "title": "Audited",
+            "description": "Os CSVs são a versão auditada (hash)."
+          },
+          "contract_version": {
+            "type": "integer",
+            "const": 3,
+            "title": "Contract Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "as_of",
+          "cycle_limit_days",
+          "cycle_percentile",
+          "min_cases",
+          "cycle_references",
+          "base_rate",
+          "audited",
+          "contract_version"
+        ],
+        "title": "Meta"
+      },
+      "MissingFieldReason": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "missing_field",
+            "title": "Code"
+          },
+          "role": {
+            "type": "string",
+            "const": "group",
+            "title": "Role"
+          },
+          "params": {
+            "$ref": "#/components/schemas/FieldParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "role",
+          "params"
+        ],
+        "title": "MissingFieldReason",
+        "description": "Falta um campo necessário: grupo nao_pontuavel."
+      },
+      "NoCycleParams": {
+        "properties": {
+          "cause": {
+            "type": "string",
+            "enum": [
+              "no_product",
+              "no_age",
+              "no_wins"
+            ],
+            "title": "Cause"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cause"
+        ],
+        "title": "NoCycleParams"
+      },
+      "NoCycleReference": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "no_cycle_reference",
+            "title": "Code"
+          },
+          "role": {
+            "type": "string",
+            "const": "context",
+            "title": "Role"
+          },
+          "params": {
+            "$ref": "#/components/schemas/NoCycleParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "role",
+          "params"
+        ],
+        "title": "NoCycleReference",
+        "description": "Não há referência de ciclo (sem produto, sem idade ou sem ganhas até o as_of)."
+      },
+      "NoListPrice": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "no_list_price",
+            "title": "Code"
+          },
+          "role": {
+            "type": "string",
+            "const": "order",
+            "title": "Role"
+          },
+          "params": {
+            "$ref": "#/components/schemas/ProductParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "role",
+          "params"
+        ],
+        "title": "NoListPrice",
+        "description": "O produto não tem preço no catálogo."
+      },
+      "NoParams": {
+        "properties": {},
+        "additionalProperties": false,
+        "type": "object",
+        "title": "NoParams",
+        "description": "Código sem parâmetros."
+      },
+      "NoProduct": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "no_product",
+            "title": "Code"
+          },
+          "role": {
+            "type": "string",
+            "const": "order",
+            "title": "Role"
+          },
+          "params": {
+            "$ref": "#/components/schemas/NoParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "role",
+          "params"
+        ],
+        "title": "NoProduct",
+        "description": "Sem produto, não há preço para ordenar."
+      },
+      "Ordering": {
+        "properties": {
+          "group_order": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "focar",
+                "revisar",
+                "qualificar",
+                "nao_pontuavel"
+              ]
+            },
+            "type": "array",
+            "title": "Group Order"
+          },
+          "within_group": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "value_band",
+                "sales_price_desc",
+                "opportunity_id"
+              ]
+            },
+            "type": "array",
+            "title": "Within Group",
+            "description": "Critérios dentro do grupo, na ordem em que valem."
+          },
+          "age_affects_order": {
+            "type": "boolean",
+            "title": "Age Affects Order"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "group_order",
+          "within_group",
+          "age_affects_order"
+        ],
+        "title": "Ordering",
+        "description": "A ordem da lista como dado, para quem apresenta explicar a ordem."
+      },
+      "PipelineEmpty": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "no_open_for_seller",
+              "no_open_for_filter"
+            ],
+            "title": "Code"
+          },
+          "params": {
+            "$ref": "#/components/schemas/NoParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "params"
+        ],
+        "title": "PipelineEmpty"
+      },
+      "ProductParams": {
+        "properties": {
+          "product": {
+            "type": "string",
+            "title": "Product"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product"
+        ],
+        "title": "ProductParams"
+      },
+      "ProspectingParams": {
+        "properties": {
+          "deal_stage": {
+            "type": "string",
+            "const": "Prospecting",
+            "title": "Deal Stage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "deal_stage"
+        ],
+        "title": "ProspectingParams"
+      },
+      "ProspectingStage": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "prospecting_stage",
+            "title": "Code"
+          },
+          "role": {
+            "type": "string",
+            "const": "group",
+            "title": "Role"
+          },
+          "params": {
+            "$ref": "#/components/schemas/ProspectingParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "role",
+          "params"
+        ],
+        "title": "ProspectingStage",
+        "description": "Estágio Prospecting: grupo qualificar (a regra é o estágio, não a falta de data)."
+      },
+      "Seller": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "manager": {
+            "type": "string",
+            "title": "Manager"
+          },
+          "office": {
+            "type": "string",
+            "title": "Office"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "manager",
+          "office"
+        ],
+        "title": "Seller"
+      },
+      "SellerList": {
+        "properties": {
+          "sellers": {
+            "items": {
+              "$ref": "#/components/schemas/Seller"
+            },
+            "type": "array",
+            "title": "Sellers",
+            "description": "Em ordem alfabética, sem métricas."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sellers"
+        ],
+        "title": "SellerList"
+      },
+      "SellerPipeline": {
+        "properties": {
+          "seller": {
+            "type": "string",
+            "title": "Seller"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          },
+          "ordering": {
+            "$ref": "#/components/schemas/Ordering"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Summary"
+          },
+          "empty": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PipelineEmpty"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nulo quando há oportunidades abertas."
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/Group"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "Na ordem de `ordering.group_order`."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seller",
+          "meta",
+          "ordering",
+          "summary",
+          "empty",
+          "groups"
+        ],
+        "title": "SellerPipeline"
+      },
+      "SimpleAction": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "work_highest_list_price_first",
+              "confirm_still_active",
+              "advance_prospecting",
+              "fix_missing_fields"
+            ],
+            "title": "Code"
+          },
+          "params": {
+            "$ref": "#/components/schemas/NoParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "params"
+        ],
+        "title": "SimpleAction"
+      },
+      "StartWithGroup": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "start_with_group",
+            "title": "Code"
+          },
+          "params": {
+            "$ref": "#/components/schemas/StartWithParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "params"
+        ],
+        "title": "StartWithGroup",
+        "description": "O grupo focar está vazio: comece pelo grupo indicado."
+      },
+      "StartWithParams": {
+        "properties": {
+          "group": {
+            "type": "string",
+            "enum": [
+              "focar",
+              "revisar",
+              "qualificar",
+              "nao_pontuavel"
+            ],
+            "title": "Group",
+            "description": "Primeiro grupo seguinte que tem oportunidades."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "confirm_still_active",
+              "advance_prospecting",
+              "fix_missing_fields"
+            ],
+            "title": "Action"
+          },
+          "cycle_limit_days": {
+            "type": "integer",
+            "title": "Cycle Limit Days"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "group",
+          "action",
+          "cycle_limit_days"
+        ],
+        "title": "StartWithParams"
+      },
+      "Summary": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "focar": {
+            "type": "integer",
+            "title": "Focar"
+          },
+          "revisar": {
+            "type": "integer",
+            "title": "Revisar"
+          },
+          "qualificar": {
+            "type": "integer",
+            "title": "Qualificar"
+          },
+          "nao_pontuavel": {
+            "type": "integer",
+            "title": "Nao Pontuavel"
+          },
+          "without_account": {
+            "type": "integer",
+            "title": "Without Account",
+            "description": "Oportunidades sem conta registrada."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total",
+          "focar",
+          "revisar",
+          "qualificar",
+          "nao_pontuavel",
+          "without_account"
+        ],
+        "title": "Summary"
+      },
+      "TeamFilter": {
+        "properties": {
+          "manager": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager"
+          },
+          "office": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Office"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "manager",
+          "office"
+        ],
+        "title": "TeamFilter"
+      },
+      "TeamPipeline": {
+        "properties": {
+          "filter": {
+            "$ref": "#/components/schemas/TeamFilter"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          },
+          "ordering": {
+            "$ref": "#/components/schemas/Ordering"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Summary"
+          },
+          "empty": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PipelineEmpty"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nulo quando há oportunidades abertas."
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/Group"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "Na ordem de `ordering.group_order`."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "filter",
+          "meta",
+          "ordering",
+          "summary",
+          "empty",
+          "groups"
+        ],
+        "title": "TeamPipeline"
+      },
+      "WonCycleParams": {
+        "properties": {
+          "product": {
+            "type": "string",
+            "title": "Product"
+          },
+          "percentile": {
+            "type": "integer",
+            "title": "Percentile"
+          },
+          "p90_days": {
+            "type": "integer",
+            "title": "P90 Days",
+            "description": "Ciclo até o qual fecharam `percentile`% das ganhas do produto."
+          },
+          "won_n": {
+            "type": "integer",
+            "title": "Won N",
+            "description": "Vendas ganhas do produto até o as_of."
+          },
+          "few_cases": {
+            "type": "boolean",
+            "title": "Few Cases",
+            "description": "won_n abaixo do mínimo de casos: ler como indicação."
+          },
+          "age_days": {
+            "type": "integer",
+            "title": "Age Days"
+          },
+          "cycle_limit_days": {
+            "type": "integer",
+            "title": "Cycle Limit Days"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product",
+          "percentile",
+          "p90_days",
+          "won_n",
+          "few_cases",
+          "age_days",
+          "cycle_limit_days"
+        ],
+        "title": "WonCycleParams"
+      },
+      "WonCycleReference": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "won_cycle_reference",
+            "title": "Code"
+          },
+          "role": {
+            "type": "string",
+            "const": "context",
+            "title": "Role"
+          },
+          "params": {
+            "$ref": "#/components/schemas/WonCycleParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "role",
+          "params"
+        ],
+        "title": "WonCycleReference",
+        "description": "Referência de ciclo das ganhas do produto: só contexto."
+      }
+    }
+  }
+}

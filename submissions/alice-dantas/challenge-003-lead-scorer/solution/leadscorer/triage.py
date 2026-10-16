@@ -15,7 +15,7 @@ from typing import Dict, Optional, Union
 import numpy as np
 import pandas as pd
 
-from . import policy
+from . import codes, policy
 from .errors import PolicyError
 
 DateLike = Union[date, str, pd.Timestamp]
@@ -44,12 +44,14 @@ def parse_as_of(frame: pd.DataFrame, value: Optional[DateLike]) -> Optional[pd.T
             stamp = pd.Timestamp(value)
         except ValueError:
             raise PolicyError(f"Data inválida: '{value}'. Use o formato AAAA-MM-DD, "
-                              f"a partir de {minimum_iso}.") from None
+                              f"a partir de {minimum_iso}.",
+                              code=codes.INVALID_AS_OF_FORMAT, value=value, minimum=minimum_iso) from None
     else:
         stamp = pd.Timestamp(value)
     if stamp < minimum:
         raise PolicyError(f"Data {stamp.date().isoformat()} anterior ao último fechamento registrado. "
-                          f"Use uma data a partir de {minimum_iso}, no formato AAAA-MM-DD.")
+                          f"Use uma data a partir de {minimum_iso}, no formato AAAA-MM-DD.",
+                          code=codes.AS_OF_BEFORE_LAST_CLOSE, value=stamp.date().isoformat(), minimum=minimum_iso)
     return stamp
 
 

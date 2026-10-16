@@ -7,10 +7,10 @@ pytestmark = pytest.mark.real_data
 def test_reconciliation_8800(real_dataset):
     assert real_dataset.audited
     assert [step.rows for step in real_dataset.steps] == [8800] * 4
-    gaps = {step.label: step.gap_count for step in real_dataset.steps}
-    assert gaps["+ products"] == 0
-    assert gaps["+ sales_teams"] == 0
-    assert gaps["+ accounts"] == 0
+    gaps = {step.table: step.gap_count for step in real_dataset.steps}
+    assert gaps["products"] == 0
+    assert gaps["sales_teams"] == 0
+    assert gaps["accounts"] == 0
 
 
 def test_gtxpro_regression_1480(real_dataset):

@@ -1,8 +1,17 @@
 """Erros com mensagem para o usuário. A API traduz cada classe em um status HTTP."""
+from __future__ import annotations
+
+from typing import Any
 
 
 class LeadScorerError(Exception):
-    """Base: a mensagem é exibida como está, na CLI e na API."""
+    """Base: a mensagem é exibida como está, na CLI e na API. `code` e `params`
+    são o mesmo erro como dado (`codes.ERROR_CODES`), para quem apresenta."""
+
+    def __init__(self, message: str, *, code: str, **params: Any) -> None:
+        super().__init__(message)
+        self.code = code
+        self.params = params
 
 
 class DataError(LeadScorerError):
