@@ -51,6 +51,11 @@ STATE_KEYS = {FOCAR: "focar", REVISAR: "revisar", QUALIFICAR: "qualificar", NAO_
 NO_ACCOUNT = "sem cliente registrado"
 EMPTY_GROUP = "Nenhuma oportunidade neste grupo."
 
+# Referência de ciclo por produto: P90 das ganhas até o as_of (quantil
+# linear, arredondado para dia inteiro); abaixo de MIN_CASES, só indicação.
+CYCLE_PERCENTILE = 90
+MIN_CASES = 30
+
 # Valor de tabela: alto >= 3.000; médio de 500 a 2.999; baixo < 500.
 VALUE_BANDS = (("alto", 3000), ("médio", 500), ("baixo", 0))
 
@@ -58,3 +63,14 @@ LEGEND = (
     "Ordem: Focar → Revisar → Qualificar → Não pontuável; em cada grupo, maior "
     "valor de tabela primeiro; a idade aparece, mas não muda a ordem."
 )
+
+# Próximo passo por estado (PRD, P0-3). A ferramenta só lê o CRM (RE-03).
+NEXT_STEPS = {
+    FOCAR: "Trabalhe primeiro os de maior valor de tabela; empates do mesmo produto valem o mesmo.",
+    REVISAR: "Confirme no CRM se segue ativa: idade acima do ciclo não prova que o negócio terminou.",
+    QUALIFICAR: ("Ainda em prospecção: avance no CRM os de maior valor de tabela e registre a "
+                 "data de engajamento quando houver contato."),
+}
+
+# Nenhum texto mostrado ao vendedor pode conter estes termos (AC-3.8).
+FORBIDDEN_TERMS = ("probabilidade", "perdida", "encerre", "prioridade alta", "chance alta", "score")

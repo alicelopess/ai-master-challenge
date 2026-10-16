@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from . import data, policy, views
-from .views import fmt_int
+from .fmt import fmt_date, fmt_int
 
 
 def display_path(path: Path) -> str:
@@ -42,7 +42,7 @@ def check_data(raw_dir: Path) -> int:
 
 def render_item(entry: Dict[str, Any], indent: str) -> str:
     age = "—" if entry["age_days"] is None else f"{entry['age_days']} d"
-    engaged = "—" if entry["engage_date"] is None else views.fmt_date(pd.Timestamp(entry["engage_date"]))
+    engaged = "—" if entry["engage_date"] is None else fmt_date(pd.Timestamp(entry["engage_date"]))
     return (f"{indent}{entry['opportunity_id']:<10}{entry['product']:<16}{entry['client']:<26}"
             f"{fmt_int(entry['sales_price']):>8}   {engaged:<12}{age:>6}")
 
@@ -64,7 +64,7 @@ def render_list(payload: Dict[str, Any]) -> str:
         if not group["items"]:
             lines.append(f"  {group['empty_message']}")
             continue
-        lines.append(header)
+        lines += [f"  Próximo passo: {group['next_step']}", header]
         band_counts = Counter(entry["value_band"] for entry in group["items"])
         band = product = None
         for entry in group["items"]:
@@ -80,9 +80,32 @@ def render_list(payload: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def render_detail(detail: Dict[str, Any]) -> str:
+    entry = detail["item"]
+    lines = [
+        f"{entry['opportunity_id']} · {entry['product']} · {entry['client']} · {detail['seller']}",
+        detail["meta"]["data_label"],
+        "",
+        "Por que está aqui",
+    ]
+    lines += [f"  • {sentence['text']}" for sentence in entry["explanation"]]
+    lines += ["", f"Próximo passo: {entry['next_step']}"]
+    return "\n".join(lines)
+
+
 def list_pipeline(raw_dir: Path, seller: str, as_of: Optional[str], as_json: bool) -> int:
     payload = views.seller_pipeline(data.load(raw_dir), seller, as_of)
     print(json.dumps(payload, ensure_ascii=False, indent=2) if as_json else render_list(payload))
+    return 0
+
+
+def explain_opportunity(raw_dir: Path, opportunity_id: str, as_of: Optional[str], as_json: bool) -> int:
+    try:
+        detail = views.opportunity_detail(data.load(raw_dir), opportunity_id, as_of)
+    except LookupError as error:
+        print(error, file=sys.stderr)
+        return 1
+    print(json.dumps(detail, ensure_ascii=False, indent=2) if as_json else render_detail(detail))
     return 0
 
 
@@ -95,12 +118,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     listing.add_argument("--seller", required=True, help='nome exato, ex.: "Zane Levy"')
     listing.add_argument("--as-of", help="data de referência AAAA-MM-DD (padrão: último fechamento)")
     listing.add_argument("--json", action="store_true", help="imprime o payload da API")
+    explaining = commands.add_parser("explain", help='"Por que está aqui" de uma oportunidade aberta')
+    explaining.add_argument("--id", required=True, dest="opportunity_id", help="ex.: 01XZ9CRY")
+    explaining.add_argument("--as-of", help="data de referência AAAA-MM-DD (padrão: último fechamento)")
+    explaining.add_argument("--json", action="store_true", help="imprime o payload da API")
     args = parser.parse_args(argv)
 
     if args.command == "check-data":
         return check_data(args.raw)
     if args.command == "list":
         return list_pipeline(args.raw, args.seller, args.as_of, args.json)
+    if args.command == "explain":
+        return explain_opportunity(args.raw, args.opportunity_id, args.as_of, args.json)
     return 2
 
 

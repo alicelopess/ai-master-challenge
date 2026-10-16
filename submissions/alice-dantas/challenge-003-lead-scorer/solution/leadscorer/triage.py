@@ -6,6 +6,7 @@ ordem estável). A idade é coluna exibida e não entra na chave.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import date
 from typing import Dict, Optional, Union
@@ -33,6 +34,40 @@ def resolve_context(frame: pd.DataFrame, as_of: Optional[DateLike] = None,
         closed = frame[frame["deal_stage"].isin(policy.CLOSED_STAGES) & (frame["close_date"] <= as_of_ts)]
         cycle_limit_days = int((closed["close_date"] - closed["engage_date"]).dt.days.max())
     return Context(as_of_ts, cycle_limit_days)
+
+
+def half_up(value: float) -> int:
+    return int(math.floor(value + 0.5))
+
+
+def cycle_references(frame: pd.DataFrame, ctx: Context) -> Dict[str, Dict[str, Optional[int]]]:
+    """P90 e N do ciclo das ganhas de cada produto, só com fechamentos até o as_of."""
+    won = frame[(frame["deal_stage"] == "Won") & (frame["close_date"] <= ctx.as_of)]
+    cycles = (won["close_date"] - won["engage_date"]).dt.days.groupby(won["product"])
+    refs = {}
+    for product in sorted(frame["product"].dropna().unique()):
+        if product in cycles.groups:
+            days = cycles.get_group(product)
+            refs[product] = {"p90_days": half_up(days.quantile(policy.CYCLE_PERCENTILE / 100)),
+                             "won_n": int(len(days))}
+        else:
+            refs[product] = {"p90_days": None, "won_n": 0}
+    return refs
+
+
+def base_rate(frame: pd.DataFrame, ctx: Context) -> Dict[str, int]:
+    """Taxa de ganho das fechadas e a faixa que ela teria se as abertas
+    fechassem todas perdidas (mínimo) ou todas ganhas (máximo)."""
+    closed = frame[frame["deal_stage"].isin(policy.CLOSED_STAGES) & (frame["close_date"] <= ctx.as_of)]
+    won = int((closed["deal_stage"] == "Won").sum())
+    opens = int(frame["deal_stage"].isin(policy.OPEN_STAGES).sum())
+    everything = len(closed) + opens
+    return {
+        "won": won, "closed": int(len(closed)), "open": opens,
+        "pct": half_up(100 * won / len(closed)),
+        "low_pct": half_up(100 * won / everything),
+        "high_pct": half_up(100 * (won + opens) / everything),
+    }
 
 
 def value_band(price: pd.Series) -> pd.Series:
