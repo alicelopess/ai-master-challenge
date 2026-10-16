@@ -70,7 +70,7 @@ def write_raw(directory: Path, **tables: List[Dict[str, str]]) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     for name, default in TABLE_ROWS.items():
         rows = tables.get(name, default)
-        fields = list(default[0].keys())
+        fields = list((rows or default)[0].keys())
         with open(directory / f"{name}.csv", "w", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=fields)
             writer.writeheader()
@@ -83,12 +83,22 @@ def raw_dir(tmp_path: Path) -> Path:
     return write_raw(tmp_path / "raw")
 
 
-@pytest.fixture(scope="session")
-def real_dataset() -> data.Dataset:
+def skip_without_real_csvs() -> None:
     missing = [t for t in data.TABLES if not (policy.RAW_DIR / f"{t}.csv").exists()]
     if missing:
         pytest.skip(
             f"CSVs reais ausentes em data/raw/ ({', '.join(missing)}): "
             "ver data/raw/README.md; os testes com fixtures sintéticas continuam valendo"
         )
+
+
+def pytest_runtest_setup(item: pytest.Item) -> None:
+    # O marcador basta: todo teste `real_data` é pulado com aviso se faltarem os CSVs.
+    if item.get_closest_marker("real_data"):
+        skip_without_real_csvs()
+
+
+@pytest.fixture(scope="session")
+def real_dataset() -> data.Dataset:
+    skip_without_real_csvs()
     return data.load(policy.RAW_DIR)

@@ -41,12 +41,12 @@ def assert_verifiable(entry, meta):  # AC-3.7
         for number in NUMBER.findall(text):
             assert number in allowed, (number, sentence)
     by_factor = {s["factor"]: s["fields"] for s in entry["explanation"]}
-    if entry["age_days"] is not None:
+    if entry["state"] in (policy.FOCAR, policy.REVISAR):
         assert by_factor["position"]["age_days"] == entry["age_days"]
         assert by_factor["position"]["cycle_limit_days"] == meta["cycle_limit_days"]
     assert by_factor["table_value"]["sales_price"] == entry["sales_price"]
-    ref = meta["cycle_references"][entry["product"]]
     if "p90_days" in by_factor["cycle"]:
+        ref = meta["cycle_references"][entry["product"]]
         assert (by_factor["cycle"]["p90_days"], by_factor["cycle"]["won_n"]) == (ref["p90_days"], ref["won_n"])
     rate = meta["base_rate"]
     assert by_factor["base_rate"] == {"base_rate_pct": rate["pct"], "range_low_pct": rate["low_pct"],

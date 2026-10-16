@@ -11,22 +11,18 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from . import data, policy, views
+from .errors import LeadScorerError
 from .fmt import fmt_date, fmt_int
-
-
-def display_path(path: Path) -> str:
-    try:
-        return str(path.resolve().relative_to(policy.SOLUTION_DIR))
-    except ValueError:
-        return str(path)
 
 
 def check_data(raw_dir: Path) -> int:
     dataset = data.load(raw_dir)
     frame = dataset.opportunities
     audited = sum(dataset.hashes[t] == policy.AUDITED_SHA256[t] for t in data.TABLES)
-    print(f"Dados: {display_path(raw_dir)}")
+    print(f"Dados: {data.display_path(raw_dir)}")
     print(f"Hash: {audited} de {len(data.TABLES)} arquivos iguais à versão auditada")
+    if not dataset.audited:
+        print(policy.DATA_WARNING)
     print("Junções (linhas após cada passo):")
     for step in dataset.steps:
         gap = f"   {step.gap_label}: {fmt_int(step.gap_count)}" if step.gap_label else ""
@@ -43,17 +39,26 @@ def check_data(raw_dir: Path) -> int:
 def render_item(entry: Dict[str, Any], indent: str) -> str:
     age = "—" if entry["age_days"] is None else f"{entry['age_days']} d"
     engaged = "—" if entry["engage_date"] is None else fmt_date(pd.Timestamp(entry["engage_date"]))
-    return (f"{indent}{entry['opportunity_id']:<10}{entry['product']:<16}{entry['client']:<26}"
-            f"{fmt_int(entry['sales_price']):>8}   {engaged:<12}{age:>6}")
+    price = "—" if entry["sales_price"] is None else fmt_int(entry["sales_price"])
+    line = (f"{indent}{entry['opportunity_id']:<10}{entry['product'] or '—':<16}{entry['client']:<26}"
+            f"{price:>8}   {engaged:<12}{age:>6}")
+    return f"{line}   ({entry['reason']})" if entry["reason"] else line
+
+
+def band_title(entry: Dict[str, Any]) -> str:
+    return entry["value_label"].capitalize() if entry["value_label"] else "Sem valor de tabela"
 
 
 def render_list(payload: Dict[str, Any]) -> str:
     summary = payload["summary"]
     counts = " + ".join(f"{summary[group['state']]} {group['label']}" for group in payload["groups"])
-    lines = [
+    lines = [payload["meta"]["data_warning"]] if payload["meta"]["data_warning"] else []
+    lines += [
         f"{payload['seller']} · {payload['meta']['data_label']}",
         f"{summary['total']} abertas = {counts}",
     ]
+    if payload["empty_message"]:
+        return "\n".join(lines + ["", payload["empty_message"]])
     if payload["account_warning"]:
         lines.append(f"Aviso: {payload['account_warning']}")
     lines.append(payload["legend"])
@@ -65,13 +70,13 @@ def render_list(payload: Dict[str, Any]) -> str:
             lines.append(f"  {group['empty_message']}")
             continue
         lines += [f"  Próximo passo: {group['next_step']}", header]
-        band_counts = Counter(entry["value_band"] for entry in group["items"])
+        band_counts = Counter(band_title(entry) for entry in group["items"])
         band = product = None
         for entry in group["items"]:
-            if entry["value_band"] != band:
-                band, product = entry["value_band"], None
-                lines.append(f"  {entry['value_label'].capitalize()} ({band_counts[band]})")
-            tied = entry["tie_size"] > 1
+            if band_title(entry) != band:
+                band, product = band_title(entry), None
+                lines.append(f"  {band} ({band_counts[band]})")
+            tied = entry["tie_size"] > 1 and entry["sales_price"] is not None
             if tied and entry["product"] != product:
                 lines.append(f"    ▸ {entry['tie_size']} oportunidades de mesmo valor de tabela "
                              f"({entry['product']}, {fmt_int(entry['sales_price'])})")
@@ -82,8 +87,9 @@ def render_list(payload: Dict[str, Any]) -> str:
 
 def render_detail(detail: Dict[str, Any]) -> str:
     entry = detail["item"]
-    lines = [
-        f"{entry['opportunity_id']} · {entry['product']} · {entry['client']} · {detail['seller']}",
+    lines = [detail["meta"]["data_warning"]] if detail["meta"]["data_warning"] else []
+    lines += [
+        f"{entry['opportunity_id']} · {entry['product'] or 'sem produto'} · {entry['client']} · {detail['seller']}",
         detail["meta"]["data_label"],
         "",
         "Por que está aqui",
@@ -100,11 +106,7 @@ def list_pipeline(raw_dir: Path, seller: str, as_of: Optional[str], as_json: boo
 
 
 def explain_opportunity(raw_dir: Path, opportunity_id: str, as_of: Optional[str], as_json: bool) -> int:
-    try:
-        detail = views.opportunity_detail(data.load(raw_dir), opportunity_id, as_of)
-    except LookupError as error:
-        print(error, file=sys.stderr)
-        return 1
+    detail = views.opportunity_detail(data.load(raw_dir), opportunity_id, as_of)
     print(json.dumps(detail, ensure_ascii=False, indent=2) if as_json else render_detail(detail))
     return 0
 
@@ -124,12 +126,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     explaining.add_argument("--json", action="store_true", help="imprime o payload da API")
     args = parser.parse_args(argv)
 
-    if args.command == "check-data":
-        return check_data(args.raw)
-    if args.command == "list":
-        return list_pipeline(args.raw, args.seller, args.as_of, args.json)
-    if args.command == "explain":
-        return explain_opportunity(args.raw, args.opportunity_id, args.as_of, args.json)
+    try:
+        if args.command == "check-data":
+            return check_data(args.raw)
+        if args.command == "list":
+            return list_pipeline(args.raw, args.seller, args.as_of, args.json)
+        if args.command == "explain":
+            return explain_opportunity(args.raw, args.opportunity_id, args.as_of, args.json)
+    except LeadScorerError as error:
+        # Nenhuma lista parcial: o erro sai sozinho, com a mensagem para o usuário.
+        print(f"Erro: {error}", file=sys.stderr)
+        return 1
     return 2
 
 

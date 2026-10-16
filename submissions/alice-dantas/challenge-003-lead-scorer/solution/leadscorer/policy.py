@@ -36,6 +36,9 @@ PRODUCT_MAP = {"GTXPro": "GTX Pro"}
 OPEN_STAGES = ("Engaging", "Prospecting")
 CLOSED_STAGES = ("Won", "Lost")
 
+DATA_WARNING = ("Atenção: dados diferentes da versão auditada; os números conferidos "
+                "no PRD deixam de ser garantidos.")
+
 # Únicos campos que a classificação enxerga (RD-02). `close_date` entra só
 # na régua de ciclo, e só de fechadas até o as_of.
 CLASSIFICATION_FIELDS = (
@@ -50,6 +53,23 @@ STATE_KEYS = {FOCAR: "focar", REVISAR: "revisar", QUALIFICAR: "qualificar", NAO_
 
 NO_ACCOUNT = "sem cliente registrado"
 EMPTY_GROUP = "Nenhuma oportunidade neste grupo."
+NO_OPEN_FOR_SELLER = "Nenhuma oportunidade aberta para este vendedor."
+NO_OPEN_FOR_FILTER = "Nenhuma oportunidade aberta para este filtro."
+
+# Campo que falta → (motivo, nome no texto). A ordem define qual é citado primeiro.
+MISSING_FIELDS = {
+    "product": ("sem produto", "o produto"),
+    "sales_price": ("sem preço de tabela", "o preço de tabela"),
+    "engage_date": ("sem data de engajamento", "a data de engajamento"),
+}
+
+# Focar vazio aponta o primeiro grupo seguinte que tem oportunidades (Q-01).
+FOCAR_EMPTY = "Nenhuma oportunidade dentro do ciclo observado (até {limit} d). Comece por {group}: {action}."
+START_ACTIONS = {
+    REVISAR: "confirme no CRM quais seguem ativas",
+    QUALIFICAR: "avance no CRM as de maior valor de tabela",
+    NAO_PONTUAVEL: "corrija o cadastro no CRM",
+}
 
 # Referência de ciclo por produto: P90 das ganhas até o as_of (quantil
 # linear, arredondado para dia inteiro); abaixo de MIN_CASES, só indicação.
@@ -70,7 +90,10 @@ NEXT_STEPS = {
     REVISAR: "Confirme no CRM se segue ativa: idade acima do ciclo não prova que o negócio terminou.",
     QUALIFICAR: ("Ainda em prospecção: avance no CRM os de maior valor de tabela e registre a "
                  "data de engajamento quando houver contato."),
+    NAO_PONTUAVEL: "Corrija no CRM o campo indicado em cada oportunidade.",
 }
+# Por item, Não pontuável cita o campo: "Corrija <campo> no CRM."
+FIX_FIELD_STEP = "Corrija {field} no CRM."
 
 # Nenhum texto mostrado ao vendedor pode conter estes termos (AC-3.8).
 FORBIDDEN_TERMS = ("probabilidade", "perdida", "encerre", "prioridade alta", "chance alta", "score")

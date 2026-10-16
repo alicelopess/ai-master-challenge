@@ -26,12 +26,22 @@ def position(item: Dict[str, Any], meta: Dict[str, Any]) -> Sentence:
             f"{state} porque está em negociação há {age} dias, {where} do maior ciclo já fechado ({limit} d).",
             state=state, age_days=age, cycle_limit_days=limit,
         )
+    if state == policy.NAO_PONTUAVEL:
+        field = item["missing_field"]
+        return _sentence("position", f"{state} porque falta {policy.MISSING_FIELDS[field][1]}.",
+                         state=state, missing_field=field, reason=item["reason"])
     return _sentence("position", f"{state} porque ainda não tem data de engajamento.",
                      state=state, engage_date=None)
 
 
 def table_value(item: Dict[str, Any]) -> Sentence:
-    price, band = item["sales_price"], item["value_band"]
+    price, band, product = item["sales_price"], item["value_band"], item["product"]
+    if product is None:
+        return _sentence("table_value", "Sem valor de tabela: a oportunidade não tem produto.",
+                         product=None, sales_price=None)
+    if price is None:
+        return _sentence("table_value", f"Sem valor de tabela: o {product} não tem preço no catálogo.",
+                         product=product, sales_price=None)
     return _sentence(
         "table_value",
         f"Valor de tabela {fmt_int(price)} (valor de tabela {band}): preço de catálogo "
@@ -42,9 +52,11 @@ def table_value(item: Dict[str, Any]) -> Sentence:
 
 def cycle(item: Dict[str, Any], meta: Dict[str, Any]) -> Sentence:
     product, age = item["product"], item["age_days"]
-    ref = meta["cycle_references"][product]
+    if product is None:
+        return _sentence("cycle", "Sem produto: não há ciclo de referência para comparar.", product=None)
     if age is None:
         return _sentence("cycle", "Sem data de engajamento: não há idade para comparar.", engage_date=None)
+    ref = meta["cycle_references"][product]
     if ref["won_n"] == 0:
         return _sentence(
             "cycle",
@@ -78,5 +90,7 @@ def explain(item: Dict[str, Any], meta: Dict[str, Any]) -> List[Sentence]:
     return [position(item, meta), table_value(item), cycle(item, meta), base_rate(meta)]
 
 
-def next_step(state: str) -> str:
-    return policy.NEXT_STEPS[state]
+def next_step(item: Dict[str, Any]) -> str:
+    if item["state"] == policy.NAO_PONTUAVEL:
+        return policy.FIX_FIELD_STEP.format(field=policy.MISSING_FIELDS[item["missing_field"]][1])
+    return policy.NEXT_STEPS[item["state"]]

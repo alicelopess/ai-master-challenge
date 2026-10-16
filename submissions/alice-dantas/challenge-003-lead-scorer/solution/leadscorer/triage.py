@@ -7,6 +7,7 @@ ordem estável). A idade é coluna exibida e não entra na chave.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Dict, Optional, Union
@@ -15,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from . import policy
+from .errors import PolicyError
 
 DateLike = Union[date, str, pd.Timestamp]
 
@@ -23,6 +25,32 @@ DateLike = Union[date, str, pd.Timestamp]
 class Context:
     as_of: pd.Timestamp
     cycle_limit_days: int
+
+
+AS_OF_FORMAT = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def parse_as_of(frame: pd.DataFrame, value: Optional[DateLike]) -> Optional[pd.Timestamp]:
+    """Valida o as_of vindo do usuário: AAAA-MM-DD e nunca antes do último
+    fechamento (D-4), para não tirar da carteira deals fechados depois dele."""
+    if value is None:
+        return None
+    minimum = frame["close_date"].max()
+    minimum_iso = minimum.date().isoformat()
+    if isinstance(value, str):
+        try:
+            if not AS_OF_FORMAT.match(value):
+                raise ValueError(value)
+            stamp = pd.Timestamp(value)
+        except ValueError:
+            raise PolicyError(f"Data inválida: '{value}'. Use o formato AAAA-MM-DD, "
+                              f"a partir de {minimum_iso}.") from None
+    else:
+        stamp = pd.Timestamp(value)
+    if stamp < minimum:
+        raise PolicyError(f"Data {stamp.date().isoformat()} anterior ao último fechamento registrado. "
+                          f"Use uma data a partir de {minimum_iso}, no formato AAAA-MM-DD.")
+    return stamp
 
 
 def resolve_context(frame: pd.DataFrame, as_of: Optional[DateLike] = None,
@@ -70,10 +98,28 @@ def base_rate(frame: pd.DataFrame, ctx: Context) -> Dict[str, int]:
     }
 
 
+def _flag(condition: pd.Series) -> np.ndarray:
+    """Condição booleana sem nulos (pd.NA conta como falso)."""
+    return condition.fillna(False).to_numpy(dtype=bool)
+
+
 def value_band(price: pd.Series) -> pd.Series:
     labels = [label for label, _ in policy.VALUE_BANDS]
-    conditions = [price >= floor for _, floor in policy.VALUE_BANDS]
-    return pd.Series(np.select(conditions, labels, default=labels[-1]), index=price.index)
+    conditions = [_flag(price >= floor) for _, floor in policy.VALUE_BANDS]
+    bands = pd.Series(np.select(conditions, labels, default=labels[-1]), index=price.index)
+    return bands.where(price.notna(), None)
+
+
+def missing_field(opps: pd.DataFrame) -> pd.Series:
+    """Primeiro campo necessário que falta (RD-03), na ordem de MISSING_FIELDS."""
+    needed = {
+        "product": opps["product"].isna(),
+        "sales_price": opps["sales_price"].isna(),
+        "engage_date": (opps["deal_stage"] == "Engaging") & opps["engage_date"].isna(),
+    }
+    fields = list(policy.MISSING_FIELDS)
+    found = np.select([_flag(needed[f]) for f in fields], fields, default="")
+    return pd.Series(found, index=opps.index).replace("", None)
 
 
 def classify(frame: pd.DataFrame, ctx: Context) -> pd.DataFrame:
@@ -83,11 +129,13 @@ def classify(frame: pd.DataFrame, ctx: Context) -> pd.DataFrame:
 
     opps["age_days"] = (ctx.as_of - opps["engage_date"]).dt.days.astype("Int64")
     opps["value_band"] = value_band(opps["sales_price"])
+    opps["missing_field"] = missing_field(opps)
     engaging = opps["deal_stage"] == "Engaging"
-    within = opps["age_days"] <= ctx.cycle_limit_days
+    within = _flag(opps["age_days"] <= ctx.cycle_limit_days)
     opps["state"] = np.select(
-        [engaging & within, engaging, opps["deal_stage"] == "Prospecting"],
-        [policy.FOCAR, policy.REVISAR, policy.QUALIFICAR],
+        [opps["missing_field"].notna().to_numpy(), engaging & within, engaging,
+         opps["deal_stage"] == "Prospecting"],
+        [policy.NAO_PONTUAVEL, policy.FOCAR, policy.REVISAR, policy.QUALIFICAR],
         default=policy.NAO_PONTUAVEL,
     )
     return opps
@@ -104,7 +152,7 @@ def order(opps: pd.DataFrame) -> pd.DataFrame:
     )
     ordered = keyed.sort_values(["_state", "_band", "_price", "opportunity_id"], kind="mergesort")
     ordered = ordered.drop(columns=["_state", "_band", "_price"])
-    ordered["tie_size"] = ordered.groupby(["state", "product"])["opportunity_id"].transform("size")
+    ordered["tie_size"] = ordered.groupby(["state", "product"], dropna=False)["opportunity_id"].transform("size")
     return ordered.reset_index(drop=True)
 
 
