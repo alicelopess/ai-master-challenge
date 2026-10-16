@@ -31,6 +31,8 @@ find submissions/alice-dantas \
   -o -name '*.key' \
   -o -name '*.pem' \
   -o -name 'node_modules' \
+  -o -name '.next' \
+  -o -name '.pytest_cache' \
   -o -name '.venv' \
   -o -name 'venv' \
   -o -name '.git' \
@@ -40,7 +42,12 @@ find submissions/alice-dantas \
   -o -name '.idea' \
   -o -name '_internal' \
   -o -name 'Thumbs.db' \
-  -o -name '.ipynb_checkpoints' \) -print
+  -o -name '.ipynb_checkpoints' \
+  -o -name '*.csv' \) -print
+
+# Esperado localmente: .venv, node_modules, .next e os CSVs
+# de solution/data/raw/. Eles ficam de fora pela etapa 4;
+# qualquer outro item listado deve ser investigado.
 
 # Conferir arquivos maiores que 1 MB
 
@@ -56,7 +63,27 @@ find submissions/alice-dantas -type f -print
 # 3. SIMULAR A ADIÇÃO
 # ==========================================
 
-git add -n -f -- submissions/alice-dantas/
+# Não use `git add -f -- submissions/alice-dantas/`:
+# o -f força tudo o que o .gitignore ignora, inclusive
+# os CSVs e o .venv (simulação de 15/10/2026: 5 CSVs e
+# 6.670 arquivos do .venv). Exclusões por pathspec
+# (':(exclude)...') também não servem: anulam o -f e
+# deixam de fora docs e scripts sem aviso.
+# O find abaixo lista só o que pode entrar.
+
+find submissions/alice-dantas \
+  \( -name .venv -o -name venv -o -name node_modules \
+  -o -name .next -o -name .pytest_cache -o -name __pycache__ \
+  -o -name .claude -o -name datasets -o -name .vscode \
+  -o -name .idea -o -name _internal -o -name .ipynb_checkpoints \) -prune \
+  -o -type f ! -name .DS_Store ! -name Thumbs.db \
+  ! -name '.env' ! -name '.env.*' ! -name '*.csv' ! -name '*.pyc' \
+  ! -name '*.log' ! -name '*.key' ! -name '*.pem' -print0 |
+  xargs -0 git add -n -f --
+
+# Remoções e alterações de arquivos já rastreados
+
+git add -n -u -- submissions/alice-dantas
 
 
 # ==========================================
@@ -64,8 +91,19 @@ git add -n -f -- submissions/alice-dantas/
 # ==========================================
 
 # Execute somente após revisar a lista acima.
+# Mesmo comando da etapa 3, sem o -n.
 
-git add -f -- submissions/alice-dantas/
+find submissions/alice-dantas \
+  \( -name .venv -o -name venv -o -name node_modules \
+  -o -name .next -o -name .pytest_cache -o -name __pycache__ \
+  -o -name .claude -o -name datasets -o -name .vscode \
+  -o -name .idea -o -name _internal -o -name .ipynb_checkpoints \) -prune \
+  -o -type f ! -name .DS_Store ! -name Thumbs.db \
+  ! -name '.env' ! -name '.env.*' ! -name '*.csv' ! -name '*.pyc' \
+  ! -name '*.log' ! -name '*.key' ! -name '*.pem' -print0 |
+  xargs -0 git add -f --
+
+git add -u -- submissions/alice-dantas
 
 
 # ==========================================
@@ -89,7 +127,7 @@ git -c core.quotepath=false \
 
 git -c core.quotepath=false \
   diff --cached --name-only |
-  grep -E '(^|/)(\.DS_Store|Thumbs\.db|\.env|\.env\..+|__pycache__|node_modules|\.venv|venv|\.claude|\.vscode|\.idea|_internal|datasets|\.ipynb_checkpoints)(/|$)|\.(pyc|log|key|pem)$' \
+  grep -E '(^|/)(\.DS_Store|Thumbs\.db|\.env|\.env\..+|__pycache__|node_modules|\.next|\.pytest_cache|\.venv|venv|\.claude|\.vscode|\.idea|_internal|datasets|\.ipynb_checkpoints)(/|$)|\.(pyc|log|key|pem|csv)$' \
   || true
 
 # Conferir conteúdo das alterações
