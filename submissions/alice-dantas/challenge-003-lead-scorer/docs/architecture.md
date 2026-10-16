@@ -1,6 +1,6 @@
 # Architecture — Challenge 003 | Lead Scorer
 
-**Status:** Decisões propostas (ADR-001 a ADR-003, registradas em 15/10/2026); ADR-004 (16/10/2026) corrige o contrato entre back e front do ADR-003. A seção 1 mantém as **entradas de produto** como contexto; a seção 2 registra as decisões. Implementação não iniciada.
+**Status:** Decisões propostas (ADR-001 a ADR-003, registradas em 15/10/2026); ADR-004 (16/10/2026) corrige o contrato entre back e front do ADR-003; ADR-005 (16/10/2026) registra o design system Rankio e a navegação entre páginas. A seção 1 mantém as **entradas de produto** como contexto; a seção 2 registra as decisões. Implementação não iniciada.
 **Última atualização:** 15/10/2026
 **Documentos de origem:** [discovery.md](./discovery.md) (Etapas 1 a 4) e [data-audit.md](./data-audit.md) (auditoria dos dados)
 
@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | **Antes de começar** | Como ler este documento? | [Como ler](#como-ler) · [Procedência](#procedencia) · [Convenção de identificadores](#ids) |
 | [**1. Contexto: entradas de produto**](#secao-1) | O que construir primeiro, para quem, com que evidência e sob quais limites? | [1.1 Conclusões](#sub-1-1) · [1.2 Requisitos](#sub-1-2) · [1.3 Matriz de oportunidades](#sub-1-3) · [1.4 Priorização](#sub-1-4) · [1.5 P0 e jornada](#sub-1-5) · [1.6 Rastreabilidade](#sub-1-6) · [1.7 Trade-offs](#sub-1-7) · [1.8 Fora do MVP](#sub-1-8) · [1.9 Sinais mínimos e restrições](#sub-1-9) · [1.10 Incertezas](#sub-1-10) |
-| [**2. Registros de decisão arquitetural**](#secao-2) | O que decidimos, por quê, o que rejeitamos, o que sacrificamos, como verificamos e quando mudaríamos de ideia? | [2.0 Panorama](#sub-2-0) · [ADR-001 Scoring](#adr-001) · [ADR-002 Dados](#adr-002) · [ADR-003 Tecnologia](#adr-003) · [ADR-004 Contrato](#adr-004) |
+| [**2. Registros de decisão arquitetural**](#secao-2) | O que decidimos, por quê, o que rejeitamos, o que sacrificamos, como verificamos e quando mudaríamos de ideia? | [2.0 Panorama](#sub-2-0) · [ADR-001 Scoring](#adr-001) · [ADR-002 Dados](#adr-002) · [ADR-003 Tecnologia](#adr-003) · [ADR-004 Contrato](#adr-004) · [ADR-005 Design system](#adr-005) |
 | [**3. Rastreabilidade e pendências**](#secao-3) | Onde cada questão aberta foi resolvida e o que ainda precisa ser corrigido? | [3.1 Questões do discovery](#sub-3-1) · [3.2 Requisitos por ADR](#sub-3-2) · [3.3 Evidência nova](#sub-3-3) · [3.4 Correções pendentes](#sub-3-4) |
 | **Apêndice** | Limites e registro | [Limites deste documento](#limites) |
 
@@ -52,7 +52,7 @@ Cada identificador tem um link para o ponto onde é definido.
 | [RJ-01](#rj-01) a [RJ-07](#rj-07) | Abordagens rejeitadas do MVP | [1.8](#sub-1-8) |
 | [Q-01](#q-01) a [Q-03](#q-03) | Questões adicionais para a arquitetura | [1.9](#sub-1-9) |
 | [U-01](#u-01) a [U-10](#u-10) | Incertezas | [1.10](#sub-1-10) |
-| [ADR-001](#adr-001) a [ADR-004](#adr-004) | Registros de decisão arquitetural | [2](#secao-2) |
+| [ADR-001](#adr-001) a [ADR-005](#adr-005) | Registros de decisão arquitetural | [2](#secao-2) |
 | [CP-01](#cp-01) a [CP-06](#cp-06) | Correções pendentes nos documentos de origem | [3.4](#sub-3-4) |
 | [P-001](./discovery.md#p-001) a [P-003](./discovery.md#p-003) · [H-001](./discovery.md#h-001) a [H-008](./discovery.md#h-008) | Problemas e hipóteses | [discovery 1.3](./discovery.md#sub-1-3) |
 | [HD-01](./discovery.md#hd-01) a [HD-08](./discovery.md#hd-08) | Decisões do mapa | [discovery 2.6](./discovery.md#sub-2-6) |
@@ -411,7 +411,7 @@ Cada incerteza diz de onde vem, o que muda no MVP e como reduzi-la. As marcadas 
 >
 > **O que esta seção responde:** o que decidimos construir, por que, o que rejeitamos, o que sacrificamos, como vamos verificar e quando mudaríamos de ideia.
 >
-> **Como está organizada:** são três decisões independentes, cada uma com sua evidência e sua condição de revisão: [ADR-001](#adr-001) (scoring), [ADR-002](#adr-002) (dados) e [ADR-003](#adr-003) (tecnologia). O [ADR-004](#adr-004) (contrato entre back e front) veio depois do build e corrige o ADR-003.
+> **Como está organizada:** são três decisões independentes, cada uma com sua evidência e sua condição de revisão: [ADR-001](#adr-001) (scoring), [ADR-002](#adr-002) (dados) e [ADR-003](#adr-003) (tecnologia). O [ADR-004](#adr-004) (contrato entre back e front) veio depois do build e corrige o ADR-003; o [ADR-005](#adr-005) registra o design system e a navegação.
 >
 > **O que NÃO decide:** pesos definitivos. As faixas de valor e a ordem de desempate são **política provisória** ([U-06](#u-06)), à espera de validação da Head de RevOps.
 
@@ -906,6 +906,11 @@ O [ADR-003](#adr-003) pedia apresentação desacoplada da lógica e um contrato 
 **Versões do contrato:**
 - **Versão 2:** os códigos foram acrescentados ao lado dos textos.
 - **Versão 3:** os textos saíram do payload.
+- **Versão 4** (16/10/2026, para as páginas da [ADR-005](#adr-005)):
+  - `GET /api/evidence`: o resultado de `scripts/backtest.py` em código e número, sem a armadilha de vazamento. Responde mesmo sem os CSVs; resultado ausente ou inválido dá 503 com `evidence_unavailable`.
+  - `GET /api/rules`: a política como dado (`meta`, `ordering` e faixas de valor de tabela).
+  - `by_seller` em `/api/pipeline`: o resumo de cada vendedor do filtro, inclusive quem tem zero abertas, em ordem alfabética.
+  - A mudança é aditiva no back. O front exige a versão 4 e mostra erro de contrato contra uma API antiga.
 
 O campo `meta.contract_version` informa qual é a versão em uso.
 
@@ -963,12 +968,104 @@ O campo `meta.contract_version` informa qual é a versão em uso.
 | 6 | As respostas passam na validação gerada; código desconhecido é recusado; `lib/contract` está atualizado | `web/tests/contract.test.ts` |
 | 7 | Todo código tem texto na tela; vocabulário; números só dos parâmetros; textos de referência | `web/tests/copy.test.ts` |
 | 8 | A tela renderiza lista, painel e vazios; resposta fora do contrato e erro da API viram mensagem | `web/tests/render.test.tsx` |
+| 9 | Versão 4: a evidência bate com o backtest, sem a armadilha e sem depender dos CSVs; as regras são a política; `by_seller` é alfabético e soma o `summary` | `tests/test_evidence.py`, `tests/test_views.py` |
 
 #### Condição para revisitar a decisão
 
 - **Mais de um front ou um time grande de front:** considerar uma camada BFF (alternativa C).
 - **A CLI deixar de ser usada:** remover `cli_text.py`.
 - **Necessidade de idiomas:** os catálogos viram arquivos por idioma.
+
+---
+
+<a id="adr-005"></a>
+### ADR-005: Design system Rankio e navegação entre páginas
+
+**Status:** Aceito em 16/10/2026. Os tokens e os padrões foram definidos antes da implementação e estão em [design-system.md](./design-system.md).
+**Data:** 16/10/2026
+
+#### Contexto
+
+- **[Código] Página única com CSS próprio:** grupos em `<details>` colapsáveis, sem identidade visual e sem componentes reutilizáveis.
+- **[Uso] O "abre e fecha" escondia o ponto de partida.** O vendedor precisava abrir seções para descobrir por onde começar, e Focar vazio (6 vendedores) ficava a um clique de distância do grupo indicado.
+- **[Produto] A Head de RevOps não tinha onde decidir.** A API já filtrava por manager e escritório, mas nenhuma tela usava isso, e a evidência do backtest só existia em Markdown.
+- **[Escolha] Decisões do usuário:**
+  - marca Rankio, com a paleta da peça de marca no escuro e um claro com o mesmo lilás;
+  - componentes só do shadcn;
+  - abas no lugar das seções colapsáveis;
+  - navegação central entre páginas, sem sidebar.
+
+#### Alternativas consideradas
+
+##### A. Manter o CSS próprio e trocar só cores e seções
+
+- **Vantagens:** nenhuma dependência nova.
+- **Limitações:** cada componente novo (combobox, sheet, abas acessíveis) seria escrito à mão, e a consistência dependeria de disciplina.
+
+##### B. shadcn (Radix + Tailwind v4) com tokens próprios
+
+- **Vantagens:**
+  - primitivos acessíveis (teclado, foco, ARIA) já prontos;
+  - o código fica no repositório, então pode ser lido e testado;
+  - os tokens vivem num só arquivo.
+- **Limitações:** Tailwind e Radix entram como dependências; há binários nativos (`lightningcss`, `oxide`); o jsdom precisa de polyfills nos testes.
+- **Veredito:** **escolhida**.
+
+##### C. Biblioteca fechada (MUI, Chakra)
+
+- **Vantagens:** muitos componentes.
+- **Limitações:** tema mais difícil de alinhar à marca; componentes fora do repositório; contraria a decisão de usar shadcn.
+
+#### Decisão
+
+**Adotamos B**, com quatro regras:
+
+1. **shadcn primeiro.** Primitivos em `components/ui/`, gerados pela CLI. Composições do produto em `components/<domínio>/`, montadas só com eles.
+2. **Tokens em hex** em `app/globals.css`: claro em `:root` e escuro em `.dark`, com contraste AA medido.
+3. **Navegação central entre páginas,** sem sidebar. `lib/nav.ts` é a fonte única dos itens do menu.
+
+   | Rota | Para quem | Pergunta |
+   | --- | --- | --- |
+   | `/carteira` | Vendedor | Qual é o meu próximo passo? |
+   | `/equipe` | Gestor e RevOps | Onde está a carteira da equipe? |
+   | `/evidencia` | RevOps | A lista ajuda a escolher onde investir? |
+   | `/como-funciona` | Todos | Como a lista é montada? |
+
+4. **O front compõe, não calcula** ([ADR-004](#adr-004)):
+   - o cartão "Seu próximo passo" mostra o primeiro bloco da ordem do back (o empate inteiro, sem eleger um ID);
+   - a aba inicial é o grupo por onde começar, vindo de `start_with_group`;
+   - os números das páginas Equipe, Evidência e Como funciona vêm da API (contrato v4).
+
+#### Trade-offs
+
+**Benefícios:**
+- Componentes acessíveis.
+- Consistência visual garantida por teste.
+- Páginas novas sem mudar o layout.
+- Claro e escuro saem dos mesmos tokens.
+
+**Limitações aceitas:**
+- **Mais dependências no front:**
+  - fixadas em versão exata, publicadas há pelo menos 14 dias;
+  - a CLI do shadcn não entra (só via `npx`);
+  - o CSS de que os primitivos dependem fica copiado em `app/shadcn.css`.
+- **O jsdom precisa de polyfills para o Radix:** ficam em `tests/setup.ts`.
+- **A sheet cobre parte da lista:** Anterior e Próxima permitem percorrer a lista sem fechá-la.
+
+#### Validação
+
+| # | Teste | Onde |
+| --- | --- | --- |
+| 1 | Contraste AA dos pares de texto, nos dois temas | `web/tests/tokens.test.ts` |
+| 2 | Composições sem HTML cru que tenha equivalente shadcn, sem cor literal e sem `style` | `web/tests/design-system.test.ts` |
+| 3 | Navegação: os quatro links e `aria-current` na página ativa | `web/tests/render.test.tsx` |
+| 4 | Carteira: cartão de próximo passo, aba inicial, sheet por `role` e estados vazios | `web/tests/render.test.tsx` |
+| 5 | Nenhuma página rola na horizontal em 375 px | Roteiro no navegador ([PRD](./prd.md)) |
+
+#### Condição para revisitar a decisão
+
+- **Mais de seis páginas, ou páginas por perfil:** reavaliar o menu (agrupar itens ou criar um menu por perfil).
+- **Marca com design system corporativo próprio:** trocar os tokens, mantendo os primitivos.
 
 ---
 

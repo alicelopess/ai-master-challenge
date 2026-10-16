@@ -18,12 +18,20 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/pytest                                             # testes
 .venv/bin/python -m leadscorer list --seller "Zane Levy"     # lista de um vendedor, sem Node
 .venv/bin/python -m leadscorer explain --id 01XZ9CRY         # "Por que está aqui"
-.venv/bin/python scripts/backtest.py                         # validação offline (7 cortes)
+.venv/bin/python scripts/backtest.py                         # validação offline (7 cortes); alimenta /api/evidence
 .venv/bin/uvicorn api.main:app --port 8000                   # API (deixe rodando; contrato em /docs)
 cd web && npm ci && npm run dev                              # tela em http://localhost:3000 (outro terminal)
 ```
 
-**Testes do front** (em `solution/web/`, sem a API no ar): `npm run typecheck` confere os tipos e `npm test` roda o Vitest contra respostas sintéticas da API.
+**Testes do front** (em `solution/web/`, sem a API no ar):
+- `npm run typecheck` confere os tipos.
+- `npm test` roda o Vitest contra respostas sintéticas da API, junto com os testes de contraste dos tokens e da regra "só shadcn".
+
+**Componentes da tela:** os primitivos do shadcn ficam em `web/components/ui/` e entram pela CLI fixada, sem que ela vire dependência:
+
+```bash
+cd web && npx shadcn@4.21.1 add <componente>
+```
 
 **Quando o contrato da API mudar** (um campo ou código novo em `api/schemas.py` ou `leadscorer/codes.py`), regenere os artefatos que o front usa. Os testes dos dois lados falham se algum deles ficar desatualizado.
 
@@ -43,8 +51,8 @@ Uma ferramenta de **triagem explicável** da carteira aberta: o vendedor escolhe
 | --- | --- | --- |
 | Núcleo Python (pandas) | Carga, normalização, estados, ordem e motivos em código; funções puras, sem web e sem texto de tela | `solution/leadscorer/` |
 | CLI | `check-data`, `list --seller` (texto ou `--json`) e `explain --id`; escreve os textos a partir dos códigos (`cli_text.py`) e entrega tudo sem Node | `python -m leadscorer` |
-| API FastAPI | `GET /api/meta`, `/api/sellers`, `/api/sellers/{seller}/pipeline`, `/api/pipeline?manager=&office=`; respostas tipadas (pydantic, descritas em `/docs`); erros 404, 422 e 503 com `code`, `params` e `detail` | `solution/api/` |
-| Tela Next.js (TypeScript) | Uma página: vendedor, resumo, grupos e painel "Por que está aqui"; valida cada resposta contra o contrato e escreve os textos a partir dos códigos (`copy/pt-BR.ts`) | `solution/web/` |
+| API FastAPI | `GET /api/meta`, `/api/sellers`, `/api/sellers/{seller}/pipeline`, `/api/pipeline?manager=&office=` (com o resumo por vendedor), `/api/rules` (a política) e `/api/evidence` (o backtest); respostas tipadas (pydantic, descritas em `/docs`); erros 404, 422 e 503 com `code`, `params` e `detail` | `solution/api/` |
+| Tela Next.js (TypeScript) | **Rankio**: quatro páginas com menu central (Carteira, Equipe, Evidência e Como funciona), tema claro e escuro. Valida cada resposta contra o contrato e escreve os textos a partir dos códigos (`copy/pt-BR.ts`). Componentes só do shadcn, com tokens próprios ([design-system.md](./docs/design-system.md), [ADR-005](./docs/architecture.md#adr-005)) | `solution/web/` |
 
 CLI, API e tela consomem **o mesmo payload**, então a lista é idêntica nas três saídas (testado para os 35 vendedores).
 
@@ -52,8 +60,27 @@ CLI, API e tela consomem **o mesmo payload**, então a lista é idêntica nas tr
 - **O back entrega dados e decisões da regra:** o grupo de cada oportunidade, a ordem, os motivos como código com os valores que decidiram (`reasons: [{code, role, params}]`), a ação sugerida (`next_action`) e os números.
 - **O front decide como dizer:** nomes, frases, formatação e layout.
 - **O mesmo contrato serve aos dois lados:** o schema fica em `web/contract/openapi.json`; o front gera dele os tipos e a validação, e testa contra respostas sintéticas exportadas pelo back.
+- **Versão 4 do contrato:** acrescenta a evidência, as regras e o resumo por vendedor. A tela não calcula nenhum número de negócio; o máximo que faz é formatar (fração em %, diferença em pontos).
 
-**Jornada de 2 minutos:** abra `localhost:3000` e escolha Zane Levy. Veja "88 abertas = 31 Focar + 57 Revisar + 0 Qualificar + 0 Não pontuável" e abra `01XZ9CRY` para ler o motivo. Depois abra "Revisar" e troque para Darcel Schlecht, que não tem nada em Focar e recebe a indicação de começar por Revisar.
+**As quatro páginas:**
+
+| Página | Para quem | Pergunta que responde | O que mostra |
+| --- | --- | --- | --- |
+| Carteira | Vendedor | Qual é o meu próximo passo? | Cartão "Seu próximo passo" com a ação e o primeiro bloco da ordem (o empate inteiro, sem eleger um ID). Uma aba por grupo, com contagem e definição. Painel "Por que está aqui" com os motivos separados por papel: decidiu o grupo, decidiu a posição ou é só contexto. Anterior e Próxima percorrem a lista; "Copiar ID" leva ao CRM. O vendedor fica na URL, e o último escolhido volta na próxima visita |
+| Equipe | Gestor e Head de RevOps | Onde está a carteira da equipe? | Filtros de gerente e escritório. Os quatro números da carteira, a tabela "Por vendedor" em ordem alfabética, sem ordenação por resultado, e a lista com a coluna Vendedor |
+| Evidência | Head de RevOps | A lista ajuda a escolher onde investir? | Do valor ganho em 90 dias, quanto estava nas 10 primeiras de cada vendedor: regra atual, "só valor de tabela" e o acaso, com a diferença e o intervalo. Também o recorte sem as negociações que nunca fecham e o que a evidência não mostra |
+| Como funciona | Todos | Como a lista é montada? | Os quatro grupos, a ordem, as faixas de valor de tabela, a referência de ciclo por produto, a taxa-base e o que a ferramenta não faz |
+
+**Jornada do vendedor (2 minutos):**
+1. Abra `localhost:3000` e escolha Zane Levy.
+2. O cartão "Seu próximo passo" mostra a ação de Focar e as 3 GTX Plus Pro de 5.482 empatadas no topo: `01XZ9CRY`, `FZWU2I30` e `J0G6ZLYZ`.
+3. Abaixo, "88 abertas = 31 Focar + 57 Revisar + 0 Qualificar + 0 Não pontuável" e as abas.
+4. Abra `01XZ9CRY` para ler o motivo e use "Próxima" para seguir na ordem.
+5. Troque para Darcel Schlecht: ele abre direto em Revisar, com a indicação de começar por lá, porque não tem nada em Focar.
+
+**Jornada da Head de RevOps:**
+1. Em **Equipe**, veja 2.089 abertas: 298 em Focar (dentro do maior ciclo já fechado: não deixar esfriar) e 1.291 em Revisar (acima dele: confirmar se seguem ativas), além da carteira de cada vendedor.
+2. Em **Evidência**, compare a regra atual (56,9% do valor ganho capturado) com ordenar só por valor de tabela (53,8%) e com o acaso (23,2%), e leia o que essa medida não prova.
 
 ### Lógica de Scoring
 
@@ -93,13 +120,14 @@ _Como você atacou o problema. Por onde começou? Como decompôs? O que priorizo
 
 | O que foi verificado | Resultado |
 | --- | --- |
-| Testes automatizados | `pytest`: 132 verdes com os CSVs; sem eles, 101 verdes e 31 pulados com aviso. `npm test`: 41 verdes; `npm run typecheck` sem erros |
+| Testes automatizados | `pytest`: 147 verdes com os CSVs; sem eles, 114 verdes e 33 pulados com aviso. `npm test`: 111 verdes; `npm run typecheck` e `npm run build` sem erros |
 | Reconciliação | 8.800 linhas após cada junção; 2.089 abertas = 298 + 1.291 + 500 + 0 |
 | Explicações | Nas 2.089, cada motivo de grupo e de ordem cita exatamente os valores que decidiram; todo número das frases vem desses valores; nenhum termo proibido ("probabilidade", "perdida", "encerre", "score"…) nos textos da CLI ou da tela |
-| Contrato | Todas as respostas passam pelos modelos tipados; todo código tem texto na tela e na CLI; resposta fora do contrato vira mensagem de erro na tela |
+| Contrato | Todas as respostas passam pelos modelos tipados (versão 4); todo código tem texto na tela e na CLI; resposta fora do contrato vira mensagem de erro na tela; a evidência servida bate com o backtest e não traz a armadilha de vazamento |
+| Design system | Todo par de texto com contraste AA (≥ 4,5 : 1) nos temas claro e escuro; composições só com primitivos do shadcn, sem cor literal nem estilo inline (ambos em teste) |
 | Paridade | CLI = API = núcleo para os 35 vendedores; soma = 2.089 |
 | Robustez | Arquivo ausente, vazio ou inválido, rótulo desconhecido, data ou preço fora do formato e `as_of` inválido param com mensagem; nenhuma lista parcial |
-| Ensaio da jornada (tela) | Todos os itens do roteiro apareceram; lista visível de 38 a 116 ms após escolher o vendedor; nenhum erro no console; sem transbordo horizontal em 375 px |
+| Ensaio das jornadas (tela) | Vendedor e RevOps nas quatro páginas, nos temas claro e escuro, em 1280 px e 375 px; todos os itens do roteiro apareceram, nenhum erro no console e nenhuma página rola na horizontal |
 | Backtest temporal (7 cortes) | Produto e preço não separam quem ganha; a regra da ferramenta concentra mais valor ganho que ordenar só por preço, por causa das negociações sem desfecho (detalhes abaixo) |
 
 **Validação offline** ([relatório completo](./solution/data/processed/backtest_report.md), gerado por `scripts/backtest.py`):
@@ -139,7 +167,9 @@ _O que a empresa deveria fazer com base nos seus findings. Priorize._
 - **Não comprova ganho de resultado.** O ganho sobre "ordenar por preço" é pequeno e inverificável aqui; só um piloto com grupo de controle mede efeito.
 - **Não detecta esfriamento nem sugere reativação:** o dataset não tem atividade nem histórico de estágio.
 - **Não escreve no CRM, não registra uso** (marcações "vou trabalhar", "revisei") e não tem autenticação; serve um usuário, com CSV em memória.
-- **Na tela, não tem filtros de manager e escritório**, que existem só na API.
+- **A evidência é o resultado gravado do backtest:**
+  - ela não se recalcula quando os dados mudam; rode de novo `scripts/backtest.py`;
+  - a página avisa quando o resultado não veio dos CSVs auditados.
 
 **O que depende de premissa:**
 - **Data do recorte:** a data de extração é desconhecida, então o `as_of` padrão de 31/12/2017 é premissa. Com ela, 81% das Engaging caem em Revisar e o Focar tem só 298 itens; o tamanho muda com o `as_of` (160 em 31/01/2018, 34 em 31/03/2018).
@@ -163,8 +193,12 @@ _O que a empresa deveria fazer com base nos seus findings. Priorize._
 
 **Desvios em relação ao ADR-003 e ao PRD** (detalhes em [build-plan.md](./docs/build-plan.md#2-ambiente-instalação-e-reprodução)):
 - A CLI imprime no terminal, sem gerar CSV.
-- A tela é Next.js com TypeScript (sem Tailwind ou ESLint), com `agentRules: false` no `next.config.mjs` para o `next dev` não criar um `AGENTS.md`. O `next-env.d.ts` é gerado pelo `next dev` e não vai para o repositório.
-- **Contrato orientado a dados ([ADR-004](./docs/architecture.md#adr-004)):** o payload leva só chaves, códigos e números (`contract_version` 3), e os textos ficam na tela e na CLI.
+- A tela é Next.js com TypeScript, Tailwind v4 e componentes do shadcn (sem ESLint), com `agentRules: false` no `next.config.mjs` para o `next dev` não criar um `AGENTS.md`. O `next-env.d.ts` é gerado pelo `next dev` e não vai para o repositório.
+- **Design system ([ADR-005](./docs/architecture.md#adr-005)):**
+  - a CLI do shadcn é usada só pelo `npx`;
+  - o CSS de que os primitivos dependem fica copiado em `web/app/shadcn.css` (MIT), para não trazer as 34 dependências da CLI;
+  - as dependências novas estão fixadas em versões publicadas há pelo menos 14 dias.
+- **Contrato orientado a dados ([ADR-004](./docs/architecture.md#adr-004)):** o payload leva só chaves, códigos e números (`contract_version` 4), e os textos ficam na tela e na CLI.
 - **Ferramentas do front, escolhidas para rodar em Node 22.12:**
   - Vitest com Vite 7 fixado (o Vite 8 não trouxe o binário nativo nesta máquina);
   - jsdom 28;
