@@ -18,6 +18,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/pytest                                             # testes
 .venv/bin/python -m leadscorer list --seller "Zane Levy"     # lista de um vendedor, sem Node
 .venv/bin/python -m leadscorer explain --id 01XZ9CRY         # "Por que está aqui"
+.venv/bin/python scripts/backtest.py                         # validação offline (5 cortes)
 .venv/bin/uvicorn api.main:app --port 8000                   # API (deixe rodando)
 cd web && npm ci && npm run dev                              # tela em http://localhost:3000 (outro terminal)
 ```
@@ -73,12 +74,35 @@ _Como você atacou o problema. Por onde começou? Como decompôs? O que priorizo
 
 | O que foi verificado | Resultado |
 | --- | --- |
-| Testes automatizados (`pytest`) | 91 verdes com os CSVs; sem eles, 69 verdes e 22 pulados com aviso |
+| Testes automatizados (`pytest`) | 99 verdes com os CSVs; sem eles, 73 verdes e 26 pulados com aviso |
 | Reconciliação | 8.800 linhas após cada junção; 2.089 abertas = 298 + 1.291 + 500 + 0 |
 | Explicações | Nas 2.089, todo número do texto confere com os campos; nenhum termo proibido ("probabilidade", "perdida", "encerre", "score"…) na API, na CLI ou na tela |
 | Paridade | CLI = API = núcleo para os 35 vendedores; soma = 2.089 |
 | Robustez | Arquivo ausente, vazio ou inválido, rótulo desconhecido, data ou preço fora do formato e `as_of` inválido param com mensagem; nenhuma lista parcial |
 | Ensaio da jornada (tela) | Todos os itens do roteiro apareceram; lista visível de 38 a 116 ms após escolher o vendedor; nenhum erro no console; sem transbordo horizontal em 375 px |
+| Backtest temporal (5 cortes) | Nenhuma ordenação legítima supera o acaso; só a armadilha do mês de fechamento passa de 0,6 (detalhes abaixo) |
+
+**Validação offline** ([relatório completo](./solution/data/processed/backtest_report.md), gerado por `scripts/backtest.py`):
+- **Desenho**, o mesmo da sonda de [data-audit.md, seção 2.9](./docs/data-audit.md#a-2-9):
+  - em cada corte T (fim de maio a fim de setembro de 2017), o treino são as fechadas até T;
+  - o teste são as negociações já engajadas em T que fecharam depois (de 893 a 1.139 por corte);
+  - os ordenadores legítimos só recebem o que se sabia em T;
+  - o IC95% do AUC vem de bootstrap com 300 reamostras.
+- **Reprodução:** tamanhos de teste e AUC por produto idênticos aos da auditoria.
+
+| Ordenador | AUC médio (mín.–máx. nos 5 cortes) | Cortes com IC acima de 0,5 | Valor ganho nos 20% primeiros |
+| --- | --- | --- | --- |
+| Taxa global | 0,500 | 0 de 5 | 21,9% |
+| Taxa por produto | 0,506 (0,495–0,533) | 0 de 5 | 11,1% |
+| Aleatório | 0,495 (0,467–0,527) | 0 de 5 | 19,2% |
+| Só valor de tabela | 0,495 (0,478–0,510) | 0 de 5 | 49,7% |
+| Regra da ferramenta | 0,495 (0,478–0,510) | 0 de 5 | 49,7% |
+| [Vazamento] fechou no 3º mês do trimestre | 0,632 (0,614–0,650) | 5 de 5 | 23,6% |
+
+Como ler:
+1. **Habilidade:** nenhuma ordenação legítima separa quem ganha de quem perde (AUC perto de 0,5, com o IC sempre incluindo 0,5). A única que parece funcionar usa a data de fechamento, que só existe depois do resultado.
+2. **Valor capturado:** ordenar por valor de tabela põe cerca de 50% do valor ganho nos 20% primeiros, contra cerca de 20% ao acaso. Isso acontece **por construção** (negócio caro no topo), não por prever quem fecha, e por isso aparece em coluna separada.
+3. **Por que a regra coincide com "só valor":** nenhuma negociação fechada passou de 138 dias, então todo o teste estava em Focar no corte. A divisão Focar/Revisar não tem rótulo para ser avaliada.
 
 Critérios de aceite e oráculos: [PRD](./docs/prd.md). Plano de build, desvios e cortes: [build-plan.md](./docs/build-plan.md). Auditoria dos dados: [data-audit.md](./docs/data-audit.md).
 
@@ -104,7 +128,7 @@ _O que a empresa deveria fazer com base nos seus findings. Priorize._
 
 **O que não foi verificado:**
 - **Compreensão:** o teste com 3 a 5 pessoas não técnicas ainda não foi feito.
-- **Backtest "só valor":** não foi executado nesta versão. O backtest de 5 cortes e a armadilha do mês de fechamento estão em [data-audit.md, seção 2.9](./docs/data-audit.md#a-2-9).
+- **Focar × Revisar:** o backtest não consegue avaliar essa divisão, porque nenhuma negociação fechada passou de 138 dias, e "Revisar" segue como heurística. O backtest também só cobre negociações que acabaram fechando: as que seguem abertas não têm desfecho para medir.
 
 **Para escalar:**
 1. Fonte viva (API do CRM) no lugar do CSV.

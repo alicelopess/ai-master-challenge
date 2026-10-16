@@ -1,0 +1,392 @@
+{
+  "design": {
+    "cuts": [
+      "2017-05-31",
+      "2017-06-30",
+      "2017-07-31",
+      "2017-08-31",
+      "2017-09-30"
+    ],
+    "seed": 20260101,
+    "smooth_m": 20,
+    "n_boot": 300,
+    "top_share": 0.2,
+    "audited_data": true
+  },
+  "cuts": [
+    {
+      "cut": "2017-05-31",
+      "n_train": 2038,
+      "n_test": 930,
+      "test_win_rate": 0.739,
+      "cycle_limit_days": 138,
+      "test_share_in_focar": 1.0
+    },
+    {
+      "cut": "2017-06-30",
+      "n_train": 2679,
+      "n_test": 970,
+      "test_win_rate": 0.628,
+      "cycle_limit_days": 138,
+      "test_share_in_focar": 1.0
+    },
+    {
+      "cut": "2017-07-31",
+      "n_train": 3306,
+      "n_test": 1139,
+      "test_win_rate": 0.651,
+      "cycle_limit_days": 138,
+      "test_share_in_focar": 1.0
+    },
+    {
+      "cut": "2017-08-31",
+      "n_train": 4091,
+      "n_test": 893,
+      "test_win_rate": 0.713,
+      "cycle_limit_days": 138,
+      "test_share_in_focar": 1.0
+    },
+    {
+      "cut": "2017-09-30",
+      "n_train": 4726,
+      "n_test": 935,
+      "test_win_rate": 0.598,
+      "cycle_limit_days": 138,
+      "test_share_in_focar": 1.0
+    }
+  ],
+  "rows": [
+    {
+      "cut": "2017-05-31",
+      "ranker": "Taxa global",
+      "leak": false,
+      "auc": 0.5,
+      "ci_low": 0.5,
+      "ci_high": 0.5,
+      "value_captured_top20": 0.234
+    },
+    {
+      "cut": "2017-05-31",
+      "ranker": "Taxa por produto",
+      "leak": false,
+      "auc": 0.504,
+      "ci_low": 0.461,
+      "ci_high": 0.546,
+      "value_captured_top20": 0.208
+    },
+    {
+      "cut": "2017-05-31",
+      "ranker": "Aleatório",
+      "leak": false,
+      "auc": 0.527,
+      "ci_low": 0.491,
+      "ci_high": 0.56,
+      "value_captured_top20": 0.192
+    },
+    {
+      "cut": "2017-05-31",
+      "ranker": "Só valor de tabela",
+      "leak": false,
+      "auc": 0.498,
+      "ci_low": 0.456,
+      "ci_high": 0.542,
+      "value_captured_top20": 0.507
+    },
+    {
+      "cut": "2017-05-31",
+      "ranker": "Regra da ferramenta",
+      "leak": false,
+      "auc": 0.498,
+      "ci_low": 0.456,
+      "ci_high": 0.542,
+      "value_captured_top20": 0.507
+    },
+    {
+      "cut": "2017-05-31",
+      "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "leak": true,
+      "auc": 0.645,
+      "ci_low": 0.613,
+      "ci_high": 0.684,
+      "value_captured_top20": 0.236
+    },
+    {
+      "cut": "2017-06-30",
+      "ranker": "Taxa global",
+      "leak": false,
+      "auc": 0.5,
+      "ci_low": 0.5,
+      "ci_high": 0.5,
+      "value_captured_top20": 0.218
+    },
+    {
+      "cut": "2017-06-30",
+      "ranker": "Taxa por produto",
+      "leak": false,
+      "auc": 0.533,
+      "ci_low": 0.493,
+      "ci_high": 0.569,
+      "value_captured_top20": 0.25
+    },
+    {
+      "cut": "2017-06-30",
+      "ranker": "Aleatório",
+      "leak": false,
+      "auc": 0.5,
+      "ci_low": 0.468,
+      "ci_high": 0.536,
+      "value_captured_top20": 0.203
+    },
+    {
+      "cut": "2017-06-30",
+      "ranker": "Só valor de tabela",
+      "leak": false,
+      "auc": 0.492,
+      "ci_low": 0.458,
+      "ci_high": 0.526,
+      "value_captured_top20": 0.498
+    },
+    {
+      "cut": "2017-06-30",
+      "ranker": "Regra da ferramenta",
+      "leak": false,
+      "auc": 0.492,
+      "ci_low": 0.458,
+      "ci_high": 0.526,
+      "value_captured_top20": 0.498
+    },
+    {
+      "cut": "2017-06-30",
+      "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "leak": true,
+      "auc": 0.614,
+      "ci_low": 0.588,
+      "ci_high": 0.639,
+      "value_captured_top20": 0.268
+    },
+    {
+      "cut": "2017-07-31",
+      "ranker": "Taxa global",
+      "leak": false,
+      "auc": 0.5,
+      "ci_low": 0.5,
+      "ci_high": 0.5,
+      "value_captured_top20": 0.207
+    },
+    {
+      "cut": "2017-07-31",
+      "ranker": "Taxa por produto",
+      "leak": false,
+      "auc": 0.498,
+      "ci_low": 0.464,
+      "ci_high": 0.532,
+      "value_captured_top20": 0.018
+    },
+    {
+      "cut": "2017-07-31",
+      "ranker": "Aleatório",
+      "leak": false,
+      "auc": 0.493,
+      "ci_low": 0.459,
+      "ci_high": 0.528,
+      "value_captured_top20": 0.199
+    },
+    {
+      "cut": "2017-07-31",
+      "ranker": "Só valor de tabela",
+      "leak": false,
+      "auc": 0.51,
+      "ci_low": 0.478,
+      "ci_high": 0.544,
+      "value_captured_top20": 0.496
+    },
+    {
+      "cut": "2017-07-31",
+      "ranker": "Regra da ferramenta",
+      "leak": false,
+      "auc": 0.51,
+      "ci_low": 0.478,
+      "ci_high": 0.544,
+      "value_captured_top20": 0.496
+    },
+    {
+      "cut": "2017-07-31",
+      "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "leak": true,
+      "auc": 0.618,
+      "ci_low": 0.59,
+      "ci_high": 0.648,
+      "value_captured_top20": 0.236
+    },
+    {
+      "cut": "2017-08-31",
+      "ranker": "Taxa global",
+      "leak": false,
+      "auc": 0.5,
+      "ci_low": 0.5,
+      "ci_high": 0.5,
+      "value_captured_top20": 0.209
+    },
+    {
+      "cut": "2017-08-31",
+      "ranker": "Taxa por produto",
+      "leak": false,
+      "auc": 0.5,
+      "ci_low": 0.461,
+      "ci_high": 0.547,
+      "value_captured_top20": 0.071
+    },
+    {
+      "cut": "2017-08-31",
+      "ranker": "Aleatório",
+      "leak": false,
+      "auc": 0.467,
+      "ci_low": 0.423,
+      "ci_high": 0.506,
+      "value_captured_top20": 0.187
+    },
+    {
+      "cut": "2017-08-31",
+      "ranker": "Só valor de tabela",
+      "leak": false,
+      "auc": 0.498,
+      "ci_low": 0.459,
+      "ci_high": 0.537,
+      "value_captured_top20": 0.495
+    },
+    {
+      "cut": "2017-08-31",
+      "ranker": "Regra da ferramenta",
+      "leak": false,
+      "auc": 0.498,
+      "ci_low": 0.459,
+      "ci_high": 0.537,
+      "value_captured_top20": 0.495
+    },
+    {
+      "cut": "2017-08-31",
+      "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "leak": true,
+      "auc": 0.65,
+      "ci_low": 0.62,
+      "ci_high": 0.684,
+      "value_captured_top20": 0.211
+    },
+    {
+      "cut": "2017-09-30",
+      "ranker": "Taxa global",
+      "leak": false,
+      "auc": 0.5,
+      "ci_low": 0.5,
+      "ci_high": 0.5,
+      "value_captured_top20": 0.227
+    },
+    {
+      "cut": "2017-09-30",
+      "ranker": "Taxa por produto",
+      "leak": false,
+      "auc": 0.495,
+      "ci_low": 0.457,
+      "ci_high": 0.527,
+      "value_captured_top20": 0.006
+    },
+    {
+      "cut": "2017-09-30",
+      "ranker": "Aleatório",
+      "leak": false,
+      "auc": 0.487,
+      "ci_low": 0.45,
+      "ci_high": 0.526,
+      "value_captured_top20": 0.179
+    },
+    {
+      "cut": "2017-09-30",
+      "ranker": "Só valor de tabela",
+      "leak": false,
+      "auc": 0.478,
+      "ci_low": 0.444,
+      "ci_high": 0.514,
+      "value_captured_top20": 0.489
+    },
+    {
+      "cut": "2017-09-30",
+      "ranker": "Regra da ferramenta",
+      "leak": false,
+      "auc": 0.478,
+      "ci_low": 0.444,
+      "ci_high": 0.514,
+      "value_captured_top20": 0.489
+    },
+    {
+      "cut": "2017-09-30",
+      "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "leak": true,
+      "auc": 0.631,
+      "ci_low": 0.6,
+      "ci_high": 0.664,
+      "value_captured_top20": 0.23
+    }
+  ],
+  "summary": [
+    {
+      "ranker": "Taxa global",
+      "leak": false,
+      "auc_mean": 0.5,
+      "auc_min": 0.5,
+      "auc_max": 0.5,
+      "cuts_ci_above_half": 0,
+      "cuts_ci_below_half": 0,
+      "value_captured_mean": 0.219
+    },
+    {
+      "ranker": "Taxa por produto",
+      "leak": false,
+      "auc_mean": 0.506,
+      "auc_min": 0.495,
+      "auc_max": 0.533,
+      "cuts_ci_above_half": 0,
+      "cuts_ci_below_half": 0,
+      "value_captured_mean": 0.111
+    },
+    {
+      "ranker": "Aleatório",
+      "leak": false,
+      "auc_mean": 0.495,
+      "auc_min": 0.467,
+      "auc_max": 0.527,
+      "cuts_ci_above_half": 0,
+      "cuts_ci_below_half": 0,
+      "value_captured_mean": 0.192
+    },
+    {
+      "ranker": "Só valor de tabela",
+      "leak": false,
+      "auc_mean": 0.495,
+      "auc_min": 0.478,
+      "auc_max": 0.51,
+      "cuts_ci_above_half": 0,
+      "cuts_ci_below_half": 0,
+      "value_captured_mean": 0.497
+    },
+    {
+      "ranker": "Regra da ferramenta",
+      "leak": false,
+      "auc_mean": 0.495,
+      "auc_min": 0.478,
+      "auc_max": 0.51,
+      "cuts_ci_above_half": 0,
+      "cuts_ci_below_half": 0,
+      "value_captured_mean": 0.497
+    },
+    {
+      "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
+      "leak": true,
+      "auc_mean": 0.632,
+      "auc_min": 0.614,
+      "auc_max": 0.65,
+      "cuts_ci_above_half": 5,
+      "cuts_ci_below_half": 0,
+      "value_captured_mean": 0.236
+    }
+  ]
+}
