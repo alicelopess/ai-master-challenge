@@ -12,9 +12,9 @@
 
 ## Challenges
 
-| Challenge         | Entrega              | Documentação                        |
-| ----------------- | -------------------- | ----------------------------------- |
-| 003 — Lead Scorer | [Detalhe da entrega] | [Ver](./challenge-003-lead-scorer/) |
+| Challenge         | Entrega                                                                                  | Documentação                        |
+| ----------------- | ---------------------------------------------------------------------------------------- | ----------------------------------- |
+| 003 — Lead Scorer | Triagem explicável da carteira aberta: núcleo Python, CLI, API FastAPI e tela Next.js | [Ver](./challenge-003-lead-scorer/) |
 
 ## Como utilizei IA
 

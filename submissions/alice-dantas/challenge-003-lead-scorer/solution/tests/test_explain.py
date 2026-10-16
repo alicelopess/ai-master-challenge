@@ -198,3 +198,11 @@ def test_real_2089_explanations_verifiable_and_clean(real_dataset):  # AC-3.7, A
         for text in list(user_texts(payload)) + [render_list(payload)]:
             assert_vocabulary(text)
     assert all(texts(entry)[-1].startswith(BASE_RATE_START) for entry in items)
+
+
+def test_web_page_strings_are_clean():  # AC-3.8 na tela
+    pages = sorted((policy.SOLUTION_DIR / "web" / "app").glob("*.js"))
+    if not pages:
+        pytest.skip("web/app ainda não existe")
+    for page in pages:
+        assert_vocabulary(page.read_text(encoding="utf-8"))
