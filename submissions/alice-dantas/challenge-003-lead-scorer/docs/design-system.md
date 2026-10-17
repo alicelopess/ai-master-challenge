@@ -8,8 +8,9 @@
 
 | Pessoa | Pergunta que a tela responde | Onde |
 | --- | --- | --- |
-| Vendedor, segunda de manhã | Qual é o meu próximo passo? | Carteira (cartão "Seu próximo passo" e abas) |
+| Vendedor, segunda de manhã | Qual é o meu próximo passo? | Carteira (cartão "O que verificar agora" e abas) |
 | Gestor e Head de RevOps | Onde está a carteira da equipe? A lista ajuda a escolher onde investir? | Equipe e Evidência |
+| Head de RevOps | Onde o processo pode melhorar? O que explica a receita? | Inteligência ([ADR-007](./architecture.md#adr-007)) |
 | Todos | Como a lista é montada? | Como funciona |
 
 **Princípios:**
@@ -74,8 +75,17 @@ Cada grupo tem um par de texto e fundo. A cor nunca aparece sem o nome do grupo.
 Dois usos que não são grupo têm variante própria no `Badge`, com as cores de um grupo: `reference` (a estratégia de referência na Evidência, cor de Focar) e `missing` (o campo ausente na tabela, cor de Completar). Assim nenhum componente escreve uma chave de grupo à mão (`web/tests/policy.test.ts`).
 
 **Gráficos:**
-- `--chart-1` é o lilás: a regra atual, em destaque.
+- `--chart-1` é o lilás: a regra atual, em destaque; na Inteligência, as barras de um recorte e o ritmo mensal.
 - `--chart-2` é o `muted-foreground`: as demais estratégias.
+
+**Intensidade da matriz** (Inteligência, vendedor × produto): `--heat-1` a `--heat-4`, do lilás mais claro ao mais forte. O número da célula fica sempre escrito por cima (cor nunca sozinha), e o texto tem contraste AA sobre os quatro tons nos dois temas (`web/tests/tokens.test.ts`).
+
+| Token | Claro | Escuro |
+| --- | --- | --- |
+| `--heat-1` | `#F3F4FE` | `#222E45` |
+| `--heat-2` | `#E2E6FD` | `#2A3758` |
+| `--heat-3` | `#C9D0FC` | `#34436D` |
+| `--heat-4` | `#ADB8FB` | `#3F5084` |
 
 ### 3.3. Tipografia
 
@@ -117,7 +127,7 @@ A grade é de 4 px (escala padrão do Tailwind).
 
 **Elevação:**
 - Cartões usam o padrão do estilo Vega do shadcn: contorno de 1 px (`ring-foreground/10`) e `shadow-xs`. No escuro a sombra quase some, e o contorno faz o papel da borda.
-- O cartão "Seu próximo passo" troca o contorno pelo lilás (`ring-primary/40`).
+- O cartão "O que verificar agora" troca o contorno pelo lilás (`ring-primary/40`).
 - A sheet usa a sombra padrão do shadcn.
 
 **Movimento:**
@@ -163,7 +173,13 @@ A grade é de 4 px (escala padrão do Tailwind).
 | Tema claro, escuro ou sistema | DropdownMenu + Button | `app/ThemeToggle` |
 | Data dos dados, contagem, campo ausente, grupo | Badge | `app/DataBadge`, abas, tabela, sheet |
 | Escolher vendedor (35 nomes, com busca) | Combobox (Popover + Command) | `portfolio/SellerCombobox` |
-| Filtros de gerente e escritório (um restringe o outro) | Select + Button | `team/TeamFilters`, `lib/team.ts` |
+| Filtros de gerente e escritório (um restringe o outro) | Select + Button | `app/FilterSelect`, `team/TeamFilters`, `lib/team.ts` |
+| Filtros da Inteligência: um botão com os sete campos e chips do recorte ativo | Popover + Select + Combobox (Popover + Command) + Button | `app/FilterSelect`, `app/SearchCombobox`, `intelligence/IntelligenceFilters`, `intelligence/ActiveFilters` |
+| "Ver por" e métrica do gráfico | Select | `intelligence/BreakdownExplorer` |
+| Números do histórico | Card + Badge | `intelligence/HistorySummary` |
+| "Ver análises" (diagnósticos e descobertas) e "Como funciona" | Sheet + Tabs + Card + Button | `intelligence/AnalysesPanel`, `intelligence/GuidePanel`, `intelligence/DiagnosticsList`, `intelligence/FindingsList` |
+| Mix vendedor × produto | Table + Button | `intelligence/SellerProductMatrix` |
+| Negociações por trás de um número | Sheet + Tabs + Table + Pagination | `intelligence/DealsSheet` |
 | Linguagem da Evidência (negócio ou técnica) | Select | `evidence/EvidencePage` |
 | Próximo passo, números, blocos de explicação | Card | `portfolio/NextStepCard`, `team/TeamSummary` |
 | Grupos da carteira | Tabs | `portfolio/GroupTabs` |
@@ -172,13 +188,13 @@ A grade é de 4 px (escala padrão do Tailwind).
 | "Por que está aqui" | Sheet + Separator + Button | `portfolio/ReasonSheet` |
 | Ajuda de coluna | Tooltip | `portfolio/ItemsTable` |
 | Vazio, carregando, erro e aviso | Empty, Skeleton, Alert | Todas as páginas |
-| Gráfico da evidência | Chart (Recharts) | `evidence/*` |
+| Gráficos da evidência e da Inteligência | Chart (Recharts) | `evidence/*`, `intelligence/BreakdownChart`, `intelligence/TimeResults` |
 
 ## 5. Padrões de página
 
 - **Cabeçalho:**
   - Desktop: marca à esquerda, navegação no centro, e à direita o badge "Dados até …" e o seletor de tema.
-  - Mobile: a navegação desce para uma segunda linha centralizada.
+  - Mobile: a navegação desce para uma segunda linha centralizada. Com cinco páginas, ela quebra em duas linhas, centralizadas (a 375 px não cabem numa só).
   - Não há sidebar. Uma página nova entra como uma rota e uma linha em `lib/nav.ts`.
 - **Abertura de página:** título (h1), uma linha do que a página responde e, em seguida, a resposta (cartão ou números). A lista vem depois.
 - **Abas de análise** (Equipe):
@@ -210,7 +226,15 @@ A grade é de 4 px (escala padrão do Tailwind).
   - No cartão "A pergunta" da Evidência, os números ficam empilhados à esquerda e o gráfico ocupa a direita.
   - Abaixo de `md` o gráfico some, porque as barras ficariam curtas demais para ler.
   - A estratégia de referência usa `--chart-1`, e as demais `--chart-2`, mais apagadas.
-- **Tabelas de pessoas** (por vendedor): seguem a ordem da API, que é alfabética, e não têm controle de ordenação, para que a tela nunca vire um ranking.
+- **Tabelas de pessoas** (por vendedor): seguem a ordem da API, que é alfabética, e não têm controle de ordenação, para que a tela nunca vire um ranking. Na Inteligência, os recortes de pessoas (vendedor, gerente e escritório) também não têm gráfico nem índice por pessoa.
+- **Inteligência** ([ADR-007](./architecture.md#adr-007)):
+  - **Os números vêm antes do texto.** O corpo da página só tem números, gráficos e tabelas: os quatro números do histórico, a carteira aberta num cartão à parte ("não é receita"), a exploração por recorte, o mix vendedor × produto e tempo e resultado. A leitura de cada tabela (acaso, decomposição, limites) fica logo abaixo dela, no rodapé do cartão.
+  - **Três botões no cabeçalho:** "Filtros" abre um popover com os sete campos em duas colunas (uma no celular, com rolagem própria e margem de 16 px), e o recorte ativo fica à vista em chips, cada um tirando só o seu filtro; "Ver análises" abre um painel lateral com os diagnósticos do processo e as descobertas, em duas abas com contagem; "Como funciona" abre as definições e o que a página não faz. Do painel, "Ver negociações", "Ver por…" e "Ver o ritmo mensal" fecham o painel e levam ao lugar certo.
+  - **"Ver por" é um Select,** não abas: sete recortes não cabem em 375 px.
+  - **Toda taxa vem com a faixa provável e o n,** e o veredito de acaso fica logo abaixo da tabela.
+  - **Números grandes em forma curta** ("10,01 mi", com o valor completo ao lado); sem símbolo de moeda, porque a base não declara a moeda.
+  - **Filtrar por uma linha** muda a página inteira (na URL); **ver negociações** abre o painel com o recorte somado à linha ou célula.
+  - **Sheet largo:** a largura usa a mesma variante do primitivo (`data-[side=right]:sm:max-w-3xl` nas negociações, `sm:max-w-2xl` nos painéis), senão a dele (`max-w-sm`) vence.
 - **Filtros dependentes:** cada filtro mostra só as opções compatíveis com o outro; por exemplo, com um gerente escolhido aparecem só os escritórios dele.
 - **Duas linguagens** (Evidência):
   - **Linguagem de negócio,** o padrão para gestores: pontos em palavras ("4,6 pontos a menos, margem de erro entre 2,5 e 6,8"), sem siglas nem jargão estatístico, que um teste confere.

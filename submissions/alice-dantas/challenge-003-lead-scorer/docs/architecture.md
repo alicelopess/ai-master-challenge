@@ -1,7 +1,7 @@
 # Architecture — Challenge 003 | Lead Scorer
 
-**Status:** Decisões propostas (ADR-001 a ADR-003, registradas em 15/10/2026); ADR-004 (16/10/2026) corrige o contrato entre back e front do ADR-003; ADR-005 (16/10/2026) registra o design system Rankio e a navegação entre páginas; ADR-006 (16/10/2026) troca a regra de grupos pela regra A e substitui em parte o ADR-001 e a decisão 5 do ADR-002. A seção 1 mantém as **entradas de produto** como contexto; a seção 2 registra as decisões. Implementação não iniciada.
-**Última atualização:** 16/10/2026
+**Status:** Decisões propostas (ADR-001 a ADR-003, registradas em 15/10/2026); ADR-004 (16/10/2026) corrige o contrato entre back e front do ADR-003; ADR-005 (16/10/2026) registra o design system Rankio e a navegação entre páginas; ADR-006 (16/10/2026) troca a regra de grupos pela regra A e substitui em parte o ADR-001 e a decisão 5 do ADR-002; ADR-007 (17/10/2026) acrescenta a página Inteligência comercial, descritiva; ADR-009 (17/10/2026) põe Qualificar logo depois de Focar; ADR-008 (17/10/2026) troca o "próximo passo" por orientação de verificação, trata a conta ausente como lacuna de cadastro e dá contexto histórico à idade. A seção 1 mantém as **entradas de produto** como contexto; a seção 2 registra as decisões. Implementação não iniciada.
+**Última atualização:** 17/10/2026
 **Documentos de origem:** [discovery.md](./discovery.md) (Etapas 1 a 4) e [data-audit.md](./data-audit.md) (auditoria dos dados)
 
 <a id="indice"></a>
@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | **Antes de começar** | Como ler este documento? | [Como ler](#como-ler) · [Procedência](#procedencia) · [Convenção de identificadores](#ids) |
 | [**1. Contexto: entradas de produto**](#secao-1) | O que construir primeiro, para quem, com que evidência e sob quais limites? | [1.1 Conclusões](#sub-1-1) · [1.2 Requisitos](#sub-1-2) · [1.3 Matriz de oportunidades](#sub-1-3) · [1.4 Priorização](#sub-1-4) · [1.5 P0 e jornada](#sub-1-5) · [1.6 Rastreabilidade](#sub-1-6) · [1.7 Trade-offs](#sub-1-7) · [1.8 Fora do MVP](#sub-1-8) · [1.9 Sinais mínimos e restrições](#sub-1-9) · [1.10 Incertezas](#sub-1-10) |
-| [**2. Registros de decisão arquitetural**](#secao-2) | O que decidimos, por quê, o que rejeitamos, o que sacrificamos, como verificamos e quando mudaríamos de ideia? | [2.0 Panorama](#sub-2-0) · [ADR-001 Scoring](#adr-001) · [ADR-002 Dados](#adr-002) · [ADR-003 Tecnologia](#adr-003) · [ADR-004 Contrato](#adr-004) · [ADR-005 Design system](#adr-005) · [ADR-006 Regra A](#adr-006) |
+| [**2. Registros de decisão arquitetural**](#secao-2) | O que decidimos, por quê, o que rejeitamos, o que sacrificamos, como verificamos e quando mudaríamos de ideia? | [2.0 Panorama](#sub-2-0) · [ADR-001 Scoring](#adr-001) · [ADR-002 Dados](#adr-002) · [ADR-003 Tecnologia](#adr-003) · [ADR-004 Contrato](#adr-004) · [ADR-005 Design system](#adr-005) · [ADR-006 Regra A](#adr-006) · [ADR-007 Inteligência](#adr-007) · [ADR-008 Verificação](#adr-008) · [ADR-009 Ordem](#adr-009) |
 | [**3. Rastreabilidade e pendências**](#secao-3) | Onde cada questão aberta foi resolvida e o que ainda precisa ser corrigido? | [3.1 Questões do discovery](#sub-3-1) · [3.2 Requisitos por ADR](#sub-3-2) · [3.3 Evidência nova](#sub-3-3) · [3.4 Correções pendentes](#sub-3-4) |
 | **Apêndice** | Limites e registro | [Limites deste documento](#limites) |
 
@@ -52,7 +52,7 @@ Cada identificador tem um link para o ponto onde é definido.
 | [RJ-01](#rj-01) a [RJ-07](#rj-07) | Abordagens rejeitadas do MVP | [1.8](#sub-1-8) |
 | [Q-01](#q-01) a [Q-03](#q-03) | Questões adicionais para a arquitetura | [1.9](#sub-1-9) |
 | [U-01](#u-01) a [U-10](#u-10) | Incertezas | [1.10](#sub-1-10) |
-| [ADR-001](#adr-001) a [ADR-006](#adr-006) | Registros de decisão arquitetural | [2](#secao-2) |
+| [ADR-001](#adr-001) a [ADR-009](#adr-009) | Registros de decisão arquitetural | [2](#secao-2) |
 | [CP-01](#cp-01) a [CP-06](#cp-06) | Correções pendentes nos documentos de origem | [3.4](#sub-3-4) |
 | [P-001](./discovery.md#p-001) a [P-003](./discovery.md#p-003) · [H-001](./discovery.md#h-001) a [H-008](./discovery.md#h-008) | Problemas e hipóteses | [discovery 1.3](./discovery.md#sub-1-3) |
 | [HD-01](./discovery.md#hd-01) a [HD-08](./discovery.md#hd-08) | Decisões do mapa | [discovery 2.6](./discovery.md#sub-2-6) |
@@ -411,7 +411,7 @@ Cada incerteza diz de onde vem, o que muda no MVP e como reduzi-la. As marcadas 
 >
 > **O que esta seção responde:** o que decidimos construir, por que, o que rejeitamos, o que sacrificamos, como vamos verificar e quando mudaríamos de ideia.
 >
-> **Como está organizada:** são três decisões independentes, cada uma com sua evidência e sua condição de revisão: [ADR-001](#adr-001) (scoring), [ADR-002](#adr-002) (dados) e [ADR-003](#adr-003) (tecnologia). O [ADR-004](#adr-004) (contrato entre back e front) veio depois do build e corrige o ADR-003; o [ADR-005](#adr-005) registra o design system e a navegação; o [ADR-006](#adr-006) troca a regra de grupos (regra A) e substitui em parte o ADR-001.
+> **Como está organizada:** são três decisões independentes, cada uma com sua evidência e sua condição de revisão: [ADR-001](#adr-001) (scoring), [ADR-002](#adr-002) (dados) e [ADR-003](#adr-003) (tecnologia). O [ADR-004](#adr-004) (contrato entre back e front) veio depois do build e corrige o ADR-003; o [ADR-005](#adr-005) registra o design system e a navegação; o [ADR-006](#adr-006) troca a regra de grupos (regra A) e substitui em parte o ADR-001; o [ADR-007](#adr-007) acrescenta a Inteligência comercial, que descreve o histórico sem pontuar oportunidades.
 >
 > **O que NÃO decide:** pesos definitivos. As faixas de valor e a ordem de desempate são **política provisória** ([U-06](#u-06)), à espera de validação da Head de RevOps.
 
@@ -917,6 +917,15 @@ O [ADR-003](#adr-003) pedia apresentação desacoplada da lógica e um contrato 
   - ação `check_progress`; `start_with_group` leva os dois limites; erro `no_won_history` (503);
   - estratégias com nomes que descrevem a regra (`age_p90_then_max_cycle`, `age_max_cycle_only`); `evidence.reference` é a servida, o resultado traz o carimbo `design.served_rule` (outra regra dá 503) e `without_no_outcome_verdict` diz, em código, como a regra servida fica sem as negociações que nunca fecham.
   - A mudança quebra o contrato: back, CLI e tela mudam juntos.
+- **Versão 6** (17/10/2026, para a Inteligência do [ADR-007](#adr-007)):
+  - `GET /api/intelligence`: histórico, carteira aberta (o mesmo `Summary` da Equipe), diagnósticos e descobertas em uniões por `code`, um recorte por dimensão com teste de acaso e decomposição, mix vendedor × produto, faixas de ciclo e ritmo mensal;
+  - `GET /api/intelligence/deals`: as negociações por trás de um número, por desfecho (`won`, `lost`, `open`) e, nas abertas, por grupo;
+  - todo parâmetro chega como texto e é validado no núcleo (`invalid_parameter`, 422); `data_bad_number` (503) para `close_value` ou receita do cliente inválidos;
+  - a carga passa a exigir `close_value` e, em `accounts`, setor, receita e sede. A classificação continua sem enxergá-los.
+- **Versão 7** (17/10/2026, para a orientação de verificação do [ADR-008](#adr-008)):
+  - `next_action.code` passa a ser `check_status` (Focar), `check_progress`, `confirm_still_active` e `check_prospecting`; saem `work_highest_list_price_first` e `advance_prospecting`;
+  - os três primeiros levam `params.has_account` (a conta está registrada?), nulo na ação do grupo;
+  - `meta.won_cycle_median_days`: mediana do ciclo das ganhas até o `as_of`, só contexto da idade (não decide grupo nem ordem).
 
 O campo `meta.contract_version` informa qual é a versão em uso.
 
@@ -1034,11 +1043,12 @@ O campo `meta.contract_version` informa qual é a versão em uso.
    | --- | --- | --- |
    | `/carteira` | Vendedor | Qual é o meu próximo passo? |
    | `/equipe` | Gestor e RevOps | Onde está a carteira da equipe? |
+   | `/inteligencia` | RevOps e gestor | Onde o processo pode melhorar e o que explica a receita? ([ADR-007](#adr-007)) |
    | `/evidencia` | RevOps | A lista ajuda a escolher onde investir? |
    | `/como-funciona` | Todos | Como a lista é montada? |
 
 4. **O front compõe, não calcula** ([ADR-004](#adr-004)):
-   - o cartão "Seu próximo passo" mostra o primeiro bloco da ordem do back (o empate inteiro, sem eleger um ID);
+   - o cartão "O que verificar agora" (antes "Seu próximo passo") mostra o primeiro bloco da ordem do back (o empate inteiro, sem eleger um ID);
    - a aba inicial é o grupo por onde começar, vindo de `start_with_group`;
    - os números das páginas Equipe, Evidência e Como funciona vêm da API (contrato v4).
 
@@ -1064,7 +1074,7 @@ O campo `meta.contract_version` informa qual é a versão em uso.
 | --- | --- | --- |
 | 1 | Contraste AA dos pares de texto, nos dois temas | `web/tests/tokens.test.ts` |
 | 2 | Composições sem HTML cru que tenha equivalente shadcn, sem cor literal e sem `style` | `web/tests/design-system.test.ts` |
-| 3 | Navegação: os quatro links e `aria-current` na página ativa | `web/tests/render.test.tsx` |
+| 3 | Navegação: os cinco links (Inteligência entre Equipe e Evidência, [ADR-007](#adr-007)) e `aria-current` na página ativa | `web/tests/render.test.tsx` |
 | 4 | Carteira: cartão de próximo passo, aba inicial, sheet por `role` e estados vazios | `web/tests/render.test.tsx` |
 | 5 | Nenhuma página rola na horizontal em 375 px | Roteiro no navegador ([PRD](./prd.md)) |
 
@@ -1103,7 +1113,7 @@ O campo `meta.contract_version` informa qual é a versão em uso.
 - **Grupos:** `focar` (idade ≤ L1, 157), `acompanhar` (L1 < idade ≤ L2, 141), `revisar` (> L2, 1.291), `qualificar` (Prospecting, 500), `nao_pontuavel` (0). Prospecting continua depois das Engaging: o backtest não o avalia, então a posição dele não muda.
 - **A ordem dentro do grupo continua por faixa e preço;** sem peso por produto.
 - **Fonte única:** `triage.engaging_group` decide o grupo; `classify` e o backtest a chamam.
-- **Explicação:** só o que decidiu (grupo e ordem), com os limites como fato do histórico, nunca como prazo. Nomes na tela: Focar, Acompanhar, Confirmar, Qualificar e Completar.
+- **Explicação:** só o que decidiu (grupo e ordem), com os limites como fato do histórico, nunca como prazo. Nomes na tela: Focar, Qualificar, Acompanhar, Confirmar e Completar (ordem do ADR-009).
 - **Sem venda ganha até o `as_of`:** erro `no_won_history`, em vez de um limite inventado.
 
 #### Consequências
@@ -1134,6 +1144,137 @@ O campo `meta.contract_version` informa qual é a versão em uso.
 
 ---
 
+<a id="adr-007"></a>
+### ADR-007: Inteligência comercial descritiva
+
+**Status:** Aceito em 17/10/2026. Acrescenta uma página; não muda a regra da lista ([ADR-006](#adr-006)).
+**Data:** 17/10/2026
+
+#### Contexto
+
+- **[Briefing] A Head de RevOps precisa ver onde o processo falha,** não só a lista de cada vendedor. A Equipe mostra a carteira aberta; nenhuma página mostra o histórico.
+- **[Dados] A taxa de ganho é igual em todo recorte:** produto (p = 0,37), vendedor (0,26), gerente (0,79), escritório (0,60), setor (0,97), cliente (0,94) e porte (0,14). Nenhuma diferença se repete entre semestres (correlação de 0,12 por vendedor e 0,00 por vendedor × produto).
+- **[Dados] A receita varia por volume e mix, não por conversão:** entre vendedores, 61,5% da diferença vem do volume, 39,9% do ticket e quase nada da taxa; entre produtos, 89,6% do ticket; entre portes de cliente, 76,0% do volume.
+- **[Dados] As alavancas visíveis são de processo:**
+  - 1.291 das 1.589 negociações em andamento estão abertas há mais de 138 dias;
+  - 1.425 das 2.089 abertas não têm cliente, contra 0 das 6.711 fechadas;
+  - as 500 em prospecção não têm data;
+  - 5 dos 35 vendedores não têm nenhuma oportunidade;
+  - a entrada caiu para 283 e 121 em nov e dez/2017, contra 864,6 por mês de jun a out;
+  - cada cliente teve fechadas com 10 vendedores (mediana).
+- **[Dados] O que não dá para mostrar:**
+  - venda cruzada: 73 dos 85 clientes já compraram 6 dos 7 produtos;
+  - comparação entre períodos: o 1º trimestre só tem março, e o último mês de cada trimestre tem 80,7% de ganho contra 52,3% nos outros, o vazamento da [RJ-02](#rj-02);
+  - região do cliente: 84% das sedes são nos Estados Unidos.
+
+#### Alternativas consideradas
+
+| Alternativa | Por que não (ou por que sim) |
+| --- | --- |
+| Só a Equipe | Não mostra o histórico nem as falhas de processo |
+| Painel de BI com rankings | Rankings de pessoas violam a [RD-06](#rd-06) e a [RJ-03](#rj-03), e taxas sem n e sem teste de acaso levam a conclusões que os dados não sustentam |
+| Texto gerado por LLM | Não é verificável nem reproduzível ([RJ-07](#rj-07)) |
+| **Regras determinísticas em código e params, texto no catálogo** | Escolhida: cada frase vem de um código testável, e todo número vem do payload ([ADR-004](#adr-004)) |
+
+#### Decisão
+
+1. **Descreve, não prevê.** `leadscorer/intelligence.py` é uma função pura sobre o `Dataset`. Nada entra na classificação; as abertas vêm de `triage.classify` com o recorte de `views.scope`, o mesmo da Equipe.
+2. **Toda taxa leva o n, a faixa provável (Wilson 95%) e o veredito de acaso:** qui-quadrado nos segmentos com pelo menos 20 fechadas, com α = 0,05 ÷ 7 dimensões (Bonferroni, família fixa).
+3. **A decomposição da receita** (volume × taxa × ticket) vem pela variância do log, com pelo menos 4 segmentos, e só no nível da dimensão.
+4. **Pessoas:** vendedor, gerente e escritório em ordem alfabética, sem gráfico e sem índice por pessoa. A matriz vendedor × produto mostra fechadas e a fatia do mix, nunca a taxa por célula.
+5. **Realizado e valor de tabela nunca se somam:** modelos e cartões separados.
+6. **Diagnósticos e descobertas** aparecem só quando a regra vale no recorte; os limites ficam em `policy.py`. O padrão de fim de trimestre aparece só como conferência do registro, nunca como sinal.
+7. **Sem filtro de período, sem matriz de venda cruzada e sem sede do cliente como filtro** (contexto acima).
+8. **Números antes do texto:** o corpo da página só tem números, gráficos e tabelas; os filtros ficam num botão, e os diagnósticos, as descobertas e as definições ficam em painéis laterais ("Ver análises" e "Como funciona").
+
+#### Trade-offs
+
+- **Ganha-se** uma visão de processo verificável, que não contradiz a lista nem a [RD-06](#rd-06).
+- **Perde-se** o "quem vende mais" que um painel comum mostraria em primeiro lugar. A decomposição mostra por que essa leitura engana nesta base.
+- **A carga fica mais exigente:** sem `close_value`, setor, receita ou sede, nenhuma página carrega ([ADR-002](#adr-002), nenhuma lista parcial).
+
+#### Validação
+
+| # | Teste | Onde |
+| --- | --- | --- |
+| 1 | Oráculos reais: KPIs, diagnósticos, descobertas, p-valores, decomposições e faixas | `tests/test_intelligence.py` |
+| 2 | Abertas iguais às da Equipe em todo gerente e escritório e em qualquer `as_of` | `tests/test_intelligence.py`, `web/tests/policy.test.ts` |
+| 3 | Somas que fecham: segmentos, matriz, faixas, meses e detalhamento | `tests/test_intelligence.py` |
+| 4 | Toda regra e veredito disparam na base sintética rica | `tests/test_intelligence.py`, `web/tests/copy.test.ts` |
+| 5 | Texto só com números dos params, sem jargão e sem termo proibido | `web/tests/copy.test.ts` |
+| 6 | API = núcleo; contrato v6 | `tests/test_api.py`, `tests/test_contract.py`, `web/tests/contract.test.ts` |
+
+#### Condição para revisitar a decisão
+
+- **Dados com atividade, motivo de perda ou histórico de estágio:** entram como diagnósticos e como dimensões.
+- **Dado que separe habilidade de território e mix:** só então rever a [RJ-03](#rj-03).
+- **Histórico de vários anos:** coortes por mês de engajamento, com aviso de censura, no lugar do filtro de período.
+- **Base grande:** paginação no servidor e exportação.
+
+---
+
+<a id="adr-008"></a>
+### ADR-008: Orientação de verificação, conta neutra e contexto da idade
+
+**Status:** Aceito em 17/10/2026. Não muda a regra da lista ([ADR-006](#adr-006)): grupos, ordem e backtest ficam como estão.
+**Data:** 17/10/2026
+
+#### Contexto
+
+- **[Teste de personas] Os seis perfis chegaram ao painel sem ajuda,** mas o "próximo passo" de Focar era a regra de ordenação repetida, e o vendedor iniciante (Boris) criou a própria regra para decidir: cliente nomeado e idade perto do limite. A causa não é a regra dele ser melhor, e sim a ferramenta não trazer dado para diferenciar oportunidades do mesmo grupo e produto.
+- **[Dados] A base não registra atividades, estágio nem contatos.** Qualquer "ação comercial" (retomar o contato, marcar reunião) presumiria algo que não vemos.
+- **[Dados] A conta nunca falta nas fechadas** (4.238 ganhas e 2.473 sem venda) e falta em 69% das abertas. Sem variação nas fechadas, não há como testar se ter conta indica proximidade do fechamento. Nas abertas, ter conta não se relaciona com a idade (mediana de 165 d com conta e 164 d sem; Mann-Whitney p = 0,32; 29%, 31% e 32% nas três faixas de idade), com o vendedor (qui-quadrado p = 0,55; V de Cramér 0,11) nem com o escritório (32,7%, 31,6% e 30,8%).
+- **[Dados] Não há evidência de que 102 dias merecem mais atenção que 12.** O backtest só mostra que ordenar por idade ("mais recentes primeiro", 26,6%) rende bem menos que a regra servida (58,4%).
+
+#### Decisão
+
+- **Orientação de verificação, não de ação.** O "próximo passo" vira "O que verificar agora": uma consulta ao CRM que depende só do grupo e de a conta estar registrada (`has_account`, nulo na ação do grupo). Não cita atividade, intenção nem compromisso. O painel diz por quê: a base não registra atividades, estágio nem contatos.
+- **Conta ausente é lacuna de cadastro.** Filtro neutro "com / sem cliente registrado" (na URL, `cliente=com|sem`), nota neutra no resumo e a coluna Cliente como indicador por linha. Nenhum efeito na ordem nem no grupo. Sem ícone extra: ele marcaria 69% das linhas.
+- **Idade com contexto, sem urgência.** O `meta` ganha `won_cycle_median_days`. O painel e a coluna Idade mostram a idade ao lado da mediana, de L1 e de L2 das ganhas, com o aviso de que isso descreve as vendas que fecharam. Sem semáforo, contagem regressiva nem ícone por linha: todo gatilho seria um limiar que repete a hipótese sem prova.
+- **Empate sem falsa ordem.** Mesmo grupo, produto e valor de tabela são "empatadas, sem ordem entre si"; a ordem por código é só estabilidade. O critério de desempate não muda.
+- **Contrato v7.** Códigos `check_status`, `check_progress`, `confirm_still_active`, `check_prospecting` (os três primeiros com `has_account`); saem `work_highest_list_price_first` e `advance_prospecting`.
+
+#### Alternativas descartadas
+
+- **Barra de score de 10 a 100 por oportunidade:** a ordem só tem 7 preços distintos por grupo, o número seria lido como chance de fechar (a Head de RevOps leu o valor de tabela como "nota"), e "score" está entre os termos proibidos (AC-3.8).
+- **"Minha sessão de trabalho" (selecionar e copiar um plano):** o painel já mostra o que verificar em cada linha, então o plano repetiria o mesmo texto. Fica para depois da validação com vendedores iniciantes, e só se eles perderem o fio entre uma oportunidade e outra.
+- **Desempate por idade ("mais perto do limite primeiro"):** parte da mesma hipótese sem prova.
+
+#### Consequências
+
+- Mais utilizável: o vendedor sabe o que consultar no CRM e o que a tela não sabe.
+- **Não comprova** que as oportunidades escolhidas fecham mais: a ferramenta organiza a verificação; o ganho só se mede no piloto com grupo de controle.
+- Validação com vendedores iniciantes reais: protocolo em [validacao-vendedor-iniciante.md](./validacao-vendedor-iniciante.md).
+
+---
+
+<a id="adr-009"></a>
+### ADR-009: Qualificar antes de Acompanhar e Confirmar
+
+**Status:** Aceito em 17/10/2026. Substitui em parte o [ADR-006](#adr-006) na posição de Qualificar; os limites de idade, os grupos de Engaging e a ordem dentro do grupo não mudam.
+**Data:** 17/10/2026
+
+#### Contexto
+
+- **[Pedido do produto]** A ordem passa a ser Focar → Qualificar → Acompanhar → Confirmar → Completar, porque as Engaging acima de L1 já passaram do tempo em que 90% das vendas ganhas fecharam, e as acima de L2, de qualquer venda ganha da base.
+- **[Dados] Confirmar quase não converte no passado:** nos 7 cortes mensais do backtest, as abertas acima de L2 somam 1.469 observações e nenhuma ganhou em 90 dias (Acompanhar, 10,2%; Focar, 39,3%). É o mesmo fato do L2 visto no tempo: nenhuma venda da base passou de 138 dias; a base termina em dezembro de 2017 e é provavelmente sintética.
+- **[Dados] Não há prova para Qualificar:** nenhuma Prospecting tem desfecho (as 4.238 ganhas e as 2.473 sem venda têm todas data de engajamento; as 500 Prospecting não têm), então o backtest não a avalia e nada mostra que ela converta mais ou menos que Acompanhar.
+- **[Dados] O ciclo da vendedora que motivou a discussão (Anna Snelling) é o da empresa:** mediana 60 d contra 57 d, P90 105 d contra 106 d, 16,3% das ganhas em até 7 dias contra 17,8%. Limites só dela não tirariam nenhuma das 56 abertas dela de Confirmar.
+
+#### Decisão
+
+- `policy.STATES` passa a ser `focar, qualificar, acompanhar, revisar, nao_pontuavel`. Tudo que depende da ordem (payload `ordering`, abas, legenda, "comece por") sai dessa tupla.
+- Focar vazio aponta para o primeiro grupo seguinte com itens; para Qualificar, o parâmetro novo `has_engaging` diz se o motivo é "nenhuma aberta há até L1" ou "nenhuma negociação em andamento".
+- A ordem de Acompanhar e Confirmar entre si, e a dentro de cada grupo, não muda; o backtest segue reproduzindo a ordem servida.
+
+#### Consequências
+
+- **Não está provado que a ordem nova ajude:** é uma hipótese de produto. Só o piloto com grupo de controle mede se o vendedor que começa por Qualificar vende mais do que o que começa por verificar as antigas.
+- Todos os 10 vendedores sem Focar passam a começar por Qualificar.
+- **Condição para revisitar:** dados de desfecho para Prospecting, ou o piloto mostrar que a verificação das antigas (Confirmar) libera esforço melhor do que a prospecção.
+
+---
+
 <a id="secao-3"></a>
 ## 3. Rastreabilidade e pendências
 
@@ -1154,7 +1295,7 @@ O campo `meta.contract_version` informa qual é a versão em uso.
 | [AR-06](./discovery.md#ar-06) Tratamento do Prospecting | [ADR-001](#adr-001) | "Qualificar": só valor, sem idade |
 | [AR-07](./discovery.md#ar-07) "Hoje" fixo ou parâmetro | [ADR-002](#adr-002) | Parâmetro, padrão `max(close_date)` |
 | [AR-08](./discovery.md#ar-08) Como medir impacto | [ADR-001](#adr-001), [ADR-003](#adr-003) | Ponto de extensão; [F-07](#f-07) e [F-13](#f-13) como caminho |
-| [AR-09](./discovery.md#ar-09) Visão de manager | [ADR-001](#adr-001) | Descritiva, sem ranking de pessoas |
+| [AR-09](./discovery.md#ar-09) Visão de manager | [ADR-001](#adr-001), [ADR-007](#adr-007) | Descritiva, sem ranking de pessoas; a Inteligência mostra pessoas em ordem alfabética, com a decomposição só no nível da dimensão |
 | [AR-10](./discovery.md#ar-10) Papel de um LLM | [ADR-001](#adr-001) | Sem LLM; explicação por modelo de frase |
 | [AR-11](./discovery.md#ar-11) Contrato de dados para enriquecimento | [ADR-001](#adr-001), [ADR-003](#adr-003) | Núcleo desacoplado e política editável |
 | [AR-12](./discovery.md#ar-12) Leitura do KPI principal | [ADR-001](#adr-001) | Habilidade e valor em colunas separadas |

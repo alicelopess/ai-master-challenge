@@ -51,8 +51,8 @@ Uma ferramenta de **triagem explicável** da carteira aberta: o vendedor escolhe
 | --- | --- | --- |
 | Núcleo Python (pandas) | Carga, normalização, estados, ordem e motivos em código; funções puras, sem web e sem texto de tela | `solution/leadscorer/` |
 | CLI | `check-data`, `list --seller` (texto ou `--json`) e `explain --id`; escreve os textos a partir dos códigos (`cli_text.py`) e entrega tudo sem Node | `python -m leadscorer` |
-| API FastAPI | `GET /api/meta`, `/api/sellers`, `/api/sellers/{seller}/pipeline`, `/api/pipeline?manager=&office=` (com o resumo por vendedor), `/api/rules` (a política) e `/api/evidence` (o backtest); respostas tipadas (pydantic, descritas em `/docs`); erros 404, 422 e 503 com `code`, `params` e `detail` | `solution/api/` |
-| Tela Next.js (TypeScript) | **Rankio**: quatro páginas com menu central (Carteira, Equipe, Evidência e Como funciona), tema claro e escuro. Valida cada resposta contra o contrato e escreve os textos a partir dos códigos (`copy/pt-BR.ts`). Componentes só do shadcn, com tokens próprios ([design-system.md](./docs/design-system.md), [ADR-005](./docs/architecture.md#adr-005)) | `solution/web/` |
+| API FastAPI | `GET /api/meta`, `/api/sellers`, `/api/sellers/{seller}/pipeline`, `/api/pipeline?manager=&office=` (com o resumo por vendedor), `/api/rules` (a política), `/api/evidence` (o backtest), `/api/intelligence` e `/api/intelligence/deals` (a Inteligência comercial); respostas tipadas (pydantic, descritas em `/docs`); erros 404, 422 e 503 com `code`, `params` e `detail` | `solution/api/` |
+| Tela Next.js (TypeScript) | **Rankio**: cinco páginas com menu central (Carteira, Equipe, Inteligência, Evidência e Como funciona), tema claro e escuro. Valida cada resposta contra o contrato e escreve os textos a partir dos códigos (`copy/pt-BR.ts`). Componentes só do shadcn, com tokens próprios ([design-system.md](./docs/design-system.md), [ADR-005](./docs/architecture.md#adr-005)) | `solution/web/` |
 
 CLI, API e tela consomem **o mesmo payload**, então a lista é idêntica nas três saídas (testado para os 35 vendedores).
 
@@ -60,27 +60,29 @@ CLI, API e tela consomem **o mesmo payload**, então a lista é idêntica nas tr
 - **O back entrega dados e decisões da regra:** o grupo de cada oportunidade, a ordem, os motivos como código com os valores que decidiram (`reasons: [{code, role, params}]`), a ação sugerida (`next_action`) e os números.
 - **O front decide como dizer:** nomes, frases, formatação e layout.
 - **O mesmo contrato serve aos dois lados:** o schema fica em `web/contract/openapi.json`; o front gera dele os tipos e a validação, e testa contra respostas sintéticas exportadas pelo back.
-- **Versão 5 do contrato:** a regra A ([ADR-006](./docs/architecture.md#adr-006)), com o grupo Acompanhar, os dois limites de idade e só os motivos que decidem. A versão 4 trouxe a evidência, as regras e o resumo por vendedor. A tela não calcula nenhum número de negócio; o máximo que faz é formatar (fração em %, diferença em pontos).
+- **Versão 6 do contrato:** a Inteligência comercial ([ADR-007](./docs/architecture.md#adr-007)), com duas rotas novas. A versão 5 trouxe a regra A ([ADR-006](./docs/architecture.md#adr-006)), com o grupo Acompanhar, os dois limites de idade e só os motivos que decidem. A versão 4 trouxe a evidência, as regras e o resumo por vendedor. A tela não calcula nenhum número de negócio; o máximo que faz é formatar (fração em %, diferença em pontos).
 
-**As quatro páginas:**
+**As cinco páginas:**
 
 | Página | Para quem | Pergunta que responde | O que mostra |
 | --- | --- | --- | --- |
-| Carteira | Vendedor | Qual é o meu próximo passo? | Cartão "Seu próximo passo" com a ação e o primeiro bloco da ordem (o empate inteiro, sem eleger um ID). Uma aba por grupo, com contagem e definição. Painel "Por que está aqui" com os dois motivos que decidiram (o grupo e a posição) e o que o sistema não vê. Anterior e Próxima percorrem a lista; "Copiar ID" leva ao CRM. O vendedor fica na URL, e o último escolhido volta na próxima visita |
+| Carteira | Vendedor | Qual é o meu próximo passo? | Cartão "O que verificar agora" com a verificação do grupo e o primeiro bloco da ordem (o empate inteiro, sem eleger um ID). Uma aba por grupo, com contagem e definição. Painel "Por que está aqui" com os dois motivos que decidiram (o grupo e a posição) e o que o sistema não vê. Anterior e Próxima percorrem a lista; "Copiar ID" leva ao CRM. O vendedor fica na URL, e o último escolhido volta na próxima visita |
 | Equipe | Gestor e Head de RevOps | Onde está a carteira da equipe? | Filtros de gerente e escritório, cada um restringindo o outro. Os números da carteira, um por grupo, e, abaixo deles, duas abas: "Por vendedor" (em ordem alfabética, sem ordenação por resultado) e "Por oportunidade" (a lista com a coluna Vendedor). Tabelas paginadas |
+| Inteligência | Head de RevOps | Onde o processo pode melhorar? O que explica a receita? | No corpo, só números: o histórico (receita ganha, vendas ganhas, taxa de ganho com a faixa provável, ciclo), a carteira aberta à parte ("não é receita"), a exploração por produto, vendedor, gerente, escritório, setor, cliente e porte, o mix vendedor × produto e tempo e resultado, com a leitura abaixo de cada tabela e as negociações por trás de cada número. Três botões: "Filtros" (os sete campos num painel, com o recorte ativo em chips), "Ver análises" (diagnósticos do processo com o próximo passo, o que o CRM não registra e as descobertas com o veredito de acaso) e "Como funciona". Pessoas em ordem alfabética, sem gráfico; nada aqui entra na lista |
 | Evidência | Head de RevOps | A lista ajuda a escolher onde investir? | Do valor vendido em 90 dias, quanto estava nas 10 primeiras de cada vendedor: regra atual, "só valor de tabela" e o acaso, com a diferença e a margem de erro. Também o recorte sem as negociações que nunca fecham, com a conclusão dele (sem elas, "só valor de tabela" fica à frente), e o que a evidência não mostra. Em **linguagem de negócio** (padrão) ou **técnica** (Val@10, P@10, Lift@10, AUC e IC95%) |
 | Como funciona | Todos | Como a lista é montada? | Os cinco grupos, os dois limites de idade, a ordem, as faixas de valor de tabela e o que a ferramenta não faz |
 
 **Jornada do vendedor (2 minutos):**
 1. Abra `localhost:3000` e escolha Zane Levy.
-2. O cartão "Seu próximo passo" mostra a ação de Focar e as 2 GTX Plus Pro de 5.482 empatadas no topo: `01XZ9CRY` e `FZWU2I30`.
+2. O cartão "O que verificar agora" mostra a verificação de Focar e as 2 GTX Plus Pro de 5.482 empatadas no topo: `01XZ9CRY` e `FZWU2I30`.
 3. Abaixo, "88 abertas = 13 Focar + 18 Acompanhar + 57 Confirmar + 0 Qualificar + 0 Completar" e as abas.
 4. Abra `01XZ9CRY` para ler os dois motivos ("aberta há 104 dias; 90% das vendas ganhas fecharam em até 106 dias") e use "Próxima" para seguir na ordem.
 5. Troque para Darcel Schlecht: as 83 em andamento passaram de 138 dias, então ele abre direto em Confirmar, com a indicação de começar por lá.
 
 **Jornada da Head de RevOps:**
 1. Em **Equipe**, veja 2.089 abertas: 157 em Focar (até o tempo em que 90% das vendas ganhas fecharam: não deixar esfriar), 141 em Acompanhar, 1.291 em Confirmar (acima da venda mais longa já fechada: confirmar se seguem) e 500 em Qualificar, além da carteira de cada vendedor.
-2. Em **Evidência**, compare a regra atual (58,4% do valor ganho capturado) com ordenar só por valor de tabela (53,8%) e com o acaso (23,2%). Leia também a limitação: sem as negociações que nunca fecham, "só valor de tabela" fica 1,0 ponto à frente.
+2. Em **Inteligência**, abra "Ver análises" para ver onde o processo pode melhorar: 1.291 das 1.589 negociações em andamento estão abertas há mais tempo do que qualquer venda já fechada; 1.425 das 2.089 abertas não têm cliente, contra 0 das 6.711 fechadas (o cliente só entra no fechamento); as 500 em prospecção não têm data; 5 dos 35 vendedores não têm nenhuma oportunidade; a entrada de novas negociações caiu para 283 e 121 em novembro e dezembro, contra 864,6 por mês antes. Leia as descobertas: a taxa de ganho (63,2%) não muda além do acaso em nenhum recorte, e a diferença de receita entre vendedores vem do volume (61,5%) e do mix (39,9%), não da conversão.
+3. Em **Evidência**, compare a regra atual (58,4% do valor ganho capturado) com ordenar só por valor de tabela (53,8%) e com o acaso (23,2%). Leia também a limitação: sem as negociações que nunca fecham, "só valor de tabela" fica 1,0 ponto à frente.
 
 ### Lógica de Scoring
 
@@ -127,14 +129,15 @@ _Como você atacou o problema. Por onde começou? Como decompôs? O que priorizo
 
 | O que foi verificado | Resultado |
 | --- | --- |
-| Testes automatizados | `pytest`: 169 verdes com os CSVs; sem eles, 135 verdes e 34 pulados com aviso. `npm test`: 141 verdes; `npm run typecheck` e `npm run build` sem erros |
+| Testes automatizados | `pytest`: 219 verdes com os CSVs; sem eles, 176 verdes e 43 pulados com aviso. `npm test`: 176 verdes; `npm run typecheck` e `npm run build` sem erros |
 | Reconciliação | 8.800 linhas após cada junção; 2.089 abertas = 157 + 141 + 1.291 + 500 + 0 |
 | Explicações | Nas 2.089, exatamente dois motivos, que citam os valores que decidiram e, sozinhos, reconstroem o grupo e a ordem; todo número das frases vem desses valores; nenhum termo proibido ("probabilidade", "perdida", "prazo", "parada", "score"…) nos textos da CLI ou da tela, conferido por início de palavra com uma lista só |
-| Contrato | Todas as respostas passam pelos modelos tipados (versão 5); todo código tem texto na tela e na CLI; resposta fora do contrato vira mensagem de erro na tela; a evidência servida bate com o backtest, traz o carimbo da regra servida e não traz a armadilha de vazamento |
+| Contrato | Todas as respostas passam pelos modelos tipados (versão 6); todo código tem texto na tela e na CLI; resposta fora do contrato vira mensagem de erro na tela; a evidência servida bate com o backtest, traz o carimbo da regra servida e não traz a armadilha de vazamento |
 | Design system | Todo par de texto com contraste AA (≥ 4,5 : 1) nos temas claro e escuro; composições só com primitivos do shadcn, sem cor literal nem estilo inline (ambos em teste) |
-| Paridade | CLI = API = núcleo para os 35 vendedores; soma = 2.089; a carteira da equipe, o detalhe e as regras usam a mesma lista e o mesmo `meta`; o backtest reproduz a ordem servida em todos os 7 cortes |
+| Paridade | CLI = API = núcleo para os 35 vendedores; soma = 2.089; a carteira da equipe, o detalhe e as regras usam a mesma lista e o mesmo `meta`; o backtest reproduz a ordem servida em todos os 7 cortes; a Inteligência mostra as mesmas abertas da Equipe em todo gerente e escritório |
+| Inteligência | Receita 10.005.534, 4.238 ganhas de 6.711 fechadas (63,2%, faixa 62,0–64,3%), ciclo mediano 57 dias; os sete diagnósticos e as descobertas conferem com os CSVs; em cada recorte, os segmentos somam o total; todo número das frases vem do payload, sem jargão estatístico |
 | Robustez | Arquivo ausente, vazio ou inválido, rótulo desconhecido, data ou preço fora do formato e `as_of` inválido param com mensagem; nenhuma lista parcial |
-| Ensaio das jornadas (tela) | Vendedor e RevOps nas quatro páginas, nos temas claro e escuro, em 1280 px e 375 px; todos os itens do roteiro apareceram, nenhum erro no console e nenhuma página rola na horizontal |
+| Ensaio das jornadas (tela) | Vendedor e RevOps nas cinco páginas, nos temas claro e escuro, em 1280 px e 375 px; todos os itens do roteiro apareceram, nenhum erro no console e nenhuma página rola na horizontal |
 | Backtest temporal (7 cortes) | Produto e preço não separam quem ganha; a regra servida (A) concentra mais valor ganho que a regra anterior e que ordenar só por preço, por causa das negociações sem desfecho (detalhes abaixo) |
 
 **Validação offline** ([relatório completo](./solution/data/processed/backtest_report.md), gerado por `scripts/backtest.py`):
