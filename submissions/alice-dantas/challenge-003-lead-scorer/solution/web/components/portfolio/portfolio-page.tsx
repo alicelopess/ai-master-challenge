@@ -18,9 +18,8 @@ import { useApi } from "@/lib/use-api";
 import { useQuery } from "@/lib/use-query";
 
 import { GroupTabs } from "./group-tabs";
-import { ListFiltersBar } from "./list-filters";
+import { ListFiltersBar, ListFiltersStatus } from "./list-filters";
 import { NextStepCard } from "./next-step-card";
-import { PortfolioSummary } from "./portfolio-summary";
 import { ReasonSheet } from "./reason-sheet";
 import { SellerCombobox } from "./seller-combobox";
 
@@ -125,9 +124,18 @@ export function PortfolioPage() {
           ) : (
             <>
               <NextStepCard payload={payload} onSelect={setSelected} onShowGroup={showGroup} />
-              <PortfolioSummary payload={payload} />
-              <ListFiltersBar filters={filters} onChange={changeFilters} products={productsIn(payload.groups)}
-                              shown={groups.reduce((sum, g) => sum + g.items.length, 0)} total={payload.summary.total} />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold tracking-tight">{UI.portfolioTitle}</h2>
+                  <Badge variant="secondary" className="tabular-nums" aria-label={`${UI.portfolioCount}: ${payload.summary.total}`}>
+                    {payload.summary.total}
+                  </Badge>
+                </div>
+                <ListFiltersBar filters={filters} onChange={changeFilters} products={productsIn(payload.groups)}
+                                className="sm:flex-1 sm:justify-end" />
+              </div>
+              <ListFiltersStatus filters={filters} shown={groups.reduce((sum, g) => sum + g.items.length, 0)}
+                                 total={payload.summary.total} />
               <GroupTabs
                 key={`${seller}:${JSON.stringify(filters)}`}
                 groups={groups}

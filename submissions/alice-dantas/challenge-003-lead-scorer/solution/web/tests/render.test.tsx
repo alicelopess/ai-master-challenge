@@ -107,6 +107,18 @@ describe("carteira", () => {
     expect(window.localStorage.getItem("rankio.vendedor")).toBe("Ana Alfa");
   });
 
+  test("título com a contagem de abertas ao lado da busca e dos filtros, sem o bloco de textos antes da tabela", async () => {
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(bySeller);
+    render(<PortfolioPage />);
+    const title = await screen.findByRole("heading", { name: UI.portfolioTitle });
+    const row = title.parentElement!.parentElement as HTMLElement;
+    expect(within(row).getByLabelText(`${UI.portfolioCount}: 8`).textContent).toBe("8");
+    expect(within(row).getByRole("searchbox", { name: UI.listFilters.searchLabel })).toBeTruthy();
+    expect(within(row).getByRole("button", { name: new RegExp(`^${UI.listFilters.button}`) })).toBeTruthy();
+    for (const gone of [/^Ordem:/, /^Nota:/, /Sem oportunidades em/, /^8 abertas/]) expect(screen.queryByText(gone)).toBeNull();
+  });
+
   test("o último vendedor volta na próxima visita; Focar vazio abre no grupo indicado", async () => {
     window.localStorage.setItem("rankio.vendedor", "Bruno Beta");
     stubApi(bySeller);

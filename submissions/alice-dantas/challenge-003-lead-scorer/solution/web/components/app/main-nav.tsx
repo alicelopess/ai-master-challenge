@@ -14,7 +14,7 @@ export function MainNav({ className }: { className?: string }) {
   const pathname = usePathname();
   return (
     <NavigationMenu viewport={false} aria-label={UI.navLabel} className={className}>
-      {/* A partir de `md` as cinco páginas cabem numa linha; abaixo disso o cabeçalho usa o `MobileNav`. */}
+      {/* A partir de `lg` as cinco páginas cabem numa linha; abaixo disso o cabeçalho usa o `MobileNav`. */}
       <NavigationMenuList className="flex-nowrap justify-center gap-1">
         {NAV_ITEMS.map((item) => (
           <NavigationMenuItem key={item.key}>

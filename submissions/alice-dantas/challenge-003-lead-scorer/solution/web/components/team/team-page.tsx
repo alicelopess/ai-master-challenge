@@ -7,7 +7,7 @@ import { useCallback, useState } from "react";
 import { DataWarning, ErrorAlert } from "@/components/app/error-alert";
 import { PageHeader } from "@/components/app/page-header";
 import { GroupTabs } from "@/components/portfolio/group-tabs";
-import { ListFiltersBar } from "@/components/portfolio/list-filters";
+import { ListFiltersBar, ListFiltersStatus } from "@/components/portfolio/list-filters";
 import { PortfolioSummary } from "@/components/portfolio/portfolio-summary";
 import { ReasonSheet } from "@/components/portfolio/reason-sheet";
 import { Button } from "@/components/ui/button";
@@ -117,9 +117,9 @@ export function TeamPage() {
               ) : (
                 <>
                   <PortfolioSummary payload={payload} counts={false} />
-                  <ListFiltersBar filters={filters} onChange={changeFilters} products={productsIn(payload.groups)}
-                                  shown={groups.reduce((sum, g) => sum + g.items.length, 0)}
-                                  total={payload.summary.total} />
+                  <ListFiltersBar filters={filters} onChange={changeFilters} products={productsIn(payload.groups)} />
+                  <ListFiltersStatus filters={filters} shown={groups.reduce((sum, g) => sum + g.items.length, 0)}
+                                     total={payload.summary.total} />
                   <GroupTabs
                     key={`${key}:${JSON.stringify(filters)}`}
                     groups={groups}

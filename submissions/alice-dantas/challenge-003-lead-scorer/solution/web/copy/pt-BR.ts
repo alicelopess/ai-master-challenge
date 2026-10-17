@@ -76,6 +76,8 @@ export const UI = {
   summaryLabel: "Resumo da carteira",
   teamSummaryLabel: "Carteira da equipe por grupo",
   open: "abertas",
+  portfolioTitle: "Suas oportunidades",
+  portfolioCount: "Oportunidades abertas",
   note: "Nota",
   accountNote: "A ausência do cliente é uma lacuna do cadastro e não diz nada sobre a qualidade da oportunidade.",
   emptyGroups: (labels: string[]) => `Sem oportunidades em ${labels.length > 1
