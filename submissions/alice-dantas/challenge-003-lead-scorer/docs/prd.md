@@ -25,7 +25,7 @@
 - **Idade com contexto, sem urgência:** o painel e a coluna Idade mostram a idade ao lado da mediana, de L1 e de L2 das vendas ganhas, com o aviso de que isso descreve as vendas que fecharam. Nenhum semáforo, contagem para o limite nem mudança de ordem.
 - **Empates sem falsa ordem:** "N oportunidades empatadas (…): sem ordem entre si"; a ordem por código não vale como ranking. O critério de desempate não mudou.
 - **Vocabulário:** "Engajada em" vira "Início da negociação"; Confirmar é a verificação de que a negociação continua; o resumo mostra só os grupos com itens e diz quais estão vazios.
-- **Interface:** abaixo de `md` o menu vira um botão; o selo de data, quando a API não responde, diz "Sem conexão com os dados" e deixa tentar de novo.
+- **Interface:** o menu vira um botão em telas estreitas (limite ajustado na Revisão 8); o selo de data, quando a API não responde, diz "Sem conexão com os dados" e deixa tentar de novo.
 - **Fora desta revisão:** a ordem da lista, os grupos e o backtest não mudam; a conclusão comercial continua a mesma: a ferramenta organiza a verificação, não prova que as oportunidades escolhidas fecham mais.
 
 **Revisão 7** (17/10/2026): nova ordem dos grupos ([ADR-009](./architecture.md#adr-009)), carteira com busca e filtros e sugestões de negociação no painel.
@@ -33,6 +33,10 @@
 - **Tabela:** sem linha de empate e com os IDs alinhados. O painel ainda diz que a ordem entre empatadas é só pelo código.
 - **Busca e filtros na Carteira e na Equipe:** busca por ID, produto, cliente (e vendedor na Equipe), e filtros de cliente (com ou sem registro), produto, faixa de valor de tabela, idade e início da negociação, todos na URL. Descrevem a lista, não mudam ordem nem grupo; sem idade ou data, a oportunidade fica de fora quando esses filtros estão ativos.
 - **Sugestões de negociação:** o painel traz, por grupo, possibilidades para contextos que a base não registra ("Se já houve contato recente: …"), e a nota do painel passa a dizer que o Rankio indica possibilidades para cenários, não uma certeza de próximo passo. As sugestões não vêm dos dados da oportunidade e não preveem resultado.
+
+**Revisão 8** (17/10/2026): carteira mais enxuta e cabeçalho que não estoura.
+- **Carteira:** o bloco de textos antes da tabela (total e grupos, legenda da ordem, grupos vazios e nota sobre o cliente) sai da tela. Entra o título "Suas oportunidades", com a quantidade de abertas numa etiqueta, e a busca e os filtros na mesma linha. A ordem dos grupos continua explicada em "Como funciona", e a ausência de cliente segue visível em cada linha ("sem cliente registrado"). A CLI e a Equipe mantêm a legenda e a nota. Isso substitui, na Carteira, a legenda e o aviso que o AC-2.1 e o AC-2.12 descrevem na tela.
+- **Cabeçalho:** o menu de páginas vira botão abaixo de 1024 px (antes, abaixo de 768 px); entre os dois, as cinco páginas, a data e o tema não cabiam e o tema saía da tela.
 
 ## 1. Problema e valor
 
