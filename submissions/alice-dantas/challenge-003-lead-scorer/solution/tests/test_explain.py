@@ -95,7 +95,8 @@ def test_focar_acompanhar_and_revisar_reasons(raw_dir):
                                  "fechada aqui (138 d).")
     assert revisar["next_action"]["code"] == codes.CONFIRM_STILL_ACTIVE
     shown = render_detail({"meta": views.meta(dataset, context(dataset)), "seller": "Ana Alfa", "item": revisar})
-    assert "confirme com o cliente ou no crm se a negociação segue" in shown.lower()
+    assert "verifique no crm se" in shown.lower()
+    assert "o tempo aberta não prova que ela terminou" in shown.lower()
     assert cli_text.LIMITS_NOTE in shown
     assert_vocabulary(shown)
 
@@ -105,15 +106,15 @@ def test_prospecting_has_no_invented_age(raw_dir):
     assert entry["reasons"][0]["code"] == codes.PROSPECTING_STAGE
     assert texts(entry)[0] == "Qualificar porque ainda está em prospecção."
     assert entry["age_days"] is None
-    assert entry["next_action"]["code"] == codes.ADVANCE_PROSPECTING
+    assert entry["next_action"]["code"] == codes.CHECK_PROSPECTING
 
 
 def test_only_what_decided_is_a_reason(raw_dir):  # AC-3.7: sem motivos de contexto
     _, items = all_items(data.load(raw_dir))
     assert {tuple(r["role"] for r in entry["reasons"]) for entry in items} == {(codes.ROLE_GROUP, codes.ROLE_ORDER)}
     meta = views.meta(data.load(raw_dir), context(data.load(raw_dir)))
-    assert set(meta) == {"as_of", "won_cycle_limit_days", "cycle_limit_days", "cycle_percentile", "audited",
-                         "contract_version"}
+    assert set(meta) == {"as_of", "won_cycle_median_days", "won_cycle_limit_days", "cycle_limit_days",
+                         "cycle_percentile", "audited", "contract_version"}
 
 
 def test_fixture_reasons_are_verifiable_and_clean(raw_dir):
@@ -128,7 +129,7 @@ def test_fixture_reasons_are_verifiable_and_clean(raw_dir):
 def test_cli_explain_and_unknown_id(raw_dir, capsys):
     assert main(["--raw", str(raw_dir), "explain", "--id", "E138"]) == 0
     out = capsys.readouterr().out
-    assert "Por que está aqui" in out and "Próximo passo:" in out
+    assert "Por que está aqui" in out and "O que verificar agora:" in out
     assert main(["--raw", str(raw_dir), "explain", "--id", "NAOEXISTE"]) == 1
     assert "não encontrada" in capsys.readouterr().err
 
@@ -141,8 +142,9 @@ def test_real_focar_panel_01XZ9CRY(real_dataset):  # AC-3.1
     assert sentences[0] == "Focar porque está aberta há 104 dias; 90% das vendas ganhas fecharam em até 106 dias."
     assert "valor de tabela 5.482 (valor de tabela alto)" in sentences[1].lower()
     assert len(sentences) == 2
-    assert cli_text.action_text(entry["next_action"]) == (
-        "Avance primeiro as de maior valor de tabela; as do mesmo produto valem o mesmo.")
+    assert entry["next_action"] == {"code": codes.CHECK_STATUS, "params": {"has_account": True}}
+    assert cli_text.action_text(entry["next_action"], entry["account"]) == (
+        "Consulte no CRM o andamento da negociação com Initech.")
 
 
 @pytest.mark.real_data
@@ -161,8 +163,8 @@ def test_real_qualificar_panel_28EJ0L9T(real_dataset):  # AC-3.3
                                    "params": {"deal_stage": "Prospecting"}}
     assert texts(entry)[0] == "Qualificar porque ainda está em prospecção."
     assert cli_text.action_text(entry["next_action"]) == (
-        "Ainda em prospecção: avance no CRM os de maior valor de tabela e registre a data de engajamento "
-        "quando houver contato.")
+        "Em prospecção, sem data de início: verifique no CRM se já houve engajamento e registre a data quando "
+        "houver.")
 
 
 @pytest.mark.real_data
@@ -176,3 +178,19 @@ def test_real_2089_reasons_verifiable_and_clean(real_dataset):  # AC-3.7, AC-3.8
                 assert_verifiable(entry, meta)
                 assert_vocabulary(render_detail({"meta": meta, "seller": payload["seller"], "item": entry}))
         assert_vocabulary(render_list(payload))
+
+
+def test_cli_detail_has_suggestions_by_scenario_and_the_new_notice(raw_dir):
+    dataset = data.load(raw_dir)
+    meta = views.meta(dataset, context(dataset))
+    without_account = detail(dataset, "EPP")  # Focar, sem conta registrada
+    shown = render_detail({"meta": meta, "seller": "Ana Alfa", "item": without_account})
+    assert cli_text.SUGGESTIONS_TITLE in shown and cli_text.SUGGESTIONS_INTRO in shown
+    assert "Se já houve contato recente: retome de onde parou e registre o avanço no CRM." in shown
+    assert "Se a conta não está registrada: consulte no CRM quem é a conta antes de contatar." in shown
+    assert cli_text.LIMITS_NOTE in shown and shown.index(cli_text.SUGGESTIONS_TITLE) < shown.index(cli_text.LIMITS_NOTE)
+    assert_vocabulary(shown)
+    with_account = detail(dataset, "EGP")
+    assert not any("conta não está registrada" in text for text in cli_text.suggestions_for(with_account))
+    assert all(cli_text.suggestions_for(detail(dataset, entry_id)) for entry_id in ("E101", "E139", "P1"))
+    assert set(cli_text.SUGGESTIONS) == set(policy.STATES)

@@ -27,6 +27,7 @@ class Context:
     """Data de referência e os dois limites de idade das Engaging. Construa sempre por palavra-chave."""
     as_of: pd.Timestamp
     won_cycle_limit_days: int  # L1: piso do P90 do ciclo das ganhas até o as_of
+    won_cycle_median_days: int  # mediana do ciclo das ganhas até o as_of: contexto da idade, não decide grupo
     cycle_limit_days: int      # L2: maior ciclo fechado (ganhas e perdidas) até o as_of
 
     def __post_init__(self) -> None:
@@ -79,13 +80,19 @@ def won_cycle_limit(frame: pd.DataFrame, as_of: pd.Timestamp) -> int:
     return int(math.floor(cycles.quantile(policy.CYCLE_PERCENTILE / 100) + 1e-9))
 
 
+def won_cycle_median(frame: pd.DataFrame, as_of: pd.Timestamp) -> int:
+    """Mediana (piso) do ciclo das ganhas até o as_of: só descreve o histórico, não entra em grupo nem em ordem."""
+    return int(math.floor(cycle_days(frame, ("Won",), as_of).median() + 1e-9))
+
+
 def resolve_context(frame: pd.DataFrame, as_of: Optional[DateLike] = None) -> Context:
     """`as_of` padrão = maior `close_date`. Os dois limites usam só fechadas até o
     `as_of` (nunca fechamentos posteriores): L1 das ganhas, L2 de todas as fechadas."""
     as_of_ts = frame["close_date"].max() if as_of is None else pd.Timestamp(as_of)
     won_limit = won_cycle_limit(frame, as_of_ts)
     longest = int(cycle_days(frame, policy.CLOSED_STAGES, as_of_ts).max())
-    return Context(as_of=as_of_ts, won_cycle_limit_days=won_limit, cycle_limit_days=longest)
+    return Context(as_of=as_of_ts, won_cycle_limit_days=won_limit, cycle_limit_days=longest,
+                   won_cycle_median_days=won_cycle_median(frame, as_of_ts))
 
 
 def _flag(condition: pd.Series) -> np.ndarray:

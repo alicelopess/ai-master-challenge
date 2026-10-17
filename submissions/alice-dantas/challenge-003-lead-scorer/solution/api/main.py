@@ -7,14 +7,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from leadscorer import data, evidence, policy, views
+from leadscorer import data, evidence, intelligence, policy, views
 from leadscorer.errors import DataError, LeadScorerError, NotFoundError, PolicyError
 
-from .schemas import ErrorBody, Evidence, Meta, Rules, SellerList, SellerPipeline, TeamPipeline
+from .schemas import (ErrorBody, Evidence, Intelligence, IntelligenceDeals, Meta, Rules, SellerList, SellerPipeline,
+                      TeamPipeline)
 
 WEB_ORIGIN = "http://localhost:3000"
 STATUS = ((DataError, 503), (PolicyError, 422), (NotFoundError, 404))
@@ -24,6 +25,15 @@ DATA_ERROR = {503: {"model": ErrorBody, "description": "CSVs ausentes ou inváli
 AS_OF_ERROR = {422: {"model": ErrorBody, "description": "as_of inválido"}}
 NOT_FOUND = {404: {"model": ErrorBody, "description": "Vendedor não encontrado"}}
 EVIDENCE_ERROR = {503: {"model": ErrorBody, "description": "Resultado do backtest ausente, inválido ou de outra regra"}}
+PARAMETER_ERROR = {422: {"model": ErrorBody, "description": "as_of, outcome ou group inválido"}}
+
+
+# Os filtros chegam como texto e o núcleo decide: valor inexistente dá recorte vazio, nunca erro.
+def intelligence_filters(product: Optional[str] = None, seller: Optional[str] = None, manager: Optional[str] = None,
+                         office: Optional[str] = None, sector: Optional[str] = None, account: Optional[str] = None,
+                         size: Optional[str] = None) -> intelligence.Filters:
+    return intelligence.Filters(product=product, seller=seller, manager=manager, office=office, sector=sector,
+                                account=account, size=size)
 
 
 def create_app(raw_dir: Path = policy.RAW_DIR, evidence_path: Path = policy.EVIDENCE_PATH) -> FastAPI:
@@ -67,6 +77,17 @@ def create_app(raw_dir: Path = policy.RAW_DIR, evidence_path: Path = policy.EVID
     @app.get("/api/rules", response_model=Rules, responses={**DATA_ERROR, **AS_OF_ERROR})
     def get_rules(as_of: Optional[str] = None) -> Dict[str, Any]:
         return views.rules(dataset(), as_of)
+
+    @app.get("/api/intelligence", response_model=Intelligence, responses={**DATA_ERROR, **AS_OF_ERROR})
+    def get_intelligence(filters: intelligence.Filters = Depends(intelligence_filters),
+                         as_of: Optional[str] = None) -> Dict[str, Any]:
+        return intelligence.payload(dataset(), filters, as_of)
+
+    @app.get("/api/intelligence/deals", response_model=IntelligenceDeals, responses={**DATA_ERROR, **PARAMETER_ERROR})
+    def get_intelligence_deals(filters: intelligence.Filters = Depends(intelligence_filters),
+                               outcome: Optional[str] = None, group: Optional[str] = None,
+                               as_of: Optional[str] = None) -> Dict[str, Any]:
+        return intelligence.deals(dataset(), filters, outcome, group, as_of)
 
     # A evidência vem do resultado gravado do backtest: não depende dos CSVs no ar.
     @app.get("/api/evidence", response_model=Evidence, responses=EVIDENCE_ERROR)

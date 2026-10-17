@@ -7,7 +7,7 @@ entra como motivo (regra A, ADR-006). Quem apresenta (tela e CLI) escreve o text
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from . import codes, policy
 
@@ -53,11 +53,22 @@ def _action(code: str, **params: Any) -> Dict[str, Any]:
     return {"code": code, "params": params}
 
 
+def _verification(code: str, has_account: Optional[bool]) -> Dict[str, Any]:
+    """A verificação do grupo; as que citam a conta levam `has_account` (nulo no grupo, que não tem conta)."""
+    if code in codes.ACCOUNT_ACTION_CODES:
+        return _action(code, has_account=has_account)
+    return _action(code)
+
+
 def next_action(item: Dict[str, Any]) -> Dict[str, Any]:
+    """O que verificar agora: depende só do grupo e de a conta estar registrada. Não presume atividade,
+    intenção nem compromisso que o CRM da base não registra (ADR-008)."""
     if item["group"] == policy.NAO_PONTUAVEL:
         return _action(codes.FIX_MISSING_FIELD, field=item["missing_field"])
-    return _action(policy.NEXT_ACTIONS[item["group"]])
+    return _verification(policy.NEXT_ACTIONS[item["group"]], item["account"] is not None)
 
 
 def group_next_action(state: str) -> Dict[str, Any]:
-    return _action(codes.FIX_MISSING_FIELDS if state == policy.NAO_PONTUAVEL else policy.NEXT_ACTIONS[state])
+    if state == policy.NAO_PONTUAVEL:
+        return _action(codes.FIX_MISSING_FIELDS)
+    return _verification(policy.NEXT_ACTIONS[state], None)

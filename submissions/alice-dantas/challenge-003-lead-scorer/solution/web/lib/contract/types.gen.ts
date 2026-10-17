@@ -5,6 +5,113 @@ export type ClientOptions = {
 };
 
 /**
+ * AccountAction
+ *
+ * Verificação no CRM que muda conforme a conta: registrada ou não (ADR-008).
+ */
+export type AccountAction = {
+    /**
+     * Code
+     */
+    code: 'check_status' | 'check_progress' | 'confirm_still_active';
+    params: AccountParams;
+};
+
+/**
+ * AccountOption
+ */
+export type AccountOption = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Sector
+     */
+    sector: string | null;
+    /**
+     * Location
+     *
+     * Sede do cliente (office_location).
+     */
+    location: string | null;
+    /**
+     * Size
+     */
+    size: string | null;
+};
+
+/**
+ * AccountParams
+ */
+export type AccountParams = {
+    /**
+     * Has Account
+     *
+     * A conta da oportunidade está registrada? Nulo na ação do grupo, que não é de uma oportunidade só.
+     */
+    has_account: boolean | null;
+};
+
+/**
+ * AccountProductCoverage
+ */
+export type AccountProductCoverage = {
+    /**
+     * Code
+     */
+    code: 'account_product_coverage';
+    params: CoverageParams;
+};
+
+/**
+ * AccountProfile
+ */
+export type AccountProfile = {
+    /**
+     * Sector
+     */
+    sector: string | null;
+    /**
+     * Location
+     */
+    location: string | null;
+    /**
+     * Size
+     */
+    size: string | null;
+    /**
+     * Products Bought
+     *
+     * Produtos diferentes já ganhos com o cliente no recorte.
+     */
+    products_bought: number;
+    /**
+     * Products Total
+     *
+     * Produtos negociados no catálogo.
+     */
+    products_total: number;
+    /**
+     * Sellers
+     *
+     * Vendedores diferentes com fechadas no cliente no recorte.
+     */
+    sellers: number;
+};
+
+/**
+ * AccountsSharedBySellers
+ */
+export type AccountsSharedBySellers = {
+    /**
+     * Code
+     */
+    code: 'accounts_shared_by_sellers';
+    params: SharedAccountsParams;
+};
+
+/**
  * AgeAboveCycleLimit
  *
  * Engaging com idade acima de L2: grupo revisar.
@@ -82,6 +189,337 @@ export type BetweenLimitsParams = {
 };
 
 /**
+ * BeyondChanceParams
+ */
+export type BeyondChanceParams = {
+    /**
+     * Dimension
+     */
+    dimension: 'product' | 'seller' | 'manager' | 'office' | 'sector' | 'account' | 'size';
+    chance: ChanceTest;
+};
+
+/**
+ * Breakdown
+ */
+export type Breakdown = {
+    /**
+     * Dimension
+     */
+    dimension: 'product' | 'seller' | 'manager' | 'office' | 'sector' | 'account' | 'size';
+    /**
+     * Order
+     *
+     * Pessoas em ordem alfabética (nunca um ranking); o resto por receita.
+     */
+    order: 'alphabetical' | 'revenue_desc';
+    /**
+     * Segments
+     */
+    segments: Array<Segment>;
+    chance: ChanceTest;
+    /**
+     * Nulo com poucos segmentos.
+     */
+    drivers: RevenueDrivers | null;
+};
+
+/**
+ * ChanceTest
+ *
+ * A taxa de ganho difere entre os segmentos mais do que o acaso explicaria (qui-quadrado)?
+ */
+export type ChanceTest = {
+    /**
+     * Verdict
+     */
+    verdict: 'beyond_chance' | 'within_chance' | 'too_few_closed';
+    /**
+     * Segments Tested
+     *
+     * Segmentos com fechadas suficientes para o teste.
+     */
+    segments_tested: number;
+    /**
+     * Segments Small
+     *
+     * Segmentos fora do teste por terem poucas fechadas.
+     */
+    segments_small: number;
+    /**
+     * Closed Tested
+     */
+    closed_tested: number;
+    /**
+     * Min Win Rate
+     */
+    min_win_rate: number | null;
+    /**
+     * Max Win Rate
+     */
+    max_win_rate: number | null;
+    /**
+     * P Value
+     */
+    p_value: number | null;
+    /**
+     * Alpha
+     *
+     * Nível do teste já dividido pelas dimensões (Bonferroni).
+     */
+    alpha: number;
+};
+
+/**
+ * ClosedMetrics
+ *
+ * O histórico de fechadas até o as_of de um recorte.
+ */
+export type ClosedMetrics = {
+    /**
+     * Closed
+     */
+    closed: number;
+    /**
+     * Won
+     */
+    won: number;
+    /**
+     * Lost
+     */
+    lost: number;
+    /**
+     * Nula sem fechadas. Não é a chance de uma oportunidade.
+     */
+    win_rate: WinRate | null;
+    /**
+     * Revenue
+     *
+     * Σ close_value das ganhas: receita realizada.
+     */
+    revenue: number;
+    /**
+     * Won Without Value
+     *
+     * Ganhas sem close_value (contam como 0 na receita).
+     */
+    won_without_value: number;
+    /**
+     * Ticket
+     *
+     * Receita ÷ ganhas.
+     */
+    ticket: number | null;
+    /**
+     * Revenue Per Closed
+     *
+     * Receita ÷ fechadas.
+     */
+    revenue_per_closed: number | null;
+    /**
+     * Median Won Cycle Days
+     *
+     * Mediana de close − engage das ganhas, em dias.
+     */
+    median_won_cycle_days: number | null;
+    /**
+     * Median Lost Cycle Days
+     *
+     * Mediana de close − engage das fechadas sem venda.
+     */
+    median_lost_cycle_days: number | null;
+    /**
+     * Without Account
+     */
+    without_account: number;
+};
+
+/**
+ * ConcentratedParams
+ */
+export type ConcentratedParams = {
+    /**
+     * Dimension
+     */
+    dimension: 'product' | 'seller' | 'manager' | 'office' | 'sector' | 'account' | 'size';
+    /**
+     * Top
+     */
+    top: number;
+    /**
+     * Of
+     */
+    of: number;
+    /**
+     * Share
+     */
+    share: number;
+    /**
+     * Keys
+     */
+    keys: Array<string>;
+};
+
+/**
+ * CoverageCount
+ */
+export type CoverageCount = {
+    /**
+     * Bought
+     *
+     * Quantos produtos diferentes o cliente já comprou.
+     */
+    bought: number;
+    /**
+     * Accounts
+     */
+    accounts: number;
+};
+
+/**
+ * CoverageParams
+ */
+export type CoverageParams = {
+    /**
+     * Accounts
+     */
+    accounts: number;
+    /**
+     * Products
+     */
+    products: number;
+    /**
+     * Distribution
+     */
+    distribution: Array<CoverageCount>;
+    /**
+     * Most Missing
+     *
+     * O produto que mais clientes nunca compraram.
+     */
+    most_missing: string | null;
+    /**
+     * Most Missing Accounts
+     */
+    most_missing_accounts: number;
+};
+
+/**
+ * CycleBand
+ */
+export type CycleBand = {
+    /**
+     * Low
+     */
+    low: number;
+    /**
+     * High
+     *
+     * As duas últimas bordas são L1 e L2 do meta.
+     */
+    high: number;
+    /**
+     * Won
+     */
+    won: number;
+    /**
+     * Lost
+     */
+    lost: number;
+    /**
+     * Win Rate
+     */
+    win_rate: number | null;
+};
+
+/**
+ * Deal
+ */
+export type Deal = {
+    /**
+     * Opportunity Id
+     */
+    opportunity_id: string;
+    /**
+     * Sales Agent
+     */
+    sales_agent: string;
+    /**
+     * Manager
+     */
+    manager: string | null;
+    /**
+     * Office
+     */
+    office: string | null;
+    /**
+     * Product
+     */
+    product: string | null;
+    /**
+     * Account
+     */
+    account: string | null;
+    /**
+     * Sector
+     */
+    sector: string | null;
+    /**
+     * Deal Stage
+     */
+    deal_stage: 'Engaging' | 'Prospecting' | 'Won' | 'Lost';
+    /**
+     * Engage Date
+     */
+    engage_date: string | null;
+    /**
+     * Close Date
+     */
+    close_date: string | null;
+    /**
+     * Close Value
+     *
+     * Valor fechado; nas sem venda, 0 por convenção do CRM.
+     */
+    close_value: number | null;
+    /**
+     * Sales Price
+     *
+     * Preço de tabela (catálogo, não valor negociado).
+     */
+    sales_price: number | null;
+    /**
+     * Cycle Days
+     *
+     * Só nas fechadas.
+     */
+    cycle_days: number | null;
+    /**
+     * Age Days
+     *
+     * Só nas abertas.
+     */
+    age_days: number | null;
+    /**
+     * Group
+     *
+     * Só nas abertas: o grupo da regra.
+     */
+    group: 'focar' | 'qualificar' | 'acompanhar' | 'revisar' | 'nao_pontuavel' | null;
+};
+
+/**
+ * DealsEmpty
+ */
+export type DealsEmpty = {
+    /**
+     * Code
+     */
+    code: 'no_deals_for_filter';
+    params: NoParams;
+};
+
+/**
  * Delta
  */
 export type Delta = {
@@ -104,6 +542,69 @@ export type Delta = {
 };
 
 /**
+ * DriversParams
+ */
+export type DriversParams = {
+    /**
+     * Dimension
+     */
+    dimension: 'product' | 'seller' | 'manager' | 'office' | 'sector' | 'account' | 'size';
+    drivers: RevenueDrivers;
+};
+
+/**
+ * EngagementInflowDrop
+ */
+export type EngagementInflowDrop = {
+    /**
+     * Code
+     */
+    code: 'engagement_inflow_drop';
+    params: InflowDropParams;
+};
+
+/**
+ * EngagingBeyondLongestCycle
+ */
+export type EngagingBeyondLongestCycle = {
+    /**
+     * Code
+     */
+    code: 'engaging_beyond_longest_cycle';
+    params: EngagingBeyondParams;
+};
+
+/**
+ * EngagingBeyondParams
+ */
+export type EngagingBeyondParams = {
+    /**
+     * Group
+     *
+     * O grupo da regra que reúne essas negociações.
+     */
+    group: 'focar' | 'qualificar' | 'acompanhar' | 'revisar' | 'nao_pontuavel';
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Engaging
+     */
+    engaging: number;
+    /**
+     * Share
+     */
+    share: number | null;
+    /**
+     * Cycle Limit Days
+     *
+     * L2: maior ciclo fechado até o as_of.
+     */
+    cycle_limit_days: number;
+};
+
+/**
  * ErrorBody
  */
 export type ErrorBody = {
@@ -116,7 +617,7 @@ export type ErrorBody = {
     /**
      * Code
      */
-    code: 'data_file_missing' | 'data_file_empty' | 'data_file_invalid' | 'data_columns_missing' | 'data_unknown_label' | 'data_bad_date' | 'data_duplicate_key' | 'data_bad_price' | 'invalid_as_of_format' | 'as_of_before_last_close' | 'seller_not_found' | 'opportunity_not_found' | 'evidence_unavailable' | 'no_won_history';
+    code: 'data_file_missing' | 'data_file_empty' | 'data_file_invalid' | 'data_columns_missing' | 'data_unknown_label' | 'data_bad_date' | 'data_duplicate_key' | 'data_bad_price' | 'invalid_as_of_format' | 'as_of_before_last_close' | 'seller_not_found' | 'opportunity_not_found' | 'evidence_unavailable' | 'no_won_history' | 'data_bad_number' | 'invalid_parameter';
     /**
      * Params
      *
@@ -225,6 +726,39 @@ export type EvidenceVerdict = {
 };
 
 /**
+ * FastLosses
+ */
+export type FastLosses = {
+    /**
+     * Code
+     */
+    code: 'fast_losses';
+    params: FastLossesParams;
+};
+
+/**
+ * FastLossesParams
+ */
+export type FastLossesParams = {
+    /**
+     * Median Lost Cycle Days
+     */
+    median_lost_cycle_days: number;
+    /**
+     * Median Won Cycle Days
+     */
+    median_won_cycle_days: number;
+    /**
+     * Lost
+     */
+    lost: number;
+    /**
+     * Won
+     */
+    won: number;
+};
+
+/**
  * FieldParams
  */
 export type FieldParams = {
@@ -252,7 +786,7 @@ export type Group = {
     /**
      * State
      */
-    state: 'focar' | 'acompanhar' | 'revisar' | 'qualificar' | 'nao_pontuavel';
+    state: 'focar' | 'qualificar' | 'acompanhar' | 'revisar' | 'nao_pontuavel';
     /**
      * Count
      */
@@ -273,8 +807,10 @@ export type Group = {
      * Nulo quando o grupo está vazio.
      */
     next_action: ({
-        code: 'advance_prospecting' | 'check_progress' | 'confirm_still_active' | 'fix_missing_fields' | 'work_highest_list_price_first';
+        code: 'check_prospecting' | 'fix_missing_fields';
     } & SimpleAction) | ({
+        code: 'check_progress' | 'check_status' | 'confirm_still_active';
+    } & AccountAction) | ({
         code: 'fix_missing_field';
     } & FixFieldAction) | null;
     /**
@@ -294,6 +830,203 @@ export type GroupEmpty = {
      */
     code: 'group_empty';
     params: NoParams;
+};
+
+/**
+ * HistoryEmpty
+ */
+export type HistoryEmpty = {
+    /**
+     * Code
+     */
+    code: 'no_closed_for_filter';
+    params: NoParams;
+};
+
+/**
+ * InflowDropParams
+ */
+export type InflowDropParams = {
+    /**
+     * Recent
+     */
+    recent: Array<MonthCount>;
+    /**
+     * Base Average
+     */
+    base_average: number;
+    /**
+     * Base First Month
+     *
+     * Mês, AAAA-MM.
+     */
+    base_first_month: string;
+    /**
+     * Base Last Month
+     *
+     * Mês, AAAA-MM.
+     */
+    base_last_month: string;
+};
+
+/**
+ * Intelligence
+ */
+export type Intelligence = {
+    meta: Meta;
+    ordering: Ordering;
+    filter: IntelligenceFilter;
+    options: IntelligenceOptions;
+    history: ClosedMetrics;
+    /**
+     * Nulo quando o recorte tem fechadas.
+     */
+    history_empty: HistoryEmpty | null;
+    open: OpenSnapshot;
+    /**
+     * Diagnostics
+     *
+     * Só os que valem no recorte, na ordem da tela.
+     */
+    diagnostics: Array<({
+        code: 'engaging_beyond_longest_cycle';
+    } & EngagingBeyondLongestCycle) | ({
+        code: 'open_without_account';
+    } & OpenWithoutAccount) | ({
+        code: 'prospecting_without_engage_date';
+    } & ProspectingWithoutEngageDate) | ({
+        code: 'sellers_without_opportunities';
+    } & SellersWithoutOpportunities) | ({
+        code: 'quarter_end_outcome_mix';
+    } & QuarterEndOutcomeMix) | ({
+        code: 'engagement_inflow_drop';
+    } & EngagementInflowDrop) | ({
+        code: 'accounts_shared_by_sellers';
+    } & AccountsSharedBySellers)>;
+    /**
+     * Findings
+     *
+     * Só as que valem no recorte, na ordem da tela.
+     */
+    findings: Array<({
+        code: 'win_rate_within_chance';
+    } & WinRateWithinChance) | ({
+        code: 'win_rate_beyond_chance';
+    } & WinRateBeyondChance) | ({
+        code: 'revenue_concentrated';
+    } & RevenueConcentrated) | ({
+        code: 'revenue_gap_drivers';
+    } & RevenueGapDrivers) | ({
+        code: 'fast_losses';
+    } & FastLosses) | ({
+        code: 'account_product_coverage';
+    } & AccountProductCoverage)>;
+    /**
+     * Breakdowns
+     *
+     * Um por dimensão, na ordem das dimensões.
+     */
+    breakdowns: Array<Breakdown>;
+    matrix: SellerProductMatrix;
+    /**
+     * Cycle Bands
+     */
+    cycle_bands: Array<CycleBand>;
+    /**
+     * Monthly
+     */
+    monthly: Array<MonthPoint>;
+};
+
+/**
+ * IntelligenceDeals
+ */
+export type IntelligenceDeals = {
+    meta: Meta;
+    filter: IntelligenceFilter;
+    /**
+     * Outcome
+     */
+    outcome: 'won' | 'lost' | 'open';
+    /**
+     * Group
+     */
+    group: 'focar' | 'qualificar' | 'acompanhar' | 'revisar' | 'nao_pontuavel' | null;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Deals
+     *
+     * Abertas na ordem da regra; fechadas da mais recente para a mais antiga.
+     */
+    deals: Array<Deal>;
+    empty: DealsEmpty | null;
+};
+
+/**
+ * IntelligenceFilter
+ *
+ * O recorte pedido. Valor inexistente dá recorte vazio, nunca erro.
+ */
+export type IntelligenceFilter = {
+    /**
+     * Product
+     */
+    product: string | null;
+    /**
+     * Seller
+     */
+    seller: string | null;
+    /**
+     * Manager
+     */
+    manager: string | null;
+    /**
+     * Office
+     *
+     * Escritório do vendedor (regional_office), não a sede do cliente.
+     */
+    office: string | null;
+    /**
+     * Sector
+     */
+    sector: string | null;
+    /**
+     * Account
+     */
+    account: string | null;
+    /**
+     * Size
+     *
+     * Porte do cliente: a chave de `options.sizes`.
+     */
+    size: string | null;
+};
+
+/**
+ * IntelligenceOptions
+ *
+ * Valores dos filtros que não vêm de /api/sellers (vendedor, gerente e escritório vêm de lá).
+ */
+export type IntelligenceOptions = {
+    /**
+     * Products
+     */
+    products: Array<string>;
+    /**
+     * Sectors
+     */
+    sectors: Array<string>;
+    /**
+     * Accounts
+     */
+    accounts: Array<AccountOption>;
+    /**
+     * Sizes
+     */
+    sizes: Array<SizeBand>;
 };
 
 /**
@@ -341,7 +1074,7 @@ export type Item = {
     /**
      * Group
      */
-    group: 'focar' | 'acompanhar' | 'revisar' | 'qualificar' | 'nao_pontuavel';
+    group: 'focar' | 'qualificar' | 'acompanhar' | 'revisar' | 'nao_pontuavel';
     /**
      * Deal Stage
      */
@@ -382,8 +1115,10 @@ export type Item = {
      * Next Action
      */
     next_action: ({
-        code: 'advance_prospecting' | 'check_progress' | 'confirm_still_active' | 'fix_missing_fields' | 'work_highest_list_price_first';
+        code: 'check_prospecting' | 'fix_missing_fields';
     } & SimpleAction) | ({
+        code: 'check_progress' | 'check_status' | 'confirm_still_active';
+    } & AccountAction) | ({
         code: 'fix_missing_field';
     } & FixFieldAction);
 };
@@ -442,6 +1177,44 @@ export type LongestCycleParams = {
 };
 
 /**
+ * MatrixCell
+ */
+export type MatrixCell = {
+    /**
+     * Product
+     */
+    product: string;
+    /**
+     * Closed
+     */
+    closed: number;
+    /**
+     * Mix Share
+     *
+     * Fatia do produto nas fechadas do vendedor.
+     */
+    mix_share: number | null;
+};
+
+/**
+ * MatrixRow
+ */
+export type MatrixRow = {
+    /**
+     * Seller
+     */
+    seller: string;
+    /**
+     * Closed
+     */
+    closed: number;
+    /**
+     * Cells
+     */
+    cells: Array<MatrixCell>;
+};
+
+/**
  * Meta
  */
 export type Meta = {
@@ -449,6 +1222,12 @@ export type Meta = {
      * As Of
      */
     as_of: string;
+    /**
+     * Won Cycle Median Days
+     *
+     * Mediana do ciclo das ganhas até o as_of: contexto da idade, não decide grupo nem ordem.
+     */
+    won_cycle_median_days: number;
     /**
      * Won Cycle Limit Days
      *
@@ -476,7 +1255,7 @@ export type Meta = {
     /**
      * Contract Version
      */
-    contract_version: 5;
+    contract_version: 7;
 };
 
 /**
@@ -494,6 +1273,48 @@ export type MissingFieldReason = {
      */
     role: 'group';
     params: FieldParams;
+};
+
+/**
+ * MonthCount
+ */
+export type MonthCount = {
+    /**
+     * Month
+     *
+     * Mês, AAAA-MM.
+     */
+    month: string;
+    /**
+     * Engaged
+     */
+    engaged: number;
+};
+
+/**
+ * MonthPoint
+ */
+export type MonthPoint = {
+    /**
+     * Month
+     *
+     * Mês, AAAA-MM.
+     */
+    month: string;
+    /**
+     * Engaged
+     *
+     * Novas negociações (engage_date no mês).
+     */
+    engaged: number;
+    /**
+     * Won
+     */
+    won: number;
+    /**
+     * Lost
+     */
+    lost: number;
 };
 
 /**
@@ -540,6 +1361,69 @@ export type NoProduct = {
 };
 
 /**
+ * OpenSnapshot
+ *
+ * A carteira aberta do recorte no as_of, com os grupos da regra (os mesmos da Equipe).
+ */
+export type OpenSnapshot = {
+    summary: Summary;
+    /**
+     * List Value
+     *
+     * Σ preço de tabela das abertas. Não é receita e não se soma a ela.
+     */
+    list_value: number;
+    /**
+     * Without List Price
+     */
+    without_list_price: number;
+    /**
+     * Excluded Without Account
+     *
+     * Abertas sem cliente que saíram do recorte por filtro de setor, cliente ou porte; nulo sem esses filtros.
+     */
+    excluded_without_account: number | null;
+    empty: PipelineEmpty | null;
+};
+
+/**
+ * OpenWithoutAccount
+ */
+export type OpenWithoutAccount = {
+    /**
+     * Code
+     */
+    code: 'open_without_account';
+    params: OpenWithoutAccountParams;
+};
+
+/**
+ * OpenWithoutAccountParams
+ */
+export type OpenWithoutAccountParams = {
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Open
+     */
+    open: number;
+    /**
+     * Share
+     */
+    share: number | null;
+    /**
+     * Closed Without Account
+     */
+    closed_without_account: number;
+    /**
+     * Closed
+     */
+    closed: number;
+};
+
+/**
  * Ordering
  *
  * A ordem da lista como dado, para quem apresenta explicar a ordem.
@@ -548,7 +1432,7 @@ export type Ordering = {
     /**
      * Group Order
      */
-    group_order: Array<'focar' | 'acompanhar' | 'revisar' | 'qualificar' | 'nao_pontuavel'>;
+    group_order: Array<'focar' | 'qualificar' | 'acompanhar' | 'revisar' | 'nao_pontuavel'>;
     /**
      * Within Group
      *
@@ -610,6 +1494,72 @@ export type ProspectingStage = {
 };
 
 /**
+ * ProspectingWithoutDateParams
+ */
+export type ProspectingWithoutDateParams = {
+    /**
+     * Group
+     *
+     * O grupo da regra que reúne essas oportunidades.
+     */
+    group: 'focar' | 'qualificar' | 'acompanhar' | 'revisar' | 'nao_pontuavel';
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Prospecting
+     */
+    prospecting: number;
+};
+
+/**
+ * ProspectingWithoutEngageDate
+ */
+export type ProspectingWithoutEngageDate = {
+    /**
+     * Code
+     */
+    code: 'prospecting_without_engage_date';
+    params: ProspectingWithoutDateParams;
+};
+
+/**
+ * QuarterEndOutcomeMix
+ *
+ * Higiene de registro: nunca um sinal para prever (RJ-02).
+ */
+export type QuarterEndOutcomeMix = {
+    /**
+     * Code
+     */
+    code: 'quarter_end_outcome_mix';
+    params: QuarterEndParams;
+};
+
+/**
+ * QuarterEndParams
+ */
+export type QuarterEndParams = {
+    /**
+     * Quarter End Closed
+     */
+    quarter_end_closed: number;
+    /**
+     * Quarter End Win Rate
+     */
+    quarter_end_win_rate: number;
+    /**
+     * Other Closed
+     */
+    other_closed: number;
+    /**
+     * Other Win Rate
+     */
+    other_win_rate: number;
+};
+
+/**
  * RankerResult
  */
 export type RankerResult = {
@@ -668,6 +1618,70 @@ export type RankerResult = {
 };
 
 /**
+ * RevenueConcentrated
+ */
+export type RevenueConcentrated = {
+    /**
+     * Code
+     */
+    code: 'revenue_concentrated';
+    params: ConcentratedParams;
+};
+
+/**
+ * RevenueDrivers
+ *
+ * Quanto da diferença de receita entre segmentos vem do volume, da conversão e do ticket.
+ */
+export type RevenueDrivers = {
+    /**
+     * Segments Used
+     */
+    segments_used: number;
+    /**
+     * Spread Ratio
+     *
+     * Maior receita ÷ menor receita entre os segmentos.
+     */
+    spread_ratio: number;
+    /**
+     * Volume Share
+     */
+    volume_share: number;
+    /**
+     * Conversion Share
+     */
+    conversion_share: number;
+    /**
+     * Ticket Share
+     */
+    ticket_share: number;
+    /**
+     * Main
+     *
+     * Fatores que explicam boa parte da diferença.
+     */
+    main: Array<'volume' | 'conversion' | 'ticket'>;
+    /**
+     * Negligible
+     *
+     * Fatores que quase não explicam a diferença.
+     */
+    negligible: Array<'volume' | 'conversion' | 'ticket'>;
+};
+
+/**
+ * RevenueGapDrivers
+ */
+export type RevenueGapDrivers = {
+    /**
+     * Code
+     */
+    code: 'revenue_gap_drivers';
+    params: DriversParams;
+};
+
+/**
  * Rules
  *
  * A política que monta a lista, como dado.
@@ -681,6 +1695,35 @@ export type Rules = {
      * Da faixa de cima para a de baixo.
      */
     value_bands: Array<ValueBandRule>;
+};
+
+/**
+ * Segment
+ */
+export type Segment = {
+    /**
+     * Key
+     *
+     * Nulo: oportunidades sem esse dado (ex.: sem cliente registrado).
+     */
+    key: string | null;
+    history: ClosedMetrics;
+    /**
+     * Revenue Share
+     *
+     * Fatia da receita do recorte.
+     */
+    revenue_share: number | null;
+    /**
+     * Open
+     *
+     * Abertas do segmento no as_of.
+     */
+    open: number;
+    /**
+     * Só na dimensão account.
+     */
+    profile: AccountProfile | null;
 };
 
 /**
@@ -737,6 +1780,24 @@ export type SellerPipeline = {
 };
 
 /**
+ * SellerProductMatrix
+ *
+ * O mix de cada vendedor, em ordem alfabética. Sem taxa por célula.
+ */
+export type SellerProductMatrix = {
+    /**
+     * Products
+     *
+     * Do maior preço de tabela para o menor.
+     */
+    products: Array<string>;
+    /**
+     * Rows
+     */
+    rows: Array<MatrixRow>;
+};
+
+/**
  * SellerSummary
  *
  * Resumo da carteira aberta de um vendedor do filtro.
@@ -777,14 +1838,93 @@ export type SellerSummary = {
 };
 
 /**
+ * SellersWithoutOpportunities
+ */
+export type SellersWithoutOpportunities = {
+    /**
+     * Code
+     */
+    code: 'sellers_without_opportunities';
+    params: SellersWithoutOpportunitiesParams;
+};
+
+/**
+ * SellersWithoutOpportunitiesParams
+ */
+export type SellersWithoutOpportunitiesParams = {
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Team
+     */
+    team: number;
+    /**
+     * Sellers
+     *
+     * Em ordem alfabética.
+     */
+    sellers: Array<string>;
+};
+
+/**
+ * SharedAccountsParams
+ */
+export type SharedAccountsParams = {
+    /**
+     * Median Sellers
+     */
+    median_sellers: number;
+    /**
+     * Max Sellers
+     */
+    max_sellers: number;
+    /**
+     * Accounts
+     */
+    accounts: number;
+};
+
+/**
  * SimpleAction
  */
 export type SimpleAction = {
     /**
      * Code
      */
-    code: 'work_highest_list_price_first' | 'check_progress' | 'confirm_still_active' | 'advance_prospecting' | 'fix_missing_fields';
+    code: 'check_prospecting' | 'fix_missing_fields';
     params: NoParams;
+};
+
+/**
+ * SizeBand
+ *
+ * Porte do cliente: quantil da receita anual entre os clientes cadastrados.
+ */
+export type SizeBand = {
+    /**
+     * Key
+     *
+     * 1 é o menor porte.
+     */
+    key: string;
+    /**
+     * Low
+     *
+     * Receita anual mínima do porte, em US$ milhões.
+     */
+    low: number;
+    /**
+     * High
+     *
+     * Receita anual máxima do porte, em US$ milhões.
+     */
+    high: number;
+    /**
+     * Accounts
+     */
+    accounts: number;
 };
 
 /**
@@ -809,11 +1949,17 @@ export type StartWithParams = {
      *
      * Primeiro grupo seguinte que tem oportunidades.
      */
-    group: 'focar' | 'acompanhar' | 'revisar' | 'qualificar' | 'nao_pontuavel';
+    group: 'focar' | 'qualificar' | 'acompanhar' | 'revisar' | 'nao_pontuavel';
     /**
      * Action
      */
-    action: 'check_progress' | 'confirm_still_active' | 'advance_prospecting' | 'fix_missing_fields';
+    action: 'check_progress' | 'confirm_still_active' | 'check_prospecting' | 'fix_missing_fields';
+    /**
+     * Has Engaging
+     *
+     * Há negociações em andamento (Engaging) acima de L1 na carteira? Define o porquê de Focar estar vazio quando o grupo indicado é Qualificar.
+     */
+    has_engaging: boolean;
     /**
      * Won Cycle Limit Days
      *
@@ -924,6 +2070,66 @@ export type ValueBandRule = {
      * Preço de tabela máximo, inclusive; nulo na faixa de cima.
      */
     max_price: number | null;
+};
+
+/**
+ * WinRate
+ */
+export type WinRate = {
+    /**
+     * Value
+     *
+     * Ganhas ÷ fechadas.
+     */
+    value: number;
+    /**
+     * Low
+     *
+     * Faixa provável (Wilson, 95%): limite inferior.
+     */
+    low: number;
+    /**
+     * High
+     *
+     * Faixa provável (Wilson, 95%): limite superior.
+     */
+    high: number;
+};
+
+/**
+ * WinRateBeyondChance
+ */
+export type WinRateBeyondChance = {
+    /**
+     * Code
+     */
+    code: 'win_rate_beyond_chance';
+    params: BeyondChanceParams;
+};
+
+/**
+ * WinRateWithinChance
+ */
+export type WinRateWithinChance = {
+    /**
+     * Code
+     */
+    code: 'win_rate_within_chance';
+    params: WithinChanceParams;
+};
+
+/**
+ * WithinChanceParams
+ */
+export type WithinChanceParams = {
+    /**
+     * Dimensions
+     */
+    dimensions: Array<'product' | 'seller' | 'manager' | 'office' | 'sector' | 'account' | 'size'>;
+    /**
+     * Closed
+     */
+    closed: number;
 };
 
 /**
@@ -1127,6 +2333,138 @@ export type GetRulesApiRulesGetResponses = {
 };
 
 export type GetRulesApiRulesGetResponse = GetRulesApiRulesGetResponses[keyof GetRulesApiRulesGetResponses];
+
+export type GetIntelligenceApiIntelligenceGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * As Of
+         */
+        as_of?: string | null;
+        /**
+         * Product
+         */
+        product?: string | null;
+        /**
+         * Seller
+         */
+        seller?: string | null;
+        /**
+         * Manager
+         */
+        manager?: string | null;
+        /**
+         * Office
+         */
+        office?: string | null;
+        /**
+         * Sector
+         */
+        sector?: string | null;
+        /**
+         * Account
+         */
+        account?: string | null;
+        /**
+         * Size
+         */
+        size?: string | null;
+    };
+    url: '/api/intelligence';
+};
+
+export type GetIntelligenceApiIntelligenceGetErrors = {
+    /**
+     * as_of inválido
+     */
+    422: ErrorBody;
+    /**
+     * CSVs ausentes ou inválidos, ou sem venda ganha até o as_of
+     */
+    503: ErrorBody;
+};
+
+export type GetIntelligenceApiIntelligenceGetError = GetIntelligenceApiIntelligenceGetErrors[keyof GetIntelligenceApiIntelligenceGetErrors];
+
+export type GetIntelligenceApiIntelligenceGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: Intelligence;
+};
+
+export type GetIntelligenceApiIntelligenceGetResponse = GetIntelligenceApiIntelligenceGetResponses[keyof GetIntelligenceApiIntelligenceGetResponses];
+
+export type GetIntelligenceDealsApiIntelligenceDealsGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Outcome
+         */
+        outcome?: string | null;
+        /**
+         * Group
+         */
+        group?: string | null;
+        /**
+         * As Of
+         */
+        as_of?: string | null;
+        /**
+         * Product
+         */
+        product?: string | null;
+        /**
+         * Seller
+         */
+        seller?: string | null;
+        /**
+         * Manager
+         */
+        manager?: string | null;
+        /**
+         * Office
+         */
+        office?: string | null;
+        /**
+         * Sector
+         */
+        sector?: string | null;
+        /**
+         * Account
+         */
+        account?: string | null;
+        /**
+         * Size
+         */
+        size?: string | null;
+    };
+    url: '/api/intelligence/deals';
+};
+
+export type GetIntelligenceDealsApiIntelligenceDealsGetErrors = {
+    /**
+     * as_of, outcome ou group inválido
+     */
+    422: ErrorBody;
+    /**
+     * CSVs ausentes ou inválidos, ou sem venda ganha até o as_of
+     */
+    503: ErrorBody;
+};
+
+export type GetIntelligenceDealsApiIntelligenceDealsGetError = GetIntelligenceDealsApiIntelligenceDealsGetErrors[keyof GetIntelligenceDealsApiIntelligenceDealsGetErrors];
+
+export type GetIntelligenceDealsApiIntelligenceDealsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: IntelligenceDeals;
+};
+
+export type GetIntelligenceDealsApiIntelligenceDealsGetResponse = GetIntelligenceDealsApiIntelligenceDealsGetResponses[keyof GetIntelligenceDealsApiIntelligenceDealsGetResponses];
 
 export type GetEvidenceApiEvidenceGetData = {
     body?: never;

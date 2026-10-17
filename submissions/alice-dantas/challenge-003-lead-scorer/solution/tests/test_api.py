@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import WEB_ORIGIN, create_app
-from leadscorer import codes, data, policy, views
+from leadscorer import codes, data, intelligence, policy, views
 from leadscorer.__main__ import main
 from leadscorer.errors import DataError
 
@@ -63,7 +63,8 @@ def test_missing_csv_is_503_with_cli_message_and_recovers(tmp_path):  # AC-1.2
     with pytest.raises(DataError) as error:
         data.load(raw)
     client = TestClient(create_app(raw))
-    for url in ("/api/sellers", pipeline_url("Ana Alfa"), "/api/meta"):
+    for url in ("/api/sellers", pipeline_url("Ana Alfa"), "/api/meta", "/api/intelligence",
+                "/api/intelligence/deals?outcome=won"):
         response = client.get(url)
         assert response.status_code == 503 and response.json()["detail"] == str(error.value)
     write_raw(raw)  # os arquivos aparecem: a API responde sem reiniciar
@@ -87,6 +88,15 @@ def test_filters_never_fail(client):  # AC-2.10
     ("/api/pipeline?manager=Mara%20Um", lambda d: views.team_pipeline(d, manager="Mara Um")),
     ("/api/pipeline?office=Central", lambda d: views.team_pipeline(d, office="Central")),
     (pipeline_url("Ana Alfa", as_of="2018-03-31"), lambda d: views.seller_pipeline(d, "Ana Alfa", "2018-03-31")),
+    ("/api/intelligence", lambda d: intelligence.payload(d)),
+    ("/api/intelligence?manager=Mara%20Um&product=GTX%20Basic",
+     lambda d: intelligence.payload(d, intelligence.Filters(manager="Mara Um", product="GTX Basic"))),
+    ("/api/intelligence?sector=retail&as_of=2030-01-01",
+     lambda d: intelligence.payload(d, intelligence.Filters(sector="retail"), "2030-01-01")),
+    ("/api/intelligence/deals?outcome=open&group=revisar", lambda d: intelligence.deals(d, outcome="open",
+                                                                                         group="revisar")),
+    ("/api/intelligence/deals?outcome=won&seller=Ana%20Alfa",
+     lambda d: intelligence.deals(d, intelligence.Filters(seller="Ana Alfa"), "won")),
 ])
 def test_endpoints_are_the_core_payload(client, raw_dir, url, core):  # mesma política em todas as rotas
     assert client.get(url).json() == roundtrip(core(data.load(raw_dir)))
@@ -133,3 +143,15 @@ def test_real_cli_json_equals_api(capsys):  # AC-2.8
     assert main(["list", "--seller", "Zane Levy", "--json", "--as-of", "2018-01-31"]) == 0
     cli = json.loads(capsys.readouterr().out)
     assert cli == client.get(pipeline_url("Zane Levy", as_of="2018-01-31")).json()
+
+
+@pytest.mark.real_data
+@pytest.mark.parametrize("query, filters", [
+    ("", intelligence.Filters()),
+    ("?office=East", intelligence.Filters(office="East")),
+    ("?sector=retail", intelligence.Filters(sector="retail")),
+    ("?account=Kan-code", intelligence.Filters(account="Kan-code")),
+])
+def test_real_intelligence_api_matches_core(real_dataset, query, filters):
+    client = TestClient(create_app(policy.RAW_DIR))
+    assert client.get(f"/api/intelligence{query}").json() == roundtrip(intelligence.payload(real_dataset, filters))

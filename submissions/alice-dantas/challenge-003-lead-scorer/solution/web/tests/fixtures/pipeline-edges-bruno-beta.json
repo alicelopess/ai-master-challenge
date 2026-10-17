@@ -2,18 +2,19 @@
   "seller": "Bruno Beta",
   "meta": {
     "as_of": "2017-12-31",
+    "won_cycle_median_days": 60,
     "won_cycle_limit_days": 100,
     "cycle_limit_days": 138,
     "cycle_percentile": 90,
     "audited": false,
-    "contract_version": 5
+    "contract_version": 7
   },
   "ordering": {
     "group_order": [
       "focar",
+      "qualificar",
       "acompanhar",
       "revisar",
-      "qualificar",
       "nao_pontuavel"
     ],
     "within_group": [
@@ -41,30 +42,11 @@
         "code": "start_with_group",
         "params": {
           "group": "qualificar",
-          "action": "advance_prospecting",
+          "action": "check_prospecting",
+          "has_engaging": false,
           "won_cycle_limit_days": 100,
           "cycle_limit_days": 138
         }
-      },
-      "next_action": null,
-      "items": []
-    },
-    {
-      "state": "acompanhar",
-      "count": 0,
-      "empty": {
-        "code": "group_empty",
-        "params": {}
-      },
-      "next_action": null,
-      "items": []
-    },
-    {
-      "state": "revisar",
-      "count": 0,
-      "empty": {
-        "code": "group_empty",
-        "params": {}
       },
       "next_action": null,
       "items": []
@@ -74,7 +56,7 @@
       "count": 1,
       "empty": null,
       "next_action": {
-        "code": "advance_prospecting",
+        "code": "check_prospecting",
         "params": {}
       },
       "items": [
@@ -110,11 +92,31 @@
             }
           ],
           "next_action": {
-            "code": "advance_prospecting",
+            "code": "check_prospecting",
             "params": {}
           }
         }
       ]
+    },
+    {
+      "state": "acompanhar",
+      "count": 0,
+      "empty": {
+        "code": "group_empty",
+        "params": {}
+      },
+      "next_action": null,
+      "items": []
+    },
+    {
+      "state": "revisar",
+      "count": 0,
+      "empty": {
+        "code": "group_empty",
+        "params": {}
+      },
+      "next_action": null,
+      "items": []
     },
     {
       "state": "nao_pontuavel",

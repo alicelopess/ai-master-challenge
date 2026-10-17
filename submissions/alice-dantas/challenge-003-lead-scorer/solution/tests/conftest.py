@@ -31,7 +31,11 @@ SALES_TEAMS = [
     {"sales_agent": "Carla Gama", "manager": "Nina Dois", "regional_office": "East"},
 ]
 
-ACCOUNTS = [{"account": "Acme"}, {"account": "Beta Corp"}]
+# Atributos do cliente (só a Inteligência os usa); Acme traz as duas grafias que a carga corrige.
+ACCOUNTS = [
+    {"account": "Acme", "sector": "technolgy", "revenue": "1100.04", "office_location": "Philipines"},
+    {"account": "Beta Corp", "sector": "retail", "revenue": "250.5", "office_location": "United States"},
+]
 
 
 def opp(oid: str, agent: str, product: str, stage: str, engaged: Optional[int] = None,
@@ -81,6 +85,57 @@ EDGE_PIPELINE = PIPELINE + [
     opp("R200", "Eva Epsilon", "GTXPro", "Engaging", engaged=200),
 ]
 EDGE_TABLES = {"sales_pipeline": EDGE_PIPELINE, "products": EDGE_PRODUCTS, "sales_teams": EDGE_TEAMS}
+
+
+
+def intel_tables() -> Dict[str, List[Dict[str, str]]]:
+    """Base da Inteligência (gerada em código) que dispara todo diagnóstico, descoberta e veredito:
+    120 fechadas, 30 por produto, de 5 vendedores e 8 clientes (6 do varejo). O produto decide a
+    taxa (Alfa 90%, Beta 20%, Gama e Delta 50%): produto além do acaso, vendedor dentro dele e
+    setor com poucas fechadas. Ganhas fecham no último mês do trimestre, as sem venda nos outros e
+    mais rápido; a entrada some em novembro e dezembro; Fabio Zeta não tem oportunidade."""
+    products = [("Alfa Pro", "5000"), ("Beta Plus", "800"), ("Gama Basic", "300"), ("Delta Mini", "40")]
+    wins = {"Alfa Pro": lambda j: j % 10 != 0, "Beta Plus": lambda j: j % 5 == 0,
+            "Gama Basic": lambda j: j % 2 == 0, "Delta Mini": lambda j: j % 2 == 1}
+    sellers = ["Ana Alfa", "Bruno Beta", "Carla Gama", "Davi Delta", "Eva Epsilon"]
+    clients = [f"Cliente {i}" for i in range(1, 9)]
+    rows = []
+    for name, price in products:
+        for j in range(30):
+            won = wins[name](j)
+            if won:   # último mês de um trimestre de 2017 (março, junho ou setembro), ciclo de 30 a 99 dias
+                closed = date(2017, (3, 6, 9)[j % 3], 15)
+                cycle = 30 + (j * 7) % 70
+            else:     # outros meses, ciclo de 5 a 14 dias
+                closed = date(2017, (1, 2, 4, 5, 7, 8, 10)[j % 7], 10)
+                cycle = 5 + j % 10
+            rows.append({"opportunity_id": f"{name[:2].upper()}{j:02d}", "sales_agent": sellers[(j // 6) % 5],
+                         "product": name, "account": clients[j % 8], "deal_stage": "Won" if won else "Lost",
+                         "engage_date": (closed - timedelta(days=cycle)).isoformat(),
+                         "close_date": closed.isoformat(), "close_value": price if won else "0"})
+    # A ganha que fixa o as_of em 31/12 e as abertas: Focar, Acompanhar, duas acima do maior ciclo
+    # (uma sem cliente) e duas Prospecting sem data e sem cliente.
+    rows.append({"opportunity_id": "ANCORA", "sales_agent": "Ana Alfa", "product": "Alfa Pro",
+                 "account": "Cliente 1", "deal_stage": "Won", "engage_date": "2017-10-02",
+                 "close_date": "2017-12-31", "close_value": "5000"})
+    for oid, seller, product, stage, age, account in (
+            ("AB10", "Ana Alfa", "Alfa Pro", "Engaging", 10, "Cliente 2"),
+            ("AB90", "Bruno Beta", "Beta Plus", "Engaging", 90, "Cliente 3"),
+            ("AB150", "Carla Gama", "Gama Basic", "Engaging", 150, ""),
+            ("AB200", "Davi Delta", "Alfa Pro", "Engaging", 200, "Cliente 4"),
+            ("PR1", "Eva Epsilon", "Beta Plus", "Prospecting", None, ""),
+            ("PR2", "Ana Alfa", "Delta Mini", "Prospecting", None, "")):
+        rows.append(opp(oid, seller, product, stage, engaged=age, account=account))
+    teams = [{"sales_agent": s, "manager": "Mara Um" if i < 2 else "Nina Dois",
+              "regional_office": "Central" if i < 2 else "East"} for i, s in enumerate(sellers)]
+    teams.append({"sales_agent": "Fabio Zeta", "manager": "Mara Um", "regional_office": "Central"})
+    accounts = [{"account": c, "sector": "retail" if i < 6 else ("finance", "medical")[i - 6],
+                 "revenue": str(100 * (i + 1)), "office_location": "United States"} for i, c in enumerate(clients)]
+    return {"sales_pipeline": rows, "products": [{"product": n, "series": n[0], "sales_price": p} for n, p in products],
+            "sales_teams": teams, "accounts": accounts}
+
+
+INTEL_TABLES = intel_tables()
 
 TABLE_ROWS = {
     "sales_pipeline": PIPELINE, "products": PRODUCTS,

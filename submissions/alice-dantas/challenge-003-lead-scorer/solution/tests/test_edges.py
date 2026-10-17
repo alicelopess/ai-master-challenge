@@ -10,8 +10,10 @@ from leadscorer.__main__ import main, render_detail, render_list
 from conftest import EDGE_TABLES, PIPELINE, PRODUCTS, opp, write_raw
 from test_explain import assert_verifiable, assert_vocabulary
 
+FOCAR_EMPTY_QUALIFICAR = ("Nenhuma aberta há até 106 dias. Comece por Qualificar: verifique no CRM se já houve "
+                          "engajamento e registre a data.")
 FOCAR_EMPTY_REVISAR = ("Todas as negociações em andamento estão abertas há mais de 138 dias. "
-                       "Comece por Confirmar: confirme no CRM quais seguem ativas.")
+                       "Comece por Confirmar: verifique no CRM quais seguem ativas.")
 
 
 def ordered(frame, as_of=None):
@@ -108,17 +110,17 @@ def test_focar_empty_points_to_next_group(raw_dir):
     payload = views.seller_pipeline(data.load(raw_dir), "Bruno Beta")  # só uma Prospecting
     empty = group(payload, "focar")["empty"]
     assert empty == {"code": codes.START_WITH_GROUP, "params": {
-        "group": "qualificar", "action": codes.ADVANCE_PROSPECTING, "won_cycle_limit_days": 100,
-        "cycle_limit_days": 138}}
+        "group": "qualificar", "action": codes.CHECK_PROSPECTING, "has_engaging": False,
+        "won_cycle_limit_days": 100, "cycle_limit_days": 138}}
     assert cli_text.empty_text(empty) == (
-        "Nenhuma negociação em andamento. Comece por Qualificar: avance no CRM as de maior valor de tabela.")
+        "Nenhuma negociação em andamento. Comece por Qualificar: verifique no CRM se já houve engajamento e registre a data.")
 
 
 def test_focar_empty_text_cites_only_the_limit_that_matters(tmp_path):
     edges = data.load(write_raw(tmp_path / "edges", **EDGE_TABLES))
     davi = group(views.seller_pipeline(edges, "Davi Delta"), "focar")["empty"]
     assert cli_text.empty_text(davi) == (
-        "Nenhuma aberta há até 100 dias. Comece por Acompanhar: veja no CRM o último avanço de cada uma.")
+        "Nenhuma aberta há até 100 dias. Comece por Acompanhar: consulte no CRM o último registro de cada uma.")
     eva = group(views.seller_pipeline(edges, "Eva Epsilon"), "focar")["empty"]
     assert cli_text.empty_text(eva) == FOCAR_EMPTY_REVISAR
 
@@ -135,7 +137,7 @@ def test_seller_without_open_deals(raw_dir, capsys):  # AC-2.5
 @pytest.mark.real_data
 def test_real_darcel_focar_empty(real_dataset):  # AC-2.4
     payload = views.seller_pipeline(real_dataset, "Darcel Schlecht")
-    assert cli_text.empty_text(group(payload, "focar")["empty"]) == FOCAR_EMPTY_REVISAR
+    assert cli_text.empty_text(group(payload, "focar")["empty"]) == FOCAR_EMPTY_QUALIFICAR  # ADR-009
     assert (payload["summary"]["revisar"], payload["summary"]["qualificar"]) == (83, 111)
 
 
@@ -155,7 +157,8 @@ def test_real_far_as_of_moves_every_engaging_to_revisar(real_dataset):  # AC-2.1
         assert payload["summary"]["focar"] == payload["summary"]["acompanhar"] == 0
         assert payload["summary"]["revisar"] == engaging.get(seller, 0)
         if payload["summary"]["revisar"]:
-            assert cli_text.empty_text(group(payload, "focar")["empty"]) == FOCAR_EMPTY_REVISAR
+            expected = FOCAR_EMPTY_QUALIFICAR if payload["summary"]["qualificar"] else FOCAR_EMPTY_REVISAR
+            assert cli_text.empty_text(group(payload, "focar")["empty"]) == expected
 
 
 @pytest.mark.real_data

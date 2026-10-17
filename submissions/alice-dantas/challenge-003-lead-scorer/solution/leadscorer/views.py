@@ -6,7 +6,7 @@ códigos e números (`codes.py`); o texto é de quem apresenta.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -20,9 +20,11 @@ def _optional(value: Any) -> Any:
 
 
 def meta(dataset: Dataset, ctx: triage.Context) -> Dict[str, Any]:
-    """Data de referência e os dois limites que decidem o grupo das Engaging (regra A)."""
+    """Data de referência, os dois limites que decidem o grupo das Engaging (regra A) e a mediana do ciclo das
+    ganhas, que só contextualiza a idade."""
     return {
         "as_of": ctx.as_of.date().isoformat(),
+        "won_cycle_median_days": ctx.won_cycle_median_days,
         "won_cycle_limit_days": ctx.won_cycle_limit_days,
         "cycle_limit_days": ctx.cycle_limit_days,
         "cycle_percentile": policy.CYCLE_PERCENTILE,
@@ -74,6 +76,7 @@ def empty_state(state: str, counts: Dict[str, int], ctx: triage.Context) -> Opti
         start = next((s for s in policy.STATES[1:] if counts[s]), None)
         if start:
             return _code(codes.START_WITH_GROUP, group=start, action=policy.START_ACTION_CODES[start],
+                         has_engaging=bool(counts[policy.ACOMPANHAR] + counts[policy.REVISAR]),
                          won_cycle_limit_days=ctx.won_cycle_limit_days, cycle_limit_days=ctx.cycle_limit_days)
     return _code(codes.GROUP_EMPTY)
 
@@ -131,17 +134,29 @@ def sellers(dataset: Dataset) -> List[Dict[str, str]]:
             for row in teams.itertuples(index=False)]
 
 
+# Colunas do recorte por pessoas: as mesmas em `opportunities` e em `teams`.
+SCOPE_COLUMNS = (("seller", "sales_agent"), ("manager", "manager"), ("office", "regional_office"))
+
+
+def scope(opps: pd.DataFrame, teams: pd.DataFrame, **values: Optional[str]) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Recorte por vendedor, manager e escritório, por igualdade exata (sem validar o valor:
+    um valor inexistente dá recorte vazio). A Equipe e a Inteligência usam este mesmo recorte,
+    então os grupos das abertas são iguais nas duas telas."""
+    for key, column in SCOPE_COLUMNS:
+        value = values.pop(key, None)
+        if value:
+            opps, teams = opps[opps[column] == value], teams[teams[column] == value]
+    if values:
+        raise TypeError(f"recorte desconhecido: {sorted(values)}")
+    return opps, teams
+
+
 def team_pipeline(dataset: Dataset, manager: Optional[str] = None, office: Optional[str] = None,
                   as_of: Optional[triage.DateLike] = None) -> Dict[str, Any]:
     """Carteira filtrada por manager e/ou escritório, na mesma ordem declarada.
     Filtro sem abertas (ou inexistente) devolve lista vazia com o código de vazio."""
     ctx = context(dataset, as_of)
-    opps = triage.classify(dataset.opportunities, ctx)
-    teams = dataset.teams
-    if manager:
-        opps, teams = opps[opps["manager"] == manager], teams[teams["manager"] == manager]
-    if office:
-        opps, teams = opps[opps["regional_office"] == office], teams[teams["regional_office"] == office]
+    opps, teams = scope(triage.classify(dataset.opportunities, ctx), dataset.teams, manager=manager, office=office)
     payload = portfolio(triage.order(opps), meta(dataset, ctx), ctx, codes.NO_OPEN_FOR_FILTER)
     return {"filter": {"manager": manager, "office": office}, **payload, "by_seller": by_seller(opps, teams)}
 

@@ -2,18 +2,19 @@
   "seller": "Ana Alfa",
   "meta": {
     "as_of": "2017-12-31",
+    "won_cycle_median_days": 60,
     "won_cycle_limit_days": 100,
     "cycle_limit_days": 138,
     "cycle_percentile": 90,
     "audited": false,
-    "contract_version": 5
+    "contract_version": 7
   },
   "ordering": {
     "group_order": [
       "focar",
+      "qualificar",
       "acompanhar",
       "revisar",
-      "qualificar",
       "nao_pontuavel"
     ],
     "within_group": [
@@ -39,8 +40,10 @@
       "count": 5,
       "empty": null,
       "next_action": {
-        "code": "work_highest_list_price_first",
-        "params": {}
+        "code": "check_status",
+        "params": {
+          "has_account": null
+        }
       },
       "items": [
         {
@@ -77,8 +80,10 @@
             }
           ],
           "next_action": {
-            "code": "work_highest_list_price_first",
-            "params": {}
+            "code": "check_status",
+            "params": {
+              "has_account": false
+            }
           }
         },
         {
@@ -115,8 +120,10 @@
             }
           ],
           "next_action": {
-            "code": "work_highest_list_price_first",
-            "params": {}
+            "code": "check_status",
+            "params": {
+              "has_account": true
+            }
           }
         },
         {
@@ -153,8 +160,10 @@
             }
           ],
           "next_action": {
-            "code": "work_highest_list_price_first",
-            "params": {}
+            "code": "check_status",
+            "params": {
+              "has_account": false
+            }
           }
         },
         {
@@ -191,8 +200,10 @@
             }
           ],
           "next_action": {
-            "code": "work_highest_list_price_first",
-            "params": {}
+            "code": "check_status",
+            "params": {
+              "has_account": false
+            }
           }
         },
         {
@@ -229,11 +240,23 @@
             }
           ],
           "next_action": {
-            "code": "work_highest_list_price_first",
-            "params": {}
+            "code": "check_status",
+            "params": {
+              "has_account": false
+            }
           }
         }
       ]
+    },
+    {
+      "state": "qualificar",
+      "count": 0,
+      "empty": {
+        "code": "group_empty",
+        "params": {}
+      },
+      "next_action": null,
+      "items": []
     },
     {
       "state": "acompanhar",
@@ -241,7 +264,9 @@
       "empty": null,
       "next_action": {
         "code": "check_progress",
-        "params": {}
+        "params": {
+          "has_account": null
+        }
       },
       "items": [
         {
@@ -280,7 +305,9 @@
           ],
           "next_action": {
             "code": "check_progress",
-            "params": {}
+            "params": {
+              "has_account": true
+            }
           }
         },
         {
@@ -319,7 +346,9 @@
           ],
           "next_action": {
             "code": "check_progress",
-            "params": {}
+            "params": {
+              "has_account": false
+            }
           }
         }
       ]
@@ -330,7 +359,9 @@
       "empty": null,
       "next_action": {
         "code": "confirm_still_active",
-        "params": {}
+        "params": {
+          "has_account": null
+        }
       },
       "items": [
         {
@@ -367,20 +398,12 @@
           ],
           "next_action": {
             "code": "confirm_still_active",
-            "params": {}
+            "params": {
+              "has_account": true
+            }
           }
         }
       ]
-    },
-    {
-      "state": "qualificar",
-      "count": 0,
-      "empty": {
-        "code": "group_empty",
-        "params": {}
-      },
-      "next_action": null,
-      "items": []
     },
     {
       "state": "nao_pontuavel",

@@ -3,6 +3,49 @@
 import * as z from 'zod';
 
 /**
+ * AccountOption
+ */
+export const zAccountOption = z.object({
+    name: z.string(),
+    sector: z.string().nullable(),
+    location: z.string().nullable(),
+    size: z.string().nullable()
+});
+
+/**
+ * AccountParams
+ */
+export const zAccountParams = z.object({
+    has_account: z.boolean().nullable()
+});
+
+/**
+ * AccountAction
+ *
+ * Verificação no CRM que muda conforme a conta: registrada ou não (ADR-008).
+ */
+export const zAccountAction = z.object({
+    code: z.enum([
+        'check_status',
+        'check_progress',
+        'confirm_still_active'
+    ]),
+    params: zAccountParams
+});
+
+/**
+ * AccountProfile
+ */
+export const zAccountProfile = z.object({
+    sector: z.string().nullable(),
+    location: z.string().nullable(),
+    size: z.string().nullable(),
+    products_bought: z.int(),
+    products_total: z.int(),
+    sellers: z.int()
+});
+
+/**
  * BetweenLimitsParams
  */
 export const zBetweenLimitsParams = z.object({
@@ -24,12 +67,162 @@ export const zAgeAboveWonCycle = z.object({
 });
 
 /**
+ * ChanceTest
+ *
+ * A taxa de ganho difere entre os segmentos mais do que o acaso explicaria (qui-quadrado)?
+ */
+export const zChanceTest = z.object({
+    verdict: z.enum([
+        'beyond_chance',
+        'within_chance',
+        'too_few_closed'
+    ]),
+    segments_tested: z.int(),
+    segments_small: z.int(),
+    closed_tested: z.int(),
+    min_win_rate: z.number().nullable(),
+    max_win_rate: z.number().nullable(),
+    p_value: z.number().nullable(),
+    alpha: z.number()
+});
+
+/**
+ * BeyondChanceParams
+ */
+export const zBeyondChanceParams = z.object({
+    dimension: z.enum([
+        'product',
+        'seller',
+        'manager',
+        'office',
+        'sector',
+        'account',
+        'size'
+    ]),
+    chance: zChanceTest
+});
+
+/**
+ * ConcentratedParams
+ */
+export const zConcentratedParams = z.object({
+    dimension: z.enum([
+        'product',
+        'seller',
+        'manager',
+        'office',
+        'sector',
+        'account',
+        'size'
+    ]),
+    top: z.int(),
+    of: z.int(),
+    share: z.number(),
+    keys: z.array(z.string())
+});
+
+/**
+ * CoverageCount
+ */
+export const zCoverageCount = z.object({
+    bought: z.int(),
+    accounts: z.int()
+});
+
+/**
+ * CoverageParams
+ */
+export const zCoverageParams = z.object({
+    accounts: z.int(),
+    products: z.int(),
+    distribution: z.array(zCoverageCount),
+    most_missing: z.string().nullable(),
+    most_missing_accounts: z.int()
+});
+
+/**
+ * AccountProductCoverage
+ */
+export const zAccountProductCoverage = z.object({
+    code: z.literal('account_product_coverage'),
+    params: zCoverageParams
+});
+
+/**
+ * CycleBand
+ */
+export const zCycleBand = z.object({
+    low: z.int(),
+    high: z.int(),
+    won: z.int(),
+    lost: z.int(),
+    win_rate: z.number().nullable()
+});
+
+/**
+ * Deal
+ */
+export const zDeal = z.object({
+    opportunity_id: z.string(),
+    sales_agent: z.string(),
+    manager: z.string().nullable(),
+    office: z.string().nullable(),
+    product: z.string().nullable(),
+    account: z.string().nullable(),
+    sector: z.string().nullable(),
+    deal_stage: z.enum([
+        'Engaging',
+        'Prospecting',
+        'Won',
+        'Lost'
+    ]),
+    engage_date: z.iso.date().nullable(),
+    close_date: z.iso.date().nullable(),
+    close_value: z.int().nullable(),
+    sales_price: z.int().nullable(),
+    cycle_days: z.int().nullable(),
+    age_days: z.int().nullable(),
+    group: z.enum([
+        'focar',
+        'qualificar',
+        'acompanhar',
+        'revisar',
+        'nao_pontuavel'
+    ]).nullable()
+});
+
+/**
  * Delta
  */
 export const zDelta = z.object({
     value: z.number(),
     low: z.number(),
     high: z.number()
+});
+
+/**
+ * EngagingBeyondParams
+ */
+export const zEngagingBeyondParams = z.object({
+    group: z.enum([
+        'focar',
+        'qualificar',
+        'acompanhar',
+        'revisar',
+        'nao_pontuavel'
+    ]),
+    count: z.int(),
+    engaging: z.int(),
+    share: z.number().nullable(),
+    cycle_limit_days: z.int()
+});
+
+/**
+ * EngagingBeyondLongestCycle
+ */
+export const zEngagingBeyondLongestCycle = z.object({
+    code: z.literal('engaging_beyond_longest_cycle'),
+    params: zEngagingBeyondParams
 });
 
 /**
@@ -51,7 +244,9 @@ export const zErrorBody = z.object({
         'seller_not_found',
         'opportunity_not_found',
         'evidence_unavailable',
-        'no_won_history'
+        'no_won_history',
+        'data_bad_number',
+        'invalid_parameter'
     ]),
     params: z.record(z.string(), z.union([
         z.int(),
@@ -97,6 +292,24 @@ export const zEvidenceVerdict = z.object({
 });
 
 /**
+ * FastLossesParams
+ */
+export const zFastLossesParams = z.object({
+    median_lost_cycle_days: z.int(),
+    median_won_cycle_days: z.int(),
+    lost: z.int(),
+    won: z.int()
+});
+
+/**
+ * FastLosses
+ */
+export const zFastLosses = z.object({
+    code: z.literal('fast_losses'),
+    params: zFastLossesParams
+});
+
+/**
  * FieldParams
  */
 export const zFieldParams = z.object({
@@ -113,6 +326,21 @@ export const zFieldParams = z.object({
 export const zFixFieldAction = z.object({
     code: z.literal('fix_missing_field'),
     params: zFieldParams
+});
+
+/**
+ * IntelligenceFilter
+ *
+ * O recorte pedido. Valor inexistente dá recorte vazio, nunca erro.
+ */
+export const zIntelligenceFilter = z.object({
+    product: z.string().nullable(),
+    seller: z.string().nullable(),
+    manager: z.string().nullable(),
+    office: z.string().nullable(),
+    sector: z.string().nullable(),
+    account: z.string().nullable(),
+    size: z.string().nullable()
 });
 
 /**
@@ -159,15 +387,34 @@ export const zAgeAboveCycleLimit = z.object({
 });
 
 /**
+ * MatrixCell
+ */
+export const zMatrixCell = z.object({
+    product: z.string(),
+    closed: z.int(),
+    mix_share: z.number().nullable()
+});
+
+/**
+ * MatrixRow
+ */
+export const zMatrixRow = z.object({
+    seller: z.string(),
+    closed: z.int(),
+    cells: z.array(zMatrixCell)
+});
+
+/**
  * Meta
  */
 export const zMeta = z.object({
     as_of: z.iso.date(),
+    won_cycle_median_days: z.int(),
     won_cycle_limit_days: z.int(),
     cycle_limit_days: z.int(),
     cycle_percentile: z.int(),
     audited: z.boolean(),
-    contract_version: z.literal(5)
+    contract_version: z.literal(7)
 });
 
 /**
@@ -182,6 +429,42 @@ export const zMissingFieldReason = z.object({
 });
 
 /**
+ * MonthCount
+ */
+export const zMonthCount = z.object({
+    month: z.string().regex(/^\d{4}-\d{2}$/),
+    engaged: z.int()
+});
+
+/**
+ * InflowDropParams
+ */
+export const zInflowDropParams = z.object({
+    recent: z.array(zMonthCount),
+    base_average: z.number(),
+    base_first_month: z.string().regex(/^\d{4}-\d{2}$/),
+    base_last_month: z.string().regex(/^\d{4}-\d{2}$/)
+});
+
+/**
+ * EngagementInflowDrop
+ */
+export const zEngagementInflowDrop = z.object({
+    code: z.literal('engagement_inflow_drop'),
+    params: zInflowDropParams
+});
+
+/**
+ * MonthPoint
+ */
+export const zMonthPoint = z.object({
+    month: z.string().regex(/^\d{4}-\d{2}$/),
+    engaged: z.int(),
+    won: z.int(),
+    lost: z.int()
+});
+
+/**
  * NoParams
  *
  * Código sem parâmetros.
@@ -189,11 +472,50 @@ export const zMissingFieldReason = z.object({
 export const zNoParams = z.record(z.string(), z.never());
 
 /**
+ * DealsEmpty
+ */
+export const zDealsEmpty = z.object({
+    code: z.literal('no_deals_for_filter'),
+    params: zNoParams
+});
+
+/**
  * GroupEmpty
  */
 export const zGroupEmpty = z.object({
     code: z.literal('group_empty'),
     params: zNoParams
+});
+
+/**
+ * HistoryEmpty
+ */
+export const zHistoryEmpty = z.object({
+    code: z.literal('no_closed_for_filter'),
+    params: zNoParams
+});
+
+/**
+ * IntelligenceDeals
+ */
+export const zIntelligenceDeals = z.object({
+    meta: zMeta,
+    filter: zIntelligenceFilter,
+    outcome: z.enum([
+        'won',
+        'lost',
+        'open'
+    ]),
+    group: z.enum([
+        'focar',
+        'qualificar',
+        'acompanhar',
+        'revisar',
+        'nao_pontuavel'
+    ]).nullable(),
+    total: z.int(),
+    deals: z.array(zDeal),
+    empty: zDealsEmpty.nullable()
 });
 
 /**
@@ -208,6 +530,25 @@ export const zNoProduct = z.object({
 });
 
 /**
+ * OpenWithoutAccountParams
+ */
+export const zOpenWithoutAccountParams = z.object({
+    count: z.int(),
+    open: z.int(),
+    share: z.number().nullable(),
+    closed_without_account: z.int(),
+    closed: z.int()
+});
+
+/**
+ * OpenWithoutAccount
+ */
+export const zOpenWithoutAccount = z.object({
+    code: z.literal('open_without_account'),
+    params: zOpenWithoutAccountParams
+});
+
+/**
  * Ordering
  *
  * A ordem da lista como dado, para quem apresenta explicar a ordem.
@@ -215,9 +556,9 @@ export const zNoProduct = z.object({
 export const zOrdering = z.object({
     group_order: z.array(z.enum([
         'focar',
+        'qualificar',
         'acompanhar',
         'revisar',
-        'qualificar',
         'nao_pontuavel'
     ])),
     within_group: z.array(z.enum([
@@ -273,6 +614,49 @@ export const zProspectingStage = z.object({
 });
 
 /**
+ * ProspectingWithoutDateParams
+ */
+export const zProspectingWithoutDateParams = z.object({
+    group: z.enum([
+        'focar',
+        'qualificar',
+        'acompanhar',
+        'revisar',
+        'nao_pontuavel'
+    ]),
+    count: z.int(),
+    prospecting: z.int()
+});
+
+/**
+ * ProspectingWithoutEngageDate
+ */
+export const zProspectingWithoutEngageDate = z.object({
+    code: z.literal('prospecting_without_engage_date'),
+    params: zProspectingWithoutDateParams
+});
+
+/**
+ * QuarterEndParams
+ */
+export const zQuarterEndParams = z.object({
+    quarter_end_closed: z.int(),
+    quarter_end_win_rate: z.number(),
+    other_closed: z.int(),
+    other_win_rate: z.number()
+});
+
+/**
+ * QuarterEndOutcomeMix
+ *
+ * Higiene de registro: nunca um sinal para prever (RJ-02).
+ */
+export const zQuarterEndOutcomeMix = z.object({
+    code: z.literal('quarter_end_outcome_mix'),
+    params: zQuarterEndParams
+});
+
+/**
  * RankerResult
  */
 export const zRankerResult = z.object({
@@ -316,6 +700,61 @@ export const zEvidence = z.object({
 });
 
 /**
+ * RevenueConcentrated
+ */
+export const zRevenueConcentrated = z.object({
+    code: z.literal('revenue_concentrated'),
+    params: zConcentratedParams
+});
+
+/**
+ * RevenueDrivers
+ *
+ * Quanto da diferença de receita entre segmentos vem do volume, da conversão e do ticket.
+ */
+export const zRevenueDrivers = z.object({
+    segments_used: z.int(),
+    spread_ratio: z.number(),
+    volume_share: z.number(),
+    conversion_share: z.number(),
+    ticket_share: z.number(),
+    main: z.array(z.enum([
+        'volume',
+        'conversion',
+        'ticket'
+    ])),
+    negligible: z.array(z.enum([
+        'volume',
+        'conversion',
+        'ticket'
+    ]))
+});
+
+/**
+ * DriversParams
+ */
+export const zDriversParams = z.object({
+    dimension: z.enum([
+        'product',
+        'seller',
+        'manager',
+        'office',
+        'sector',
+        'account',
+        'size'
+    ]),
+    drivers: zRevenueDrivers
+});
+
+/**
+ * RevenueGapDrivers
+ */
+export const zRevenueGapDrivers = z.object({
+    code: z.literal('revenue_gap_drivers'),
+    params: zDriversParams
+});
+
+/**
  * Seller
  */
 export const zSeller = z.object({
@@ -329,6 +768,16 @@ export const zSeller = z.object({
  */
 export const zSellerList = z.object({
     sellers: z.array(zSeller)
+});
+
+/**
+ * SellerProductMatrix
+ *
+ * O mix de cada vendedor, em ordem alfabética. Sem taxa por célula.
+ */
+export const zSellerProductMatrix = z.object({
+    products: z.array(z.string()),
+    rows: z.array(zMatrixRow)
 });
 
 /**
@@ -348,17 +797,69 @@ export const zSellerSummary = z.object({
 });
 
 /**
+ * SellersWithoutOpportunitiesParams
+ */
+export const zSellersWithoutOpportunitiesParams = z.object({
+    count: z.int(),
+    team: z.int(),
+    sellers: z.array(z.string())
+});
+
+/**
+ * SellersWithoutOpportunities
+ */
+export const zSellersWithoutOpportunities = z.object({
+    code: z.literal('sellers_without_opportunities'),
+    params: zSellersWithoutOpportunitiesParams
+});
+
+/**
+ * SharedAccountsParams
+ */
+export const zSharedAccountsParams = z.object({
+    median_sellers: z.int(),
+    max_sellers: z.int(),
+    accounts: z.int()
+});
+
+/**
+ * AccountsSharedBySellers
+ */
+export const zAccountsSharedBySellers = z.object({
+    code: z.literal('accounts_shared_by_sellers'),
+    params: zSharedAccountsParams
+});
+
+/**
  * SimpleAction
  */
 export const zSimpleAction = z.object({
-    code: z.enum([
-        'work_highest_list_price_first',
-        'check_progress',
-        'confirm_still_active',
-        'advance_prospecting',
-        'fix_missing_fields'
-    ]),
+    code: z.enum(['check_prospecting', 'fix_missing_fields']),
     params: zNoParams
+});
+
+/**
+ * SizeBand
+ *
+ * Porte do cliente: quantil da receita anual entre os clientes cadastrados.
+ */
+export const zSizeBand = z.object({
+    key: z.string(),
+    low: z.number(),
+    high: z.number(),
+    accounts: z.int()
+});
+
+/**
+ * IntelligenceOptions
+ *
+ * Valores dos filtros que não vêm de /api/sellers (vendedor, gerente e escritório vêm de lá).
+ */
+export const zIntelligenceOptions = z.object({
+    products: z.array(z.string()),
+    sectors: z.array(z.string()),
+    accounts: z.array(zAccountOption),
+    sizes: z.array(zSizeBand)
 });
 
 /**
@@ -367,17 +868,18 @@ export const zSimpleAction = z.object({
 export const zStartWithParams = z.object({
     group: z.enum([
         'focar',
+        'qualificar',
         'acompanhar',
         'revisar',
-        'qualificar',
         'nao_pontuavel'
     ]),
     action: z.enum([
         'check_progress',
         'confirm_still_active',
-        'advance_prospecting',
+        'check_prospecting',
         'fix_missing_fields'
     ]),
+    has_engaging: z.boolean(),
     won_cycle_limit_days: z.int(),
     cycle_limit_days: z.int()
 });
@@ -403,6 +905,19 @@ export const zSummary = z.object({
     qualificar: z.int(),
     nao_pontuavel: z.int(),
     without_account: z.int()
+});
+
+/**
+ * OpenSnapshot
+ *
+ * A carteira aberta do recorte no as_of, com os grupos da regra (os mesmos da Equipe).
+ */
+export const zOpenSnapshot = z.object({
+    summary: zSummary,
+    list_value: z.int(),
+    without_list_price: z.int(),
+    excluded_without_account: z.int().nullable(),
+    empty: zPipelineEmpty.nullable()
 });
 
 /**
@@ -435,6 +950,156 @@ export const zRules = z.object({
     meta: zMeta,
     ordering: zOrdering,
     value_bands: z.array(zValueBandRule)
+});
+
+/**
+ * WinRate
+ */
+export const zWinRate = z.object({
+    value: z.number(),
+    low: z.number(),
+    high: z.number()
+});
+
+/**
+ * ClosedMetrics
+ *
+ * O histórico de fechadas até o as_of de um recorte.
+ */
+export const zClosedMetrics = z.object({
+    closed: z.int(),
+    won: z.int(),
+    lost: z.int(),
+    win_rate: zWinRate.nullable(),
+    revenue: z.int(),
+    won_without_value: z.int(),
+    ticket: z.number().nullable(),
+    revenue_per_closed: z.number().nullable(),
+    median_won_cycle_days: z.int().nullable(),
+    median_lost_cycle_days: z.int().nullable(),
+    without_account: z.int()
+});
+
+/**
+ * Segment
+ */
+export const zSegment = z.object({
+    key: z.string().nullable(),
+    history: zClosedMetrics,
+    revenue_share: z.number().nullable(),
+    open: z.int(),
+    profile: zAccountProfile.nullable()
+});
+
+/**
+ * Breakdown
+ */
+export const zBreakdown = z.object({
+    dimension: z.enum([
+        'product',
+        'seller',
+        'manager',
+        'office',
+        'sector',
+        'account',
+        'size'
+    ]),
+    order: z.enum(['alphabetical', 'revenue_desc']),
+    segments: z.array(zSegment),
+    chance: zChanceTest,
+    drivers: zRevenueDrivers.nullable()
+});
+
+/**
+ * WinRateBeyondChance
+ */
+export const zWinRateBeyondChance = z.object({
+    code: z.literal('win_rate_beyond_chance'),
+    params: zBeyondChanceParams
+});
+
+/**
+ * WithinChanceParams
+ */
+export const zWithinChanceParams = z.object({
+    dimensions: z.array(z.enum([
+        'product',
+        'seller',
+        'manager',
+        'office',
+        'sector',
+        'account',
+        'size'
+    ])),
+    closed: z.int()
+});
+
+/**
+ * WinRateWithinChance
+ */
+export const zWinRateWithinChance = z.object({
+    code: z.literal('win_rate_within_chance'),
+    params: zWithinChanceParams
+});
+
+/**
+ * Intelligence
+ */
+export const zIntelligence = z.object({
+    meta: zMeta,
+    ordering: zOrdering,
+    filter: zIntelligenceFilter,
+    options: zIntelligenceOptions,
+    history: zClosedMetrics,
+    history_empty: zHistoryEmpty.nullable(),
+    open: zOpenSnapshot,
+    diagnostics: z.array(z.union([
+        z.object({
+            code: z.literal('engaging_beyond_longest_cycle')
+        }).and(zEngagingBeyondLongestCycle),
+        z.object({
+            code: z.literal('open_without_account')
+        }).and(zOpenWithoutAccount),
+        z.object({
+            code: z.literal('prospecting_without_engage_date')
+        }).and(zProspectingWithoutEngageDate),
+        z.object({
+            code: z.literal('sellers_without_opportunities')
+        }).and(zSellersWithoutOpportunities),
+        z.object({
+            code: z.literal('quarter_end_outcome_mix')
+        }).and(zQuarterEndOutcomeMix),
+        z.object({
+            code: z.literal('engagement_inflow_drop')
+        }).and(zEngagementInflowDrop),
+        z.object({
+            code: z.literal('accounts_shared_by_sellers')
+        }).and(zAccountsSharedBySellers)
+    ])),
+    findings: z.array(z.union([
+        z.object({
+            code: z.literal('win_rate_within_chance')
+        }).and(zWinRateWithinChance),
+        z.object({
+            code: z.literal('win_rate_beyond_chance')
+        }).and(zWinRateBeyondChance),
+        z.object({
+            code: z.literal('revenue_concentrated')
+        }).and(zRevenueConcentrated),
+        z.object({
+            code: z.literal('revenue_gap_drivers')
+        }).and(zRevenueGapDrivers),
+        z.object({
+            code: z.literal('fast_losses')
+        }).and(zFastLosses),
+        z.object({
+            code: z.literal('account_product_coverage')
+        }).and(zAccountProductCoverage)
+    ])),
+    breakdowns: z.array(zBreakdown),
+    matrix: zSellerProductMatrix,
+    cycle_bands: z.array(zCycleBand),
+    monthly: z.array(zMonthPoint)
 });
 
 /**
@@ -475,9 +1140,9 @@ export const zItem = z.object({
     age_days: z.int().nullable(),
     group: z.enum([
         'focar',
+        'qualificar',
         'acompanhar',
         'revisar',
-        'qualificar',
         'nao_pontuavel'
     ]),
     deal_stage: z.enum(['Engaging', 'Prospecting']),
@@ -516,13 +1181,17 @@ export const zItem = z.object({
     next_action: z.union([
         z.object({
             code: z.union([
-                z.literal('advance_prospecting'),
-                z.literal('check_progress'),
-                z.literal('confirm_still_active'),
-                z.literal('fix_missing_fields'),
-                z.literal('work_highest_list_price_first')
+                z.literal('check_prospecting'),
+                z.literal('fix_missing_fields')
             ])
         }).and(zSimpleAction),
+        z.object({
+            code: z.union([
+                z.literal('check_progress'),
+                z.literal('check_status'),
+                z.literal('confirm_still_active')
+            ])
+        }).and(zAccountAction),
         z.object({
             code: z.literal('fix_missing_field')
         }).and(zFixFieldAction)
@@ -535,9 +1204,9 @@ export const zItem = z.object({
 export const zGroup = z.object({
     state: z.enum([
         'focar',
+        'qualificar',
         'acompanhar',
         'revisar',
-        'qualificar',
         'nao_pontuavel'
     ]),
     count: z.int(),
@@ -552,13 +1221,17 @@ export const zGroup = z.object({
     next_action: z.union([
         z.object({
             code: z.union([
-                z.literal('advance_prospecting'),
-                z.literal('check_progress'),
-                z.literal('confirm_still_active'),
-                z.literal('fix_missing_fields'),
-                z.literal('work_highest_list_price_first')
+                z.literal('check_prospecting'),
+                z.literal('fix_missing_fields')
             ])
         }).and(zSimpleAction),
+        z.object({
+            code: z.union([
+                z.literal('check_progress'),
+                z.literal('check_status'),
+                z.literal('confirm_still_active')
+            ])
+        }).and(zAccountAction),
         z.object({
             code: z.literal('fix_missing_field')
         }).and(zFixFieldAction)
@@ -637,6 +1310,40 @@ export const zGetRulesApiRulesGetQuery = z.object({
  * Successful Response
  */
 export const zGetRulesApiRulesGetResponse = zRules;
+
+export const zGetIntelligenceApiIntelligenceGetQuery = z.object({
+    as_of: z.string().nullish(),
+    product: z.string().nullish(),
+    seller: z.string().nullish(),
+    manager: z.string().nullish(),
+    office: z.string().nullish(),
+    sector: z.string().nullish(),
+    account: z.string().nullish(),
+    size: z.string().nullish()
+});
+
+/**
+ * Successful Response
+ */
+export const zGetIntelligenceApiIntelligenceGetResponse = zIntelligence;
+
+export const zGetIntelligenceDealsApiIntelligenceDealsGetQuery = z.object({
+    outcome: z.string().nullish(),
+    group: z.string().nullish(),
+    as_of: z.string().nullish(),
+    product: z.string().nullish(),
+    seller: z.string().nullish(),
+    manager: z.string().nullish(),
+    office: z.string().nullish(),
+    sector: z.string().nullish(),
+    account: z.string().nullish(),
+    size: z.string().nullish()
+});
+
+/**
+ * Successful Response
+ */
+export const zGetIntelligenceDealsApiIntelligenceDealsGetResponse = zIntelligenceDeals;
 
 /**
  * Successful Response

@@ -8,7 +8,7 @@ from leadscorer.__main__ import main
 from conftest import EDGE_TABLES, write_raw
 
 LEGEND = (
-    "Ordem: Focar → Acompanhar → Confirmar → Qualificar → Completar; em cada grupo, maior "
+    "Ordem: Focar → Qualificar → Acompanhar → Confirmar → Completar; em cada grupo, maior "
     "valor de tabela primeiro; a idade aparece, mas não muda a ordem."
 )
 
@@ -52,8 +52,8 @@ def test_cli_text_has_header_legend_and_one_warning(raw_dir, capsys):
     assert main(["--raw", str(raw_dir), "list", "--seller", "Ana Alfa"]) == 0
     out = capsys.readouterr().out
     assert "Dados até 31/12/2017" in out and LEGEND in out
-    assert sum(line.startswith("Aviso:") for line in out.splitlines()) == 1
-    assert "2 oportunidades de mesmo valor de tabela (GTX Basic, 550)" in out
+    assert sum(line.startswith("Nota:") for line in out.splitlines()) == 1
+    assert "2 oportunidades empatadas (GTX Basic, 550): sem ordem entre si" in out
     assert "%" not in out
 
 

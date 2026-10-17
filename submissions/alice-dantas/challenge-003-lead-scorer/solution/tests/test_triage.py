@@ -57,7 +57,8 @@ def test_no_won_history_is_a_coded_data_error(tmp_path):
 
 def test_context_rejects_a_first_limit_above_the_second():
     with pytest.raises(ValueError):
-        triage.Context(as_of=pd.Timestamp("2017-12-31"), won_cycle_limit_days=139, cycle_limit_days=138)
+        triage.Context(as_of=pd.Timestamp("2017-12-31"), won_cycle_limit_days=139, cycle_limit_days=138,
+                       won_cycle_median_days=57)
 
 
 def test_engaging_group_matches_classify(raw_dir):
@@ -80,7 +81,7 @@ def test_partition_covers_every_open_once(raw_dir):
 
 def test_declared_order_state_band_price_id(raw_dir):
     _, opps = classified(raw_dir)
-    assert list(opps["opportunity_id"]) == ["EPP", "EGP", "E050", "E100", "EMG", "E101", "E138", "E139", "P1"]
+    assert list(opps["opportunity_id"]) == ["EPP", "EGP", "E050", "E100", "EMG", "P1", "E101", "E138", "E139"]
     assert list(opps["value_band"][:5]) == ["alto", "alto", "médio", "médio", "baixo"]
 
 

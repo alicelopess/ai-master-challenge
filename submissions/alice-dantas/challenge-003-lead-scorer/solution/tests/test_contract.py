@@ -7,8 +7,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import create_app
-from api.schemas import Evidence, Meta, Rules, SellerList, SellerPipeline, TeamPipeline
-from leadscorer import data, evidence, policy, views
+from api.schemas import (Evidence, Intelligence, IntelligenceDeals, Meta, Rules, SellerList, SellerPipeline,
+                         TeamPipeline)
+from leadscorer import codes, data, evidence, intelligence, policy, views
 from leadscorer.__main__ import main
 
 def load_script(name):
@@ -107,6 +108,12 @@ def test_payloads_pass_through_the_models_unchanged(raw_dir):
     assert dumped(SellerList, {"sellers": views.sellers(dataset)}) == as_json({"sellers": views.sellers(dataset)})
     assert dumped(Rules, views.rules(dataset)) == as_json(views.rules(dataset))
     assert dumped(Evidence, evidence.load()) == as_json(evidence.load())
+    for filters in (intelligence.Filters(), intelligence.Filters(sector="retail"), intelligence.Filters(account="X")):
+        payload = intelligence.payload(dataset, filters)
+        assert dumped(Intelligence, payload) == as_json(payload)
+    for outcome in codes.OUTCOMES:
+        payload = intelligence.deals(dataset, outcome=outcome)
+        assert dumped(IntelligenceDeals, payload) == as_json(payload)
 
 
 def test_states_and_actions_flow_from_policy():
@@ -114,9 +121,11 @@ def test_states_and_actions_flow_from_policy():
     contrato (e quebra os catálogos da tela e da CLI até ganhar texto)."""
     from typing import get_args
     from api import schemas
-    from leadscorer import codes
     assert get_args(schemas.StateKey) == policy.STATES
-    assert set(get_args(schemas.SimpleActionCode)) == {*policy.NEXT_ACTIONS.values(), codes.FIX_MISSING_FIELDS}
+    assert set(get_args(schemas.SimpleActionCode)) == {codes.CHECK_PROSPECTING, codes.FIX_MISSING_FIELDS}
+    assert set(get_args(schemas.AccountActionCode)) == set(codes.ACCOUNT_ACTION_CODES)
+    assert {*get_args(schemas.SimpleActionCode), *get_args(schemas.AccountActionCode)} == {
+        *policy.NEXT_ACTIONS.values(), codes.FIX_MISSING_FIELDS}
     assert set(get_args(schemas.StartActionCode)) == set(policy.START_ACTION_CODES.values())
     assert set(schemas.Summary.model_fields) == {"total", *policy.STATES, "without_account"}
     assert set(schemas.SellerSummary.model_fields) == {"seller", "total", *policy.STATES, "without_account"}

@@ -67,7 +67,7 @@ class Cut:
 
 
 def close_values(raw_dir: Path) -> pd.Series:
-    """`close_value` vem direto do CSV: o núcleo nem carrega esse campo."""
+    """`close_value` vem direto do CSV: a regra nunca enxerga esse campo (`triage.classify`)."""
     pipeline = data.read_table(raw_dir, "sales_pipeline")
     return pd.to_numeric(pipeline.set_index("opportunity_id")["close_value"])
 

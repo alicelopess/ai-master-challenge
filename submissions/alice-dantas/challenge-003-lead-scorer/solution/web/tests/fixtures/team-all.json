@@ -5,18 +5,19 @@
   },
   "meta": {
     "as_of": "2017-12-31",
+    "won_cycle_median_days": 60,
     "won_cycle_limit_days": 100,
     "cycle_limit_days": 138,
     "cycle_percentile": 90,
     "audited": false,
-    "contract_version": 5
+    "contract_version": 7
   },
   "ordering": {
     "group_order": [
       "focar",
+      "qualificar",
       "acompanhar",
       "revisar",
-      "qualificar",
       "nao_pontuavel"
     ],
     "within_group": [
@@ -42,8 +43,10 @@
       "count": 5,
       "empty": null,
       "next_action": {
-        "code": "work_highest_list_price_first",
-        "params": {}
+        "code": "check_status",
+        "params": {
+          "has_account": null
+        }
       },
       "items": [
         {
@@ -80,8 +83,10 @@
             }
           ],
           "next_action": {
-            "code": "work_highest_list_price_first",
-            "params": {}
+            "code": "check_status",
+            "params": {
+              "has_account": false
+            }
           }
         },
         {
@@ -118,8 +123,10 @@
             }
           ],
           "next_action": {
-            "code": "work_highest_list_price_first",
-            "params": {}
+            "code": "check_status",
+            "params": {
+              "has_account": true
+            }
           }
         },
         {
@@ -156,8 +163,10 @@
             }
           ],
           "next_action": {
-            "code": "work_highest_list_price_first",
-            "params": {}
+            "code": "check_status",
+            "params": {
+              "has_account": false
+            }
           }
         },
         {
@@ -194,8 +203,10 @@
             }
           ],
           "next_action": {
-            "code": "work_highest_list_price_first",
-            "params": {}
+            "code": "check_status",
+            "params": {
+              "has_account": false
+            }
           }
         },
         {
@@ -232,7 +243,56 @@
             }
           ],
           "next_action": {
-            "code": "work_highest_list_price_first",
+            "code": "check_status",
+            "params": {
+              "has_account": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "state": "qualificar",
+      "count": 1,
+      "empty": null,
+      "next_action": {
+        "code": "check_prospecting",
+        "params": {}
+      },
+      "items": [
+        {
+          "opportunity_id": "P1",
+          "sales_agent": "Bruno Beta",
+          "product": "GTX Pro",
+          "account": null,
+          "sales_price": 4821,
+          "value_band": "alto",
+          "engage_date": null,
+          "age_days": null,
+          "group": "qualificar",
+          "deal_stage": "Prospecting",
+          "missing_field": null,
+          "tie_size": 1,
+          "reasons": [
+            {
+              "code": "prospecting_stage",
+              "role": "group",
+              "params": {
+                "deal_stage": "Prospecting"
+              }
+            },
+            {
+              "code": "list_price",
+              "role": "order",
+              "params": {
+                "product": "GTX Pro",
+                "sales_price": 4821,
+                "value_band": "alto"
+              }
+            }
+          ],
+          "next_action": {
+            "code": "check_prospecting",
             "params": {}
           }
         }
@@ -244,7 +304,9 @@
       "empty": null,
       "next_action": {
         "code": "check_progress",
-        "params": {}
+        "params": {
+          "has_account": null
+        }
       },
       "items": [
         {
@@ -283,7 +345,9 @@
           ],
           "next_action": {
             "code": "check_progress",
-            "params": {}
+            "params": {
+              "has_account": true
+            }
           }
         },
         {
@@ -322,7 +386,9 @@
           ],
           "next_action": {
             "code": "check_progress",
-            "params": {}
+            "params": {
+              "has_account": false
+            }
           }
         }
       ]
@@ -333,7 +399,9 @@
       "empty": null,
       "next_action": {
         "code": "confirm_still_active",
-        "params": {}
+        "params": {
+          "has_account": null
+        }
       },
       "items": [
         {
@@ -370,54 +438,9 @@
           ],
           "next_action": {
             "code": "confirm_still_active",
-            "params": {}
-          }
-        }
-      ]
-    },
-    {
-      "state": "qualificar",
-      "count": 1,
-      "empty": null,
-      "next_action": {
-        "code": "advance_prospecting",
-        "params": {}
-      },
-      "items": [
-        {
-          "opportunity_id": "P1",
-          "sales_agent": "Bruno Beta",
-          "product": "GTX Pro",
-          "account": null,
-          "sales_price": 4821,
-          "value_band": "alto",
-          "engage_date": null,
-          "age_days": null,
-          "group": "qualificar",
-          "deal_stage": "Prospecting",
-          "missing_field": null,
-          "tie_size": 1,
-          "reasons": [
-            {
-              "code": "prospecting_stage",
-              "role": "group",
-              "params": {
-                "deal_stage": "Prospecting"
-              }
-            },
-            {
-              "code": "list_price",
-              "role": "order",
-              "params": {
-                "product": "GTX Pro",
-                "sales_price": 4821,
-                "value_band": "alto"
-              }
+            "params": {
+              "has_account": true
             }
-          ],
-          "next_action": {
-            "code": "advance_prospecting",
-            "params": {}
           }
         }
       ]

@@ -6,7 +6,7 @@ from leadscorer import codes, data, policy, triage, views
 from leadscorer.__main__ import main
 from leadscorer.errors import DataError, NotFoundError, PolicyError
 
-from conftest import PIPELINE, PRODUCTS, SALES_TEAMS, opp, write_raw
+from conftest import ACCOUNTS, PIPELINE, PRODUCTS, SALES_TEAMS, opp, write_raw
 
 
 def run_cli(raw_dir, capsys, *args):
@@ -42,6 +42,31 @@ def test_missing_column_is_listed(tmp_path):  # AC-1.3
     rows = [{k: v for k, v in row.items() if k != "engage_date"} for row in PIPELINE]
     with pytest.raises(DataError, match="sales_pipeline.csv sem as colunas: engage_date"):
         data.load(write_raw(tmp_path / "raw", sales_pipeline=rows))
+
+
+def test_missing_account_attribute_is_listed(tmp_path):  # AC-1.3: a Inteligência usa o setor
+    accounts = [{k: v for k, v in row.items() if k != "sector"} for row in ACCOUNTS]
+    with pytest.raises(DataError) as error:
+        data.load(write_raw(tmp_path / "raw", accounts=accounts))
+    assert (error.value.code, error.value.params["columns"]) == (codes.DATA_COLUMNS_MISSING, ["sector"])
+
+
+@pytest.mark.parametrize("value", ["cem", "-5", "10.5"])
+def test_bad_close_value_fails_with_the_ids(tmp_path, value):
+    rows = [dict(row) for row in PIPELINE]
+    rows[0]["close_value"] = value                                     # W1
+    with pytest.raises(DataError) as error:
+        data.load(write_raw(tmp_path / "raw", sales_pipeline=rows))
+    assert error.value.code == codes.DATA_BAD_NUMBER
+    assert error.value.params == {"table": "sales_pipeline", "column": "close_value", "ids": ["W1"]}
+
+
+def test_bad_account_revenue_fails_with_the_account(tmp_path):
+    accounts = [dict(row) for row in ACCOUNTS]
+    accounts[1]["revenue"] = "muito"
+    with pytest.raises(DataError) as error:
+        data.load(write_raw(tmp_path / "raw", accounts=accounts))
+    assert error.value.params == {"table": "accounts", "column": "revenue", "ids": ["Beta Corp"]}
 
 
 def test_unknown_product_label_fails_without_dropping(tmp_path):  # AC-1.4

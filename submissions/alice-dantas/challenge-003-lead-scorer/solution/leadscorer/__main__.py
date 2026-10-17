@@ -55,8 +55,11 @@ def render_list(payload: Dict[str, Any]) -> str:
     ]
     if payload["empty"]:
         return "\n".join(lines + ["", cli_text.empty_text(payload["empty"])])
+    empty_groups = cli_text.empty_groups_text(payload)
+    if empty_groups:
+        lines.append(empty_groups)
     if summary["without_account"]:
-        lines.append(f"{cli_text.WARNING}: {cli_text.account_warning(summary)}")
+        lines.append(f"{cli_text.NOTE}: {cli_text.account_warning(summary)}. {cli_text.ACCOUNT_NOTE}")
     lines.append(cli_text.legend_text(payload["ordering"]))
     widths = (10, 16, 26, 8, 12, 6)
     names = cli_text.COLUMNS
@@ -96,8 +99,16 @@ def render_detail(detail: Dict[str, Any]) -> str:
         cli_text.WHY_HERE,
     ]
     lines += [f"  • {cli_text.reason_text(reason)}" for reason in entry["reasons"]]
-    lines += [f"  {cli_text.LIMITS_NOTE}"]
-    lines += ["", f"{cli_text.NEXT_STEP}: {cli_text.action_text(entry['next_action'])}"]
+    tie = cli_text.tie_note(entry)
+    if tie:
+        lines.append(f"  • {tie}")
+    age = cli_text.age_context(entry["age_days"], meta)
+    if age:
+        lines += ["", cli_text.AGE_CONTEXT_TITLE, f"  {age}", f"  {cli_text.AGE_CONTEXT_NOTE}"]
+    lines += ["", f"{cli_text.NEXT_STEP}: {cli_text.action_text(entry['next_action'], entry['account'])}"]
+    lines += ["", cli_text.SUGGESTIONS_TITLE, f"  {cli_text.SUGGESTIONS_INTRO}"]
+    lines += [f"  • {text}" for text in cli_text.suggestions_for(entry)]
+    lines += ["", f"  {cli_text.LIMITS_NOTE}"]
     return "\n".join(lines)
 
 

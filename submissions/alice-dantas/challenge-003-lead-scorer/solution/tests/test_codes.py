@@ -95,7 +95,7 @@ def assert_actions(payload):
         for entry in g["items"]:
             expected = (explain._action(codes.FIX_MISSING_FIELD, field=entry["missing_field"])
                         if entry["group"] == "nao_pontuavel" else
-                        explain._action(policy.NEXT_ACTIONS[entry["group"]]))
+                        explain._verification(policy.NEXT_ACTIONS[entry["group"]], entry["account"] is not None))
             assert entry["next_action"] == expected
         if g["items"]:
             assert g["next_action"] == explain.group_next_action(g["state"])
@@ -169,8 +169,8 @@ def test_prospecting_with_engage_date_stays_qualificar_and_the_reason_holds(tmp_
 def test_empty_states_are_codes(dataset):
     bruno = views.seller_pipeline(dataset, "Bruno Beta")  # só uma Prospecting
     assert group(bruno, "focar")["empty"] == {"code": codes.START_WITH_GROUP, "params": {
-        "group": "qualificar", "action": codes.ADVANCE_PROSPECTING, "won_cycle_limit_days": 100,
-        "cycle_limit_days": 138}}
+        "group": "qualificar", "action": codes.CHECK_PROSPECTING, "has_engaging": False,
+        "won_cycle_limit_days": 100, "cycle_limit_days": 138}}
     carla = views.seller_pipeline(dataset, "Carla Gama")  # sem abertas
     assert carla["empty"] == {"code": codes.NO_OPEN_FOR_SELLER, "params": {}}
     assert all(g["empty"] == {"code": codes.GROUP_EMPTY, "params": {}} for g in carla["groups"])
@@ -192,7 +192,8 @@ def test_focar_empty_points_to_acompanhar_or_revisar(tmp_path):
         payload = views.seller_pipeline(edges, seller)
         check_payload(payload)
         assert group(payload, "focar")["empty"]["params"] == {
-            "group": start, "action": action, "won_cycle_limit_days": 100, "cycle_limit_days": 138}
+            "group": start, "action": action, "has_engaging": True, "won_cycle_limit_days": 100,
+            "cycle_limit_days": 138}
 
 
 def test_codes_and_schema_list_the_same_values():
@@ -203,6 +204,18 @@ def test_codes_and_schema_list_the_same_values():
     assert set(get_args(schemas.ErrorCode)) == set(codes.ERROR_CODES)
     assert literals(schemas.Reason, "role") == set(codes.ROLES)
     assert get_args(schemas.RankerCode) == codes.RANKER_CODES
+
+
+def test_intelligence_codes_and_schema_list_the_same_values():
+    assert literals(schemas.Diagnostic) == set(codes.DIAGNOSTIC_CODES)
+    assert literals(schemas.Finding) == set(codes.FINDING_CODES)
+    empties = {get_args(m.model_fields["code"].annotation)[0] for m in (schemas.HistoryEmpty, schemas.DealsEmpty)}
+    assert empties == set(codes.INTELLIGENCE_EMPTY_CODES) and not empties & set(codes.EMPTY_CODES)
+    assert get_args(schemas.Dimension) == codes.DIMENSIONS
+    assert get_args(schemas.DealOutcome) == codes.OUTCOMES
+    assert get_args(schemas.ChanceVerdict) == codes.CHANCE_VERDICTS
+    assert get_args(schemas.Driver) == codes.DRIVERS
+    assert get_args(schemas.SegmentOrder) == codes.SEGMENT_ORDERS
 
 
 def test_every_error_raised_by_the_core_has_a_contract_code():
@@ -220,6 +233,10 @@ def test_api_errors_carry_code_and_params(raw_dir, tmp_path):
          {"value": "31/12/2017", "minimum": "2017-12-31"}),
         ("/api/meta?as_of=2017-01-01", 422, codes.AS_OF_BEFORE_LAST_CLOSE,
          {"value": "2017-01-01", "minimum": "2017-12-31"}),
+        ("/api/intelligence/deals?outcome=ganhas", 422, codes.INVALID_PARAMETER,
+         {"name": "outcome", "value": "ganhas", "allowed": list(codes.OUTCOMES)}),
+        ("/api/intelligence/deals?outcome=open&group=focus", 422, codes.INVALID_PARAMETER,
+         {"name": "group", "value": "focus", "allowed": list(policy.STATES)}),
     ]
     for url, status, code, params in cases:
         response = client.get(url)
@@ -256,11 +273,11 @@ def test_real_every_item_cites_what_decided(real_dataset):
 def test_real_empty_states(real_dataset):
     darcel = views.seller_pipeline(real_dataset, "Darcel Schlecht")
     assert group(darcel, "focar")["empty"] == {"code": codes.START_WITH_GROUP, "params": {
-        "group": "revisar", "action": codes.CONFIRM_STILL_ACTIVE, "won_cycle_limit_days": 106,
-        "cycle_limit_days": 138}}
+        "group": "qualificar", "action": codes.CHECK_PROSPECTING, "has_engaging": True,
+        "won_cycle_limit_days": 106, "cycle_limit_days": 138}}
     sellers = [views.seller_pipeline(real_dataset, s) for s in real_dataset.sellers]
     starts = [group(p, "focar")["empty"]["params"]["group"] for p in sellers
               if group(p, "focar")["empty"] and group(p, "focar")["empty"]["code"] == codes.START_WITH_GROUP]
-    assert sorted(starts) == ["acompanhar"] * 4 + ["revisar"] * 6  # 10 sem Focar entre os 27 com Engaging
+    assert starts == ["qualificar"] * 10  # 10 sem Focar entre os 27 com Engaging; todos têm Qualificar (ADR-009)
     assert views.seller_pipeline(real_dataset, "Carl Lin")["empty"]["code"] == codes.NO_OPEN_FOR_SELLER
     assert views.seller_pipeline(real_dataset, "Zane Levy")["summary"]["without_account"] == 59

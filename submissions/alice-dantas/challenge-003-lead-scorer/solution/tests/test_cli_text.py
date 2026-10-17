@@ -30,7 +30,8 @@ def items(payload):
 
 def test_every_contract_code_has_cli_text():
     assert set(cli_text.REASONS) == set(codes.REASON_CODES)
-    assert set(cli_text.ACTIONS) == set(codes.ACTION_CODES)
+    assert {*cli_text.ACTIONS, *cli_text.ACCOUNT_ACTIONS} == set(codes.ACTION_CODES)
+    assert set(cli_text.ACCOUNT_ACTIONS) == set(codes.ACCOUNT_ACTION_CODES)
     assert set(cli_text.EMPTY) == set(codes.EMPTY_CODES)
     assert set(cli_text.START_ACTIONS) == set(policy.START_ACTION_CODES.values())
     assert set(cli_text.GROUP_LABELS) == set(policy.STATES)

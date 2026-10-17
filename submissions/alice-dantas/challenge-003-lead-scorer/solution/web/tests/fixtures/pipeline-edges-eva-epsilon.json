@@ -2,18 +2,19 @@
   "seller": "Eva Epsilon",
   "meta": {
     "as_of": "2017-12-31",
+    "won_cycle_median_days": 60,
     "won_cycle_limit_days": 100,
     "cycle_limit_days": 138,
     "cycle_percentile": 90,
     "audited": false,
-    "contract_version": 5
+    "contract_version": 7
   },
   "ordering": {
     "group_order": [
       "focar",
+      "qualificar",
       "acompanhar",
       "revisar",
-      "qualificar",
       "nao_pontuavel"
     ],
     "within_group": [
@@ -42,9 +43,20 @@
         "params": {
           "group": "revisar",
           "action": "confirm_still_active",
+          "has_engaging": true,
           "won_cycle_limit_days": 100,
           "cycle_limit_days": 138
         }
+      },
+      "next_action": null,
+      "items": []
+    },
+    {
+      "state": "qualificar",
+      "count": 0,
+      "empty": {
+        "code": "group_empty",
+        "params": {}
       },
       "next_action": null,
       "items": []
@@ -65,7 +77,9 @@
       "empty": null,
       "next_action": {
         "code": "confirm_still_active",
-        "params": {}
+        "params": {
+          "has_account": null
+        }
       },
       "items": [
         {
@@ -102,20 +116,12 @@
           ],
           "next_action": {
             "code": "confirm_still_active",
-            "params": {}
+            "params": {
+              "has_account": false
+            }
           }
         }
       ]
-    },
-    {
-      "state": "qualificar",
-      "count": 0,
-      "empty": {
-        "code": "group_empty",
-        "params": {}
-      },
-      "next_action": null,
-      "items": []
     },
     {
       "state": "nao_pontuavel",

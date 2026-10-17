@@ -79,7 +79,8 @@ def hand_cut(ages, prices, won_limit, limit):
         "opportunity_id": [f"O{i}" for i in range(len(ages))], "sales_agent": "Ana Alfa",
         "product": "GTX Basic", "sales_price": prices,
         "engage_date": [as_of - pd.Timedelta(days=a) for a in ages]})
-    ctx = triage.Context(as_of=as_of, won_cycle_limit_days=won_limit, cycle_limit_days=limit)
+    ctx = triage.Context(as_of=as_of, won_cycle_limit_days=won_limit, cycle_limit_days=limit,
+                         won_cycle_median_days=min(won_limit, 57))
     return backtest.Cut(as_of, ctx, pd.DataFrame(), features, pd.DataFrame())
 
 

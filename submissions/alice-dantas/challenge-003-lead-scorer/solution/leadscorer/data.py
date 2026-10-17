@@ -39,6 +39,9 @@ class Dataset:
     steps: List[JoinStep]
     hashes: Dict[str, str]
     unmatched_without_map: int
+    # Atributos do cliente (setor, receita anual, sede), só para a Inteligência (ADR-007):
+    # ficam fora de `opportunities` para o scoring nunca enxergá-los.
+    accounts: pd.DataFrame
 
     @property
     def audited(self) -> bool:
@@ -139,6 +142,21 @@ def parse_dates(frame: pd.DataFrame, column: str) -> pd.Series:
     return parsed
 
 
+def parse_number(frame: pd.DataFrame, table: str, column: str, key: str, integer: bool) -> pd.Series:
+    """Número não negativo (inteiro, se `integer`); a célula vazia fica nula. Qualquer outro
+    valor vira erro com as chaves das linhas, sem descarte."""
+    parsed = pd.to_numeric(frame[column], errors="coerce")
+    invalid = parsed.isna() | (parsed < 0)
+    if integer:
+        invalid |= parsed.mod(1).fillna(0) != 0
+    bad = frame[frame[column].notna() & invalid]
+    if not bad.empty:
+        kind = "um número inteiro não negativo" if integer else "um número não negativo"
+        raise DataError(f"{table}.csv: {column} precisa ser {kind} ({key}: {id_list(bad[key])}).",
+                        code=codes.DATA_BAD_NUMBER, table=table, column=column, ids=sorted(bad[key]))
+    return parsed.astype("Int64") if integer else parsed.astype("float")
+
+
 def merge_m1(left: pd.DataFrame, right: pd.DataFrame, key: str, table: str, **kwargs) -> pd.DataFrame:
     try:
         return left.merge(right, on=key, how="left", validate="m:1", **kwargs)
@@ -173,12 +191,16 @@ def load(raw_dir: Path = policy.RAW_DIR) -> Dataset:
     frame = merge_m1(frame, teams, "sales_agent", "sales_teams")
     steps.append(JoinStep("sales_teams", len(frame), GAP_NULL_MANAGER, int(frame["manager"].isna().sum())))
 
-    accounts = raw["accounts"].loc[:, ["account"]]
-    frame = merge_m1(frame, accounts, "account", "accounts", indicator=True)
+    accounts = raw["accounts"].loc[:, list(policy.REQUIRED_COLUMNS["accounts"])]
+    accounts = accounts.assign(revenue=parse_number(accounts, "accounts", "revenue", "account", integer=False))
+    for column, mapping in policy.LABEL_MAPS.items():
+        accounts[column] = accounts[column].replace(mapping)
+    frame = merge_m1(frame, accounts[["account"]], "account", "accounts", indicator=True)
     orphans = int((frame["account"].notna() & (frame["_merge"] == "left_only")).sum())
     frame = frame.drop(columns="_merge")
     steps.append(JoinStep("accounts", len(frame), GAP_ORPHAN_ACCOUNT, orphans))
 
     frame["engage_date"] = parse_dates(frame, "engage_date")
     frame["close_date"] = parse_dates(frame, "close_date")
-    return Dataset(frame, teams, steps, hashes, unmatched_without_map)
+    frame["close_value"] = parse_number(frame, "sales_pipeline", "close_value", "opportunity_id", integer=True)
+    return Dataset(frame, teams, steps, hashes, unmatched_without_map, accounts.reset_index(drop=True))
