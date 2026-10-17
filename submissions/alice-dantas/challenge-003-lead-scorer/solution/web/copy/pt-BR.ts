@@ -7,10 +7,13 @@
  * vocabulário e a origem de cada número.
  */
 import type {
-  Delta, ErrorBody, Evidence, EvidenceDesign, Group, Item, Meta, Ordering, RankerResult, SellerPipeline,
-  StartWithParams, ValueBandRule,
+  ChanceTest, Delta, ErrorBody, Evidence, EvidenceDesign, Group, Intelligence, IntelligenceDeals, Item, Meta, Ordering,
+  RankerResult, RevenueDrivers, SellerPipeline, SizeBand, StartWithParams, ValueBandRule,
 } from "@/lib/contract";
-import { capitalize, formatDate, formatDecimal, formatInt, formatPp } from "@/lib/format";
+import {
+  capitalize, formatCompact, formatDate, formatDecimal, formatInt, formatMonth, formatPct, formatPp, formatWhole,
+} from "@/lib/format";
+import type { DealOutcome, Dimension, MetricKey } from "@/lib/intelligence";
 import type { NavKey } from "@/lib/nav";
 
 export type GroupKey = Item["group"];
@@ -41,6 +44,7 @@ export const BRAND = {
 export const NAV: Record<NavKey, string> = {
   carteira: "Carteira",
   equipe: "Equipe",
+  inteligencia: "Inteligência",
   evidencia: "Evidência",
   comoFunciona: "Como funciona",
 };
@@ -48,6 +52,10 @@ export const NAV: Record<NavKey, string> = {
 export const PAGES: Record<NavKey, { title: string; description: string }> = {
   carteira: { title: "Minha carteira", description: "Suas oportunidades abertas, na ordem sugerida pela regra." },
   equipe: { title: "Equipe", description: "A carteira aberta da equipe, por gerente e escritório." },
+  inteligencia: {
+    title: "Inteligência comercial",
+    description: "Onde o processo comercial pode melhorar e o que explica a receita, a partir do histórico.",
+  },
   evidencia: { title: "Evidência", description: "A lista ajuda a escolher onde investir o próximo esforço?" },
   comoFunciona: { title: "Como funciona", description: "Como a lista é montada e o que ela não faz." },
 };
@@ -61,16 +69,21 @@ export const UI = {
   searchSeller: "Buscar vendedor…",
   noSellerFound: "Nenhum vendedor encontrado.",
   loadingData: "Carregando dados…",
-  dataUnavailable: "Dados indisponíveis",
+  dataUnavailable: "Sem conexão com os dados",
+  dataRetry: "Não foi possível carregar a data dos dados. Tentar de novo.",
+  menu: "Menu",
   loading: "Carregando…",
   summaryLabel: "Resumo da carteira",
   teamSummaryLabel: "Carteira da equipe por grupo",
   open: "abertas",
-  warning: "Aviso",
-  nextStep: "Próximo passo",
-  nextStepTitle: "Seu próximo passo",
+  note: "Nota",
+  accountNote: "A ausência do cliente é uma lacuna do cadastro e não diz nada sobre a qualidade da oportunidade.",
+  emptyGroups: (labels: string[]) => `Sem oportunidades em ${labels.length > 1
+    ? `${labels.slice(0, -1).join(", ")} e ${labels[labels.length - 1]}` : labels[0]}.`,
+  nextStep: "O que verificar agora",
+  nextStepTitle: "O que verificar agora",
   startWithOne: "Comece por esta oportunidade:",
-  startWithTie: (tie: string) => `Comece por estas ${tie}:`,
+  startWithTie: (tie: string) => `Comece por qualquer uma destas ${tie}:`,
   seeGroup: (group: string) => `Ver a aba ${group}`,
   moreInTab: (count: number, group: string) => `+${count} na aba ${group}`,
   groupsLabel: "Grupos da carteira",
@@ -79,14 +92,23 @@ export const UI = {
   closePanel: "Fechar painel",
   previous: "Anterior",
   next: "Próxima",
-  position: (index: number, total: number) => `${index} de ${total}`,
-  limitsNote: "O sistema só vê datas, produto e preço de tabela: não vê ligações, reuniões nem e-mails.",
+  position: (index: number, total: number) => `Item ${index} de ${total}`,
+  limitsNote: "Como o pipeline só apresenta datas, produto e preço de tabela: não apresenta último contato, ligações, " +
+    "reuniões nem e-mails, a base não registra atividades, estágio nem contatos; por isso o Rankio indica " +
+    "possibilidades para diferentes cenários de negociação, não uma certeza de próximo passo.",
+  suggestionsTitle: "Sugestões de negociação",
+  suggestionsIntro: "O Rankio não sabe em que contexto a negociação está. Estas são possibilidades para diferentes " +
+    "cenários: use as que fizerem sentido.",
+  suggestionIf: "Se",
+  ageContextTitle: "Idade no contexto do histórico",
+  ageContextNote: "Isso descreve as vendas que fecharam; não diz o que acontece com esta negociação.",
+  ageContextHelp: "Abrir o contexto histórico da idade",
   copyId: "Copiar ID",
   copied: "ID copiado",
   noProduct: "sem produto",
   columns: {
     id: "ID", seller: "Vendedor", product: "Produto", client: "Cliente", price: "Valor de tabela",
-    engaged: "Engajada em", age: "Idade",
+    engaged: "Início da negociação", age: "Idade",
   },
   columnHelp: {
     price: "Preço de catálogo do produto, não o valor negociado.",
@@ -96,6 +118,29 @@ export const UI = {
   empty: "—",
   theme: { label: "Tema", light: "Claro", dark: "Escuro", system: "Sistema" },
   filters: { manager: "Gerente", office: "Escritório", all: "Todos", clear: "Limpar filtros" },
+  listFilters: {
+    searchLabel: "Buscar oportunidades",
+    searchPlaceholder: "Buscar por ID, produto ou cliente",
+    button: "Filtros",
+    title: "Filtros da lista",
+    clear: "Limpar busca e filtros",
+    account: "Cliente",
+    accountWith: "Com cliente registrado",
+    accountWithout: "Sem cliente registrado",
+    product: "Produto",
+    band: "Faixa de valor de tabela",
+    age: "Idade (dias)",
+    engaged: "Início da negociação",
+    from: "De",
+    to: "Até",
+    ageFrom: "Idade mínima, em dias",
+    ageTo: "Idade máxima, em dias",
+    engagedFrom: "Início da negociação a partir de",
+    engagedTo: "Início da negociação até",
+    undated: "Oportunidades sem data de início ou idade ficam de fora quando esses filtros estão ativos.",
+    result: (shown: number, total: number) => `${formatInt(shown)} de ${formatInt(total)} oportunidades na lista`,
+    noneHere: "Nenhuma oportunidade deste grupo corresponde à busca e aos filtros.",
+  },
   ofTotal: (total: number) => `de ${formatInt(total)} abertas`,
   pagination: {
     label: "Páginas da tabela",
@@ -343,7 +388,7 @@ export const RULES = {
   limitsTitle: "O que a ferramenta não faz",
   limits: [
     "Não calcula chance de fechar por oportunidade.",
-    "Não escreve no CRM: só lê os dados e sugere o próximo passo.",
+    "Não escreve no CRM: só lê os dados e indica o que verificar.",
     "Não ordena vendedores: a equipe aparece em ordem alfabética.",
     "Não se atualiza sozinha: a lista vale para a data dos dados.",
   ],
@@ -372,8 +417,8 @@ export function groupDescription(state: GroupKey, limits: AgeLimits): string {
       return `Abertas há mais de ${won} e até ${longest} dias: mais do que ${percentile}% das vendas ganhas levaram, ` +
         "sem passar da venda mais longa já fechada.";
     case "revisar":
-      return `Abertas há mais de ${longest} dias, mais do que qualquer venda já fechada aqui. O sistema não vê ` +
-        "ligações nem reuniões.";
+      return `Para verificar se a negociação continua: abertas há mais de ${longest} dias, mais do que qualquer ` +
+        "venda já fechada aqui. O sistema não vê ligações nem reuniões.";
     case "qualificar":
       return "Ainda em prospecção, sem data de início da negociação.";
     case "nao_pontuavel":
@@ -435,26 +480,49 @@ export function reasonText(reason: Reason): string {
   }
 }
 
-const ACTIONS: Record<Exclude<NextAction["code"], "fix_missing_field">, string> = {
-  work_highest_list_price_first: "Avance primeiro as de maior valor de tabela; as do mesmo produto valem o mesmo.",
-  check_progress: "Veja no CRM o último avanço e o que falta para fechar.",
-  confirm_still_active: "Confirme com o cliente ou no CRM se a negociação segue: o tempo aberta não prova que ela " +
-    "terminou.",
-  advance_prospecting: "Ainda em prospecção: avance no CRM os de maior valor de tabela e registre a data de " +
-    "engajamento quando houver contato.",
+// O que verificar agora: uma verificação no CRM com base nos dados da linha, sem presumir atividade, intenção nem
+// compromisso (a base não os registra). Os três primeiros variam com a conta: registrada, ausente ou, no grupo, nenhuma.
+const ABOUT_STATUS = "o tempo aberta não prova que ela terminou";
+type AccountActionCode = "check_status" | "check_progress" | "confirm_still_active";
+const ACCOUNT_ACTIONS: Record<AccountActionCode, { with: (account: string) => string; without: string; group: string }> = {
+  check_status: {
+    with: (account) => `Consulte no CRM o andamento da negociação com ${account}.`,
+    without: "Consulte no CRM o andamento e a conta desta negociação.",
+    group: "Consulte no CRM o andamento de cada negociação.",
+  },
+  check_progress: {
+    with: (account) => `Consulte no CRM o último registro da negociação com ${account}.`,
+    without: "Consulte no CRM o último registro e a conta desta negociação.",
+    group: "Consulte no CRM o último registro de cada negociação.",
+  },
+  confirm_still_active: {
+    with: (account) => `Verifique no CRM se a negociação com ${account} continua: ${ABOUT_STATUS}.`,
+    without: `Verifique no CRM se esta negociação continua e qual é a conta: ${ABOUT_STATUS}.`,
+    group: `Verifique no CRM se cada negociação continua: ${ABOUT_STATUS}.`,
+  },
+};
+
+const ACTIONS: Record<"check_prospecting" | "fix_missing_fields", string> = {
+  check_prospecting: "Em prospecção, sem data de início: verifique no CRM se já houve engajamento e registre a " +
+    "data quando houver.",
   fix_missing_fields: "Corrija no CRM o campo indicado em cada oportunidade.",
 };
 
-export function actionText(action: NextAction): string {
+/** `account` é a conta da oportunidade; sem ela (ou na ação do grupo, que não tem conta) a frase é genérica. */
+export function actionText(action: NextAction, account?: string | null): string {
   if (action.code === "fix_missing_field") return `Corrija ${MISSING[action.params.field].name} no CRM.`;
-  return ACTIONS[action.code];
+  if (action.code === "check_prospecting" || action.code === "fix_missing_fields") return ACTIONS[action.code];
+  const variants = ACCOUNT_ACTIONS[action.code];
+  const { has_account: hasAccount } = action.params;
+  if (hasAccount === null) return variants.group;
+  return hasAccount && account ? variants.with(account) : variants.without;
 }
 
 // Ação de "comece por", em minúscula, no meio da frase de Focar vazio.
 const START_ACTIONS: Record<StartWithParams["action"], string> = {
-  check_progress: "veja no CRM o último avanço de cada uma",
-  confirm_still_active: "confirme no CRM quais seguem ativas",
-  advance_prospecting: "avance no CRM as de maior valor de tabela",
+  check_progress: "consulte no CRM o último registro de cada uma",
+  confirm_still_active: "verifique no CRM quais seguem ativas",
+  check_prospecting: "verifique no CRM se já houve engajamento e registre a data",
   fix_missing_fields: "corrija o cadastro no CRM",
 };
 
@@ -465,7 +533,8 @@ export function groupEmptyText(empty: GroupEmptyState): string {
     case "start_with_group": {
       // Focar vazio: cita só o limite que importa para o grupo indicado.
       const p = empty.params;
-      const why = p.group === "acompanhar" ? `Nenhuma aberta há até ${p.won_cycle_limit_days} dias.`
+      const why = p.group === "acompanhar" || (p.group === "qualificar" && p.has_engaging)
+        ? `Nenhuma aberta há até ${p.won_cycle_limit_days} dias.`
         : p.group === "revisar" ? `Todas as negociações em andamento estão abertas há mais de ${p.cycle_limit_days} dias.`
           : "Nenhuma negociação em andamento.";
       return `${why} Comece por ${GROUP_LABELS[p.group]}: ${START_ACTIONS[p.action]}.`;
@@ -500,8 +569,19 @@ export const DATA_WARNING =
 export const accountWarning = (withoutAccount: number, total: number): string =>
   `${formatInt(withoutAccount)} de ${formatInt(total)} ${NO_ACCOUNT}`;
 
-export const summaryCounts = (payload: Pick<SellerPipeline, "groups" | "summary">): string =>
-  payload.groups.map((group) => `${formatInt(payload.summary[group.state])} ${GROUP_LABELS[group.state]}`).join(" + ");
+type Counted = Pick<SellerPipeline, "groups" | "summary">;
+
+/** Só os grupos com oportunidades; os zerados saem na linha de `emptyGroupsText`, para a ausência não passar
+ * por esquecimento. */
+export const summaryCounts = (payload: Counted): string =>
+  payload.groups.filter((group) => payload.summary[group.state] > 0)
+    .map((group) => `${formatInt(payload.summary[group.state])} ${GROUP_LABELS[group.state]}`).join(" + ");
+
+export const emptyGroupsText = (payload: Counted): string | null => {
+  const labels = payload.groups.filter((group) => payload.summary[group.state] === 0)
+    .map((group) => GROUP_LABELS[group.state]);
+  return labels.length ? UI.emptyGroups(labels) : null;
+};
 
 export const clientText = (item: Item): string => item.account ?? NO_ACCOUNT;
 
@@ -511,8 +591,498 @@ export const bandTitle = (band: ValueBand | null): string => (band ? capitalize(
 
 export const missingShort = (field: MissingField): string => MISSING[field].short;
 
+/** Empate: mesmo grupo, produto e valor de tabela. A ordem dentro dele é só pelo código, sem significado. */
 export const tieText = (count: number, product: string, price: number): string =>
-  `${count} oportunidades de mesmo valor de tabela (${product}, ${formatInt(price)})`;
+  `${count} oportunidades empatadas (${product}, ${formatInt(price)})`;
+
+/** No painel de uma oportunidade empatada: a posição na tabela não a põe à frente das outras do bloco. */
+export const tieNote = (item: Item): string | null => {
+  if (item.tie_size < 2 || item.sales_price === null) return null;
+  const others = item.tie_size - 1;
+  return `Empata com ${others} ${others === 1 ? "outra" : "outras"} do mesmo produto e valor de tabela; a ordem ` +
+    "entre elas é só pelo código.";
+};
+
+export type Suggestion = { when: string; then: string };
+
+// Sugestões de negociação: possibilidades para contextos que a base não registra, por grupo. Não são derivadas dos
+// dados da oportunidade nem preveem resultado: o Rankio não sabe em qual contexto a negociação está.
+const SUGGESTIONS: Record<GroupKey, Suggestion[]> = {
+  focar: [
+    { when: "já houve contato recente", then: "retome de onde parou e registre o avanço no CRM." },
+    { when: "não há registro de contato", then: "consulte no CRM o último registro e avalie um novo contato para " +
+      "entender em que ponto a negociação está." },
+    { when: "foi enviada uma proposta sem resposta", then: "avalie um novo contato para entender o que falta para a " +
+      "decisão." },
+    { when: "o cliente pediu mais tempo", then: "combine uma data para retomar e registre no CRM." },
+  ],
+  qualificar: [
+    { when: "já houve conversa com a conta", then: "registre a data de início da negociação no CRM." },
+    { when: "ainda não houve contato", then: "avalie um primeiro contato, pelo valor de tabela e pelo que você já " +
+      "conhece da conta." },
+  ],
+  acompanhar: [
+    { when: "o último registro é antigo", then: "avalie retomar o contato para entender se a negociação segue." },
+    { when: "o cliente respondeu recentemente", then: "registre o avanço no CRM e combine o próximo passo com ele." },
+    { when: "o contato mudou de função na empresa", then: "procure quem assumiu o assunto e registre o novo contato." },
+    { when: "o cliente indicou que não vai seguir", then: "registre o desfecho no CRM." },
+  ],
+  revisar: [
+    { when: "a negociação continua ativa", then: "registre o avanço e a situação atual no CRM." },
+    { when: "o cliente voltou a demonstrar interesse", then: "registre o novo engajamento no CRM." },
+    { when: "não há registro recente", then: "confirme com quem atendeu a conta antes de decidir." },
+    { when: "o cliente não responde mais", then: "considere registrar o desfecho no CRM e liberar espaço na carteira." },
+  ],
+  nao_pontuavel: [
+    { when: "o dado existe em outra fonte", then: "complete o campo no CRM." },
+    { when: "ninguém sabe a informação", then: "pergunte a quem abriu a oportunidade." },
+  ],
+};
+
+const NO_ACCOUNT_SUGGESTION: Suggestion = {
+  when: "a conta não está registrada",
+  then: "consulte no CRM quem é a conta antes de contatar.",
+};
+
+/** As possibilidades do grupo; a da conta ausente só entra quando a oportunidade não tem conta registrada. */
+export const suggestionsFor = (item: Item): Suggestion[] => [
+  ...SUGGESTIONS[item.group],
+  ...(item.account === null && item.group !== "nao_pontuavel" ? [NO_ACCOUNT_SUGGESTION] : []),
+];
+
+export const suggestionText = (suggestion: Suggestion): string => `${UI.suggestionIf} ${suggestion.when}: ${suggestion.then}`;
+
+export type AgeContextMeta = Pick<Meta, "won_cycle_median_days" | "won_cycle_limit_days" | "cycle_limit_days" |
+  "cycle_percentile">;
+
+/** O contexto histórico da idade: fatos das vendas ganhas, sem semáforo nem contagem para o limite. */
+export const ageContextText = (age: number, meta: AgeContextMeta): string =>
+  `Aberta há ${age} dias. Nas vendas ganhas, metade fechou em até ${meta.won_cycle_median_days} dias, ` +
+  `${meta.cycle_percentile}% em até ${meta.won_cycle_limit_days} dias e a mais longa levou ${meta.cycle_limit_days}.`;
+
+// Inteligência comercial (ADR-007): descreve o histórico, não prevê. Todo número vem do payload.
+export type Diagnostic = Intelligence["diagnostics"][number];
+export type Finding = Intelligence["findings"][number];
+export type ChanceVerdict = ChanceTest["verdict"];
+export type Driver = RevenueDrivers["main"][number];
+export type HistoryEmpty = NonNullable<Intelligence["history_empty"]>;
+export type DealsEmpty = NonNullable<IntelligenceDeals["empty"]>;
+
+export const DIMENSION_LABELS: Record<Dimension, string> = {
+  product: "Produto", seller: "Vendedor", manager: "Gerente", office: "Escritório", sector: "Setor",
+  account: "Cliente", size: "Porte do cliente",
+};
+
+const DIMENSION_PLURALS: Record<Dimension, string> = {
+  product: "produtos", seller: "vendedores", manager: "gerentes", office: "escritórios", sector: "setores",
+  account: "clientes", size: "portes de cliente",
+};
+
+export const METRIC_LABELS: Record<MetricKey, string> = {
+  revenue: "Receita", won: "Vendas ganhas", win_rate: "Taxa de ganho", ticket: "Ticket por venda",
+  revenue_per_closed: "Receita por fechada", median_won_cycle_days: "Ciclo mediano de ganho",
+};
+
+/** Valor de uma métrica na unidade dela; "—" quando não há fechadas. */
+export function metricText(metric: MetricKey, value: number | null): string {
+  if (value === null) return UI.empty;
+  switch (metric) {
+    case "revenue":
+      return formatCompact(value);
+    case "won":
+      return formatInt(value);
+    case "win_rate":
+      return formatPct(value);
+    case "ticket":
+    case "revenue_per_closed":
+      return formatWhole(value);
+    case "median_won_cycle_days":
+      return `${formatInt(value)} d`;
+    default:
+      return unreachable(metric);
+  }
+}
+
+export const OUTCOME_LABELS: Record<DealOutcome, string> = { won: "Ganhas", lost: "Sem venda", open: "Abertas" };
+
+const DRIVER_LABELS: Record<Driver, string> = {
+  volume: "volume de fechadas", conversion: "taxa de ganho", ticket: "ticket por venda (mix de produto)",
+};
+// O mesmo fator depois de "vem sobretudo".
+const DRIVER_FROM: Record<Driver, string> = {
+  volume: "do volume de fechadas", conversion: "da taxa de ganho", ticket: "do ticket por venda (mix de produto)",
+};
+
+/** "a, b e c". */
+const listText = (values: string[]): string =>
+  values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} e ${values[values.length - 1]}`;
+
+/** Porte em palavras, com a receita anual do cliente em US$ milhões. */
+export function sizeLabel(band: SizeBand, bands: SizeBand[]): string {
+  const range = band.key === bands[0]?.key ? `até ${formatInt(Math.round(band.high))} mi`
+    : band.key === bands[bands.length - 1]?.key ? `acima de ${formatInt(Math.round(band.low))} mi`
+      : `${formatInt(Math.round(band.low))} a ${formatInt(Math.round(band.high))} mi`;
+  return `Porte ${band.key} (${range})`;
+}
+
+/** Nome de um segmento; a chave nula é a falta do dado. */
+export function segmentLabel(dimension: Dimension, key: string | null, bands: SizeBand[]): string {
+  if (key === null) return dimension === "product" ? UI.noProduct : NO_ACCOUNT;
+  if (dimension === "size") {
+    const band = bands.find((b) => b.key === key);
+    return band ? sizeLabel(band, bands) : `Porte ${key}`;
+  }
+  return key;
+}
+
+export const INTELLIGENCE = {
+  filtersLabel: "Recorte da análise",
+  filters: {
+    button: "Filtros",
+    title: "Filtrar a análise",
+    help: "Cada filtro muda todos os números da página e fica no endereço.",
+    activeLabel: "Filtros ativos",
+    chip: (label: string, value: string) => `${label}: ${value}`,
+    remove: (label: string, value: string) => `Tirar o filtro ${label}: ${value}`,
+  },
+  analyses: {
+    button: "Ver análises",
+    title: "Análises do recorte",
+    help: "Onde o processo pode melhorar e o que os resultados mostram, para o recorte escolhido.",
+    tabsLabel: "Tipo de análise",
+    process: "Processo",
+    findings: "Resultados",
+  },
+  guide: {
+    button: "Como funciona",
+    title: "Como funciona a Inteligência",
+    help: "O que cada número quer dizer e o que esta página não faz.",
+    explore: "Explore: escolha um recorte em \"Ver por\" e filtre por qualquer linha; a página inteira passa a mostrar " +
+      "só aquele recorte. O ícone de lista abre as negociações por trás da linha.",
+  },
+  searchSeller: "Buscar vendedor…",
+  searchAccount: "Buscar cliente…",
+  noMatch: "Nada encontrado.",
+  dataLabel: (meta: Meta) => `Histórico até ${formatDate(meta.as_of)}`,
+  historyEmpty: "Nenhuma negociação fechada neste recorte.",
+  kpis: {
+    label: "Histórico do recorte",
+    revenue: "Receita ganha",
+    revenueHelp: (revenue: number) => `${formatInt(revenue)}: soma do valor fechado nas vendas ganhas.`,
+    won: "Vendas ganhas",
+    wonOf: (closed: number) => `de ${formatInt(closed)} fechadas`,
+    winRate: "Taxa de ganho",
+    winRateRange: (low: number, high: number) => `faixa provável: ${formatPct(low)} a ${formatPct(high)}`,
+    cycle: "Ciclo mediano de ganho",
+    days: (days: number) => `${formatInt(days)} dias`,
+    lostCycle: (days: number) => `${formatInt(days)} dias nas fechadas sem venda`,
+  },
+  open: {
+    title: "Carteira aberta",
+    count: (total: number) => `${formatInt(total)} abertas na data dos dados`,
+    listValue: (value: number) => `${formatCompact(value)} em valor de tabela`,
+    notRevenue: "Valor de tabela não é receita e não se soma a ela.",
+    groupsLabel: "Abertas por grupo",
+    excluded: (count: number) => `${formatInt(count)} abertas sem cliente registrado ficam fora deste recorte: elas não ` +
+      "têm setor, cliente nem porte.",
+  },
+  process: {
+    title: "Onde o processo pode melhorar",
+    help: "Padrões do CRM que a Head de RevOps pode mudar. Cada um traz o número e um próximo passo.",
+    none: "Nenhum diagnóstico de processo neste recorte.",
+    nextStep: "Próximo passo",
+    seeDeals: "Ver negociações",
+    seeTeam: "Ver na Equipe",
+    seeAccounts: "Ver por cliente",
+    seeMonths: "Ver o ritmo mensal",
+    crmTitle: "O que o CRM não registra",
+    crmHelp: "Sem estes campos, algumas perguntas não têm resposta em nenhuma análise.",
+    crmGaps: [
+      "Motivo da perda: sem ele, não dá para saber por que as fechadas sem venda não avançaram.",
+      "Atividades (ligações, reuniões, e-mails): sem elas, não dá para saber se uma negociação esfriou.",
+      "Histórico de estágio: sem ele, não dá para medir quanto tempo cada etapa leva.",
+      "Valor proposto nas fechadas sem venda: o CRM grava zero, então não dá para medir o valor que deixou de entrar.",
+    ],
+  },
+  findings: {
+    title: "O que os resultados mostram",
+    help: "Descobertas calculadas por regras fixas sobre o histórico. Descrevem o que aconteceu; não explicam a causa.",
+    none: "Nenhuma descoberta neste recorte.",
+    kinds: { descriptive: "Descrição do histórico", statistical: "Comparação com o acaso" },
+    seeBy: (dimension: Dimension) => `Ver por ${DIMENSION_LABELS[dimension].toLowerCase()}`,
+  },
+  explore: {
+    title: "Explore os resultados",
+    viewBy: "Ver por",
+    metric: "Métrica do gráfico",
+    peopleNote: "Pessoas aparecem em ordem alfabética e sem gráfico: a tabela não ordena ninguém por resultado.",
+    chartNote: "O gráfico mostra as dez primeiras linhas da tabela.",
+    columns: {
+      closed: "Fechadas", winRate: "Taxa de ganho", ticket: "Ticket por venda", revenue: "Receita",
+      share: "% da receita", open: "Abertas", sector: "Setor", location: "Sede", size: "Porte",
+      products: "Produtos comprados", sellers: "Vendedores", actions: "Ações",
+    },
+    rateRange: (low: number, high: number) => `${formatPct(low)} a ${formatPct(high)}`,
+    productsOf: (bought: number, total: number) => `${bought} de ${total}`,
+    filterBy: (name: string) => `Filtrar a página por ${name}`,
+    dealsOf: (name: string) => `Ver as negociações de ${name}`,
+    empty: "Nenhum segmento neste recorte.",
+  },
+  matrix: {
+    title: "O que cada vendedor vende",
+    help: "Fechadas por produto e a fatia de cada produto nas fechadas do vendedor, em ordem alfabética. A cor " +
+      "acompanha a fatia.",
+    noRate: "A taxa de ganho por vendedor e produto não aparece: com poucas fechadas por combinação, a diferença não " +
+      "se repete de um período para o outro.",
+    total: "Fechadas",
+    cell: (closed: number, share: number | null) => share === null ? formatInt(closed)
+      : `${formatInt(closed)} · ${formatPct(share)}`,
+    cellLabel: (seller: string, product: string) => `Ver negociações de ${seller} com ${product}`,
+  },
+  time: {
+    title: "Tempo e resultado",
+    bandsTitle: "Fechadas por tempo até o desfecho",
+    bandsHelp: (meta: Meta) => `Dias entre o engajamento e o fechamento. As duas últimas faixas terminam nos limites ` +
+      `da regra: ${meta.won_cycle_limit_days} dias (${meta.cycle_percentile}% das vendas ganhas fecharam até aí) e ` +
+      `${meta.cycle_limit_days} dias (a venda mais longa já fechada).`,
+    columns: { band: "Ciclo (dias)", won: "Ganhas", lost: "Sem venda", rate: "Taxa de ganho" },
+    band: (low: number, high: number) => `${low} a ${high}`,
+    monthlyTitle: "Ritmo mensal",
+    monthlyHelp: "Novas negociações pela data de engajamento e fechamentos pela data de fechamento.",
+    monthColumns: { month: "Mês", engaged: "Novas negociações", won: "Ganhas", lost: "Sem venda" },
+    chartLabel: "Novas negociações por mês",
+  },
+  reading: {
+    title: "Como ler esta página",
+    definitions: [
+      "Receita ganha: soma do valor fechado nas vendas ganhas, pela data de fechamento.",
+      "Taxa de ganho: ganhas divididas por fechadas (ganhas e sem venda). Descreve o histórico; não é a chance de uma " +
+        "oportunidade fechar.",
+      "Faixa provável: onde a taxa estaria se o mesmo processo se repetisse, com boa margem de segurança.",
+      "Dentro do acaso: com esse número de fechadas, uma diferença desse tamanho apareceria mesmo se todos " +
+        "convertessem igual.",
+      "Ticket por venda: receita dividida pelas vendas ganhas. Ciclo: dias entre o engajamento e o fechamento.",
+      "Carteira aberta: oportunidades em prospecção e em negociação na data dos dados, com os grupos da lista. Valor " +
+        "de tabela não é receita.",
+    ],
+    limitsTitle: "O que esta página não faz",
+    limits: [
+      "Não prevê nem pontua oportunidades: a lista de trabalho está na Carteira.",
+      "Não explica a causa de uma diferença: descreve o histórico.",
+      "Não tem filtro de período: os meses do histórico não são comparáveis entre si (ver o diagnóstico do fim do " +
+        "trimestre).",
+      "A base é provavelmente sintética: alguns padrões podem vir de como ela foi montada.",
+    ],
+  },
+  deals: {
+    title: "Negociações",
+    scope: (parts: string[]) => (parts.length ? `Recorte: ${parts.join(" · ")}` : "Todo o histórico"),
+    filterPart: (label: string, value: string) => `${label} ${value}`,
+    groupPart: (group: string) => `grupo ${group}`,
+    outcomesLabel: "Desfecho",
+    total: (count: number) => `${formatInt(count)} negociações`,
+    columns: {
+      id: "ID", seller: "Vendedor", product: "Produto", client: "Cliente", value: "Valor fechado",
+      price: "Valor de tabela", closed: "Fechada em", engaged: "Engajada em", cycle: "Ciclo", age: "Idade",
+      group: "Grupo",
+    },
+    valueHelp: "Nas fechadas sem venda, o CRM grava zero: o valor não aparece.",
+    seePortfolio: (seller: string) => `Abrir a carteira de ${seller}`,
+  },
+} as const;
+
+const HISTORY_EMPTY: Record<HistoryEmpty["code"], string> = { no_closed_for_filter: INTELLIGENCE.historyEmpty };
+export const historyEmptyText = (empty: HistoryEmpty): string => HISTORY_EMPTY[empty.code];
+
+const DEALS_EMPTY: Record<DealsEmpty["code"], string> = { no_deals_for_filter: "Nenhuma negociação neste recorte." };
+export const dealsEmptyText = (empty: DealsEmpty): string => DEALS_EMPTY[empty.code];
+
+/** Diagnóstico do processo: título, o que o número quer dizer e o próximo passo para RevOps. */
+export function diagnosticText(diagnostic: Diagnostic): { title: string; body: string; step: string } {
+  switch (diagnostic.code) {
+    case "engaging_beyond_longest_cycle": {
+      const p = diagnostic.params;
+      return {
+        title: `${formatInt(p.count)} negociações abertas há mais de ${p.cycle_limit_days} dias`,
+        body: `${formatInt(p.count)} de ${formatInt(p.engaging)} negociações em andamento` +
+          `${p.share === null ? "" : ` (${formatPct(p.share)})`} estão abertas há mais tempo do que qualquer venda já ` +
+          `fechada. Na lista, elas ficam em ${GROUP_LABELS[p.group]}. O sistema não vê ligações nem reuniões: o tempo ` +
+          "aberta não prova que a negociação terminou.",
+        step: "Rotina de confirmação: cada vendedor confirma no CRM quais seguem e registra o desfecho das demais. A " +
+          "carteira fica menor e o que sobra é real.",
+      };
+    }
+    case "open_without_account": {
+      const p = diagnostic.params;
+      const closed = p.closed_without_account === 0 ? `Nas ${formatInt(p.closed)} fechadas, todas têm cliente; por ` +
+        "isso a base não permite saber se a ausência do cliente diz algo sobre o desfecho."
+        : `Nas fechadas, ${formatInt(p.closed_without_account)} de ${formatInt(p.closed)} não têm.`;
+      return {
+        title: `${formatInt(p.count)} abertas sem cliente registrado`,
+        body: `${formatInt(p.count)} de ${formatInt(p.open)} abertas${p.share === null ? "" : ` (${formatPct(p.share)})`} ` +
+          `não têm cliente. ${closed}`,
+        step: "Exigir o cliente ao passar a oportunidade para negociação. Sem ele, setor, porte e histórico do cliente " +
+          "ficam fora da análise das abertas.",
+      };
+    }
+    case "prospecting_without_engage_date": {
+      const p = diagnostic.params;
+      return {
+        title: `${formatInt(p.count)} em prospecção sem nenhuma data`,
+        body: `${formatInt(p.count)} de ${formatInt(p.prospecting)} oportunidades em prospecção não têm data: não dá ` +
+          "para saber há quanto tempo estão na carteira nem quantas entram por mês.",
+        step: "Registrar a data de criação de cada oportunidade, e não só a de engajamento.",
+      };
+    }
+    case "sellers_without_opportunities": {
+      const p = diagnostic.params;
+      return {
+        title: `${formatInt(p.count)} de ${formatInt(p.team)} vendedores sem nenhuma oportunidade`,
+        body: `${listText(p.sellers)} ${p.count === 1 ? "está" : "estão"} no cadastro da equipe, mas sem nenhuma ` +
+          "oportunidade no CRM.",
+        step: "Confirmar se seguem na equipe e se devem receber carteira.",
+      };
+    }
+    case "quarter_end_outcome_mix": {
+      const p = diagnostic.params;
+      return {
+        title: "Ganhos concentrados no último mês do trimestre",
+        body: `No último mês de cada trimestre, ${formatPct(p.quarter_end_win_rate)} das ${formatInt(p.quarter_end_closed)} ` +
+          `fechadas são ganhas; nos outros meses, ${formatPct(p.other_win_rate)} das ${formatInt(p.other_closed)}.`,
+        step: "Conferir se a data de fechamento registrada é a data real (desfechos registrados em lote?). O padrão só " +
+          "aparece depois do desfecho: não serve para prever nem para escolher quando vender.",
+      };
+    }
+    case "engagement_inflow_drop": {
+      const p = diagnostic.params;
+      const recent = listText(p.recent.map((m) => `${formatInt(m.engaged)} em ${formatMonth(m.month)}`));
+      return {
+        title: "A entrada de novas negociações caiu",
+        body: `${capitalize(recent)}, contra o ritmo de ${formatDecimal(p.base_average, 1)} por mês de ` +
+          `${formatMonth(p.base_first_month)} a ${formatMonth(p.base_last_month)}.`,
+        step: "Conferir se a geração de pipeline caiu ou se o registro atrasou, e olhar a cobertura do próximo trimestre.",
+      };
+    }
+    case "accounts_shared_by_sellers": {
+      const p = diagnostic.params;
+      return {
+        title: "Clientes atendidos por muitos vendedores",
+        body: `Na mediana, cada um dos ${formatInt(p.accounts)} clientes teve fechadas com ${p.median_sellers} ` +
+          `vendedores diferentes (até ${p.max_sellers}).`,
+        step: "Decidir se haverá dono de conta. Sem ele, o histórico de cada cliente fica espalhado pela equipe.",
+      };
+    }
+    default:
+      return unreachable(diagnostic);
+  }
+}
+
+/** Fatia de um fator da receita: "quase nada" quando o back o marcou como desprezível. */
+function driverShare(drivers: RevenueDrivers, driver: Driver): string {
+  if (drivers.negligible.includes(driver)) return "quase nada";
+  const share = { volume: drivers.volume_share, conversion: drivers.conversion_share, ticket: drivers.ticket_share };
+  return formatPct(share[driver]);
+}
+
+/** A decomposição da receita de uma dimensão, em palavras. */
+export function driversText(dimension: Dimension, drivers: RevenueDrivers): string {
+  const plural = DIMENSION_PLURALS[dimension];
+  const parts = (["volume", "ticket", "conversion"] as const).map((d) => `${DRIVER_LABELS[d]}, ${driverShare(drivers, d)}`);
+  const main = drivers.main.length ? ` A diferença vem sobretudo ${listText(drivers.main.map((d) => DRIVER_FROM[d]))}.`
+    : "";
+  return `A receita varia ${formatDecimal(drivers.spread_ratio, 1)} vezes entre ${drivers.segments_used} ${plural}. ` +
+    `Quanto da diferença cada fator explica: ${parts.join("; ")}.${main}`;
+}
+
+/** Nota que acompanha a decomposição quando a dimensão é de pessoas. */
+export const PEOPLE_DRIVERS_NOTE = "Não mede habilidade: volume e mix dependem da carteira que cada pessoa recebe.";
+
+/** O veredito do teste de acaso da taxa de ganho numa dimensão. */
+export function chanceText(dimension: Dimension, chance: ChanceTest): string {
+  const plural = DIMENSION_PLURALS[dimension];
+  const small = chance.segments_small ? ` ${formatInt(chance.segments_small)} com poucas fechadas ficaram fora da ` +
+    "comparação." : "";
+  switch (chance.verdict) {
+    case "within_chance":
+      return `Entre ${formatInt(chance.segments_tested)} ${plural}, a taxa de ganho vai de ` +
+        `${formatPct(chance.min_win_rate ?? 0)} a ${formatPct(chance.max_win_rate ?? 0)}: dentro do que o acaso explica ` +
+        `com ${formatInt(chance.closed_tested)} fechadas.${small}`;
+    case "beyond_chance":
+      return `Entre ${formatInt(chance.segments_tested)} ${plural}, a taxa de ganho vai de ` +
+        `${formatPct(chance.min_win_rate ?? 0)} a ${formatPct(chance.max_win_rate ?? 0)}: mais do que o acaso ` +
+        `explicaria com ${formatInt(chance.closed_tested)} fechadas. Descreve este histórico; não prova causa nem que ` +
+        `vá se repetir.${small}`;
+    case "too_few_closed":
+      return `Poucas fechadas por ${DIMENSION_LABELS[dimension].toLowerCase()} para comparar a taxa de ganho.${small}`;
+    default:
+      return unreachable(chance.verdict);
+  }
+}
+
+/** Descoberta: título, texto e o tipo (descrição do histórico ou comparação com o acaso). */
+export function findingText(finding: Finding): { title: string; body: string; kind: "descriptive" | "statistical" } {
+  switch (finding.code) {
+    case "win_rate_within_chance": {
+      const p = finding.params;
+      const dims = listText(p.dimensions.map((d) => DIMENSION_LABELS[d].toLowerCase()));
+      return {
+        kind: "statistical",
+        title: "A taxa de ganho não separa os recortes",
+        body: `Por ${dims}, as diferenças de taxa de ganho ficam dentro do que o acaso explica com ` +
+          `${formatInt(p.closed)} fechadas. Nesses recortes, comparar taxas não aponta onde vender melhor.`,
+      };
+    }
+    case "win_rate_beyond_chance": {
+      const p = finding.params;
+      return {
+        kind: "statistical",
+        title: `A taxa de ganho por ${DIMENSION_LABELS[p.dimension].toLowerCase()} varia mais do que o acaso`,
+        body: chanceText(p.dimension, p.chance),
+      };
+    }
+    case "revenue_concentrated": {
+      const p = finding.params;
+      return {
+        kind: "descriptive",
+        title: `${p.top} de ${p.of} ${DIMENSION_PLURALS[p.dimension]} somam ${formatPct(p.share)} da receita`,
+        body: `${listText(p.keys)} ${p.top === 1 ? "responde" : "respondem"} pela maior parte da receita do recorte. ` +
+          "Para interpretar, compare volume, ticket e taxa de ganho no Explore.",
+      };
+    }
+    case "revenue_gap_drivers": {
+      const p = finding.params;
+      const people = ["seller", "manager", "office"].includes(p.dimension) ? ` ${PEOPLE_DRIVERS_NOTE}` : "";
+      return {
+        kind: "statistical",
+        title: `O que explica a diferença de receita entre ${DIMENSION_PLURALS[p.dimension]}`,
+        body: `${driversText(p.dimension, p.drivers)}${people}`,
+      };
+    }
+    case "fast_losses": {
+      const p = finding.params;
+      return {
+        kind: "descriptive",
+        title: "As fechadas sem venda se decidem cedo",
+        body: `Metade das ${formatInt(p.lost)} fechadas sem venda fechou em até ${p.median_lost_cycle_days} dias; nas ` +
+          `${formatInt(p.won)} ganhas, a mediana é de ${p.median_won_cycle_days} dias.`,
+      };
+    }
+    case "account_product_coverage": {
+      const p = finding.params;
+      const counts = listText(p.distribution.map((d) => `${formatInt(d.accounts)} compraram ${d.bought}`));
+      const missing = p.most_missing ? ` O que mais falta é o ${p.most_missing}, em ${formatInt(p.most_missing_accounts)} ` +
+        "clientes." : "";
+      return {
+        kind: "descriptive",
+        title: "Os clientes já compram quase todo o catálogo",
+        body: `Dos ${formatInt(p.accounts)} clientes com venda ganha, ${counts} dos ${p.products} produtos.${missing} Não ` +
+          "há lacuna de produto visível para venda cruzada, e isso não diz se um cliente compraria de novo.",
+      };
+    }
+    default:
+      return unreachable(finding);
+  }
+}
 
 // Erros: os valores vêm de `params`; o `detail` da API é para quem opera.
 const text = (value: ErrorParams[string] | undefined): string =>
@@ -538,6 +1108,9 @@ const ERRORS: Record<ErrorBody["code"], (p: ErrorParams) => string> = {
     "scripts/backtest.py com os CSVs em data/raw/.",
   no_won_history: (p) => `Nenhuma venda ganha até ${text(p.as_of)}: sem ela não há como separar as negociações pelo ` +
     "tempo das vendas ganhas.",
+  data_bad_number: (p) => `${text(p.table)}.csv: ${text(p.column)} precisa ser um número não negativo ` +
+    `(${text(p.ids)}).`,
+  invalid_parameter: (p) => `Parâmetro ${text(p.name)} inválido: '${text(p.value)}'.`,
 };
 
 export const errorText = (error: ErrorBody): string => ERRORS[error.code](error.params);

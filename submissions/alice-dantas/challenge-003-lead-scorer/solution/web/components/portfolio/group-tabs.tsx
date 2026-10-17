@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GROUP_LABELS, UI, actionText, groupDescription, groupEmptyText, type AgeLimits } from "@/copy/pt-BR";
+import { GROUP_LABELS, UI, actionText, groupDescription, groupEmptyText, type AgeContextMeta, type AgeLimits } from "@/copy/pt-BR";
 import type { Group } from "@/lib/contract";
 import { formatInt } from "@/lib/format";
 import { PAGE_SIZE, pageOf } from "@/lib/pagination";
@@ -24,8 +24,10 @@ type Props = {
   onTab: (state: State) => void;
   selected: string | null;
   onSelect: (id: string) => void;
-  limits: AgeLimits;
+  limits: AgeLimits & AgeContextMeta;
   showSeller?: boolean;
+  /** Busca ou filtro já aplicado aos grupos: um grupo que fica sem itens por causa dele diz isso. */
+  filtered?: boolean;
   /** Linhas por página em cada aba. */
   pageSize?: number;
   /** Grupo cujo próximo passo já está no cartão "Seu próximo passo" (não repete a frase). */
@@ -34,7 +36,7 @@ type Props = {
 
 /** Um grupo por aba, na ordem da API, com a contagem no rótulo. */
 export function GroupTabs({
-  groups, tab, onTab, selected, onSelect, limits, showSeller, pageSize = PAGE_SIZE, actionShownFor,
+  groups, tab, onTab, selected, onSelect, limits, showSeller, filtered = false, pageSize = PAGE_SIZE, actionShownFor,
 }: Props) {
   const [pages, setPages] = useState<Partial<Record<State, number>>>({});
   const tables = useRef<Partial<Record<State, HTMLDivElement | null>>>({});
@@ -83,7 +85,7 @@ export function GroupTabs({
             {group.items.length ? (
               <Card className="scroll-mt-24 gap-0 py-0" ref={(node) => { tables.current[group.state] = node; }}>
                 <ItemsTable items={group.items} selected={selected} onSelect={onSelect} showSeller={showSeller}
-                            range={range} />
+                            meta={limits} range={range} />
                 <TablePagination page={page} total={group.items.length} pageSize={pageSize}
                                  onPage={(next) => goTo(group.state, next)} />
               </Card>
@@ -93,7 +95,9 @@ export function GroupTabs({
                   <EmptyMedia variant="icon">
                     <Inbox aria-hidden />
                   </EmptyMedia>
-                  <EmptyDescription>{group.empty ? groupEmptyText(group.empty) : null}</EmptyDescription>
+                  <EmptyDescription>
+                    {group.empty ? groupEmptyText(group.empty) : filtered ? UI.listFilters.noneHere : null}
+                  </EmptyDescription>
                 </EmptyHeader>
                 {group.empty?.code === "start_with_group" && (
                   <EmptyContent>

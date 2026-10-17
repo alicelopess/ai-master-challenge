@@ -2,11 +2,12 @@
 
 import { ArrowRight, Inbox } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { DataWarning, ErrorAlert } from "@/components/app/error-alert";
 import { PageHeader } from "@/components/app/page-header";
 import { GroupTabs } from "@/components/portfolio/group-tabs";
+import { ListFiltersBar } from "@/components/portfolio/list-filters";
 import { PortfolioSummary } from "@/components/portfolio/portfolio-summary";
 import { ReasonSheet } from "@/components/portfolio/reason-sheet";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { PAGES, TEAM, UI, pipelineEmptyText } from "@/copy/pt-BR";
 import { api } from "@/lib/api";
 import type { Group } from "@/lib/contract";
 import { formatInt } from "@/lib/format";
-import { defaultTab } from "@/lib/portfolio";
+import { defaultTab, filterGroups, filtersToQuery, hasFilters, parseFilters, productsIn, type ListFilters } from "@/lib/portfolio";
 import { filterOptions } from "@/lib/team";
 import { useApi } from "@/lib/use-api";
 import { useQuery } from "@/lib/use-query";
@@ -40,7 +41,10 @@ export function TeamPage() {
   const payload = pipeline.data;
   const fromQuery = query.get("grupo");
   const tab = payload?.groups.some((g) => g.state === fromQuery) ? (fromQuery as Group["state"]) : payload && defaultTab(payload);
-  const openGroup = payload?.groups.find((g) => g.items.some((i) => i.opportunity_id === selected));
+  const filters = parseFilters(query);
+  const groups = payload ? filterGroups(payload.groups, filters) : [];
+  const changeFilters = useCallback((next: ListFilters) => setQuery(filtersToQuery(next)), [setQuery]);
+  const openGroup = groups.find((g) => g.items.some((i) => i.opportunity_id === selected));
   const error = sellers.error ?? pipeline.error;
   // Duas análises sob os números, em abas, para a página não virar uma rolagem longa. Fica na URL.
   const view = query.get("visao") === "oportunidades" ? "oportunidades" : "vendedores";
@@ -113,21 +117,25 @@ export function TeamPage() {
               ) : (
                 <>
                   <PortfolioSummary payload={payload} counts={false} />
+                  <ListFiltersBar filters={filters} onChange={changeFilters} products={productsIn(payload.groups)}
+                                  shown={groups.reduce((sum, g) => sum + g.items.length, 0)}
+                                  total={payload.summary.total} />
                   <GroupTabs
-                    key={key}
-                    groups={payload.groups}
+                    key={`${key}:${JSON.stringify(filters)}`}
+                    groups={groups}
                     tab={tab}
                     onTab={(state) => setQuery({ grupo: state })}
                     selected={selected}
                     onSelect={setSelected}
                     limits={payload.meta}
+                    filtered={hasFilters(filters)}
                     showSeller
                   />
                 </>
               )}
             </TabsContent>
           </Tabs>
-          <ReasonSheet items={openGroup?.items ?? []} selected={selected} onSelect={setSelected} />
+          <ReasonSheet items={openGroup?.items ?? []} selected={selected} onSelect={setSelected} meta={payload.meta} />
         </>
       )}
     </div>

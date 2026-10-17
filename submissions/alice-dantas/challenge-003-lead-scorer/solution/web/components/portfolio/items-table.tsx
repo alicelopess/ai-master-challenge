@@ -3,18 +3,20 @@ import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { UI, bandTitle, clientText, missingShort, tieText } from "@/copy/pt-BR";
+import { UI, ageContextText, bandTitle, clientText, missingShort, type AgeContextMeta } from "@/copy/pt-BR";
 import type { Item } from "@/lib/contract";
 import { formatDate, formatInt } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 type Props = {
   items: Item[];
   selected: string | null;
   onSelect: (id: string) => void;
   showSeller?: boolean;
+  /** Os limites e a mediana do histórico: com eles, a idade abre o contexto histórico. */
+  meta?: AgeContextMeta;
   /** A página a mostrar, como posições [início, fim) na lista; sem ela, todas. As contagens de faixa
    * continuam sendo da lista inteira. */
   range?: [number, number];
@@ -38,8 +40,8 @@ function HelpHead({ label, help, className }: { label: string; help: string; cla
   );
 }
 
-/** Lista na ordem que veio da API, com linhas de faixa e de empate entre os blocos. */
-export function ItemsTable({ items, selected, onSelect, showSeller = false, range }: Props) {
+/** Lista na ordem que veio da API, com uma linha de título para cada faixa de valor de tabela. */
+export function ItemsTable({ items, selected, onSelect, showSeller = false, meta, range }: Props) {
   const columns = showSeller ? 7 : 6;
   const bandCounts = new Map<string, number>();
   items.forEach((item) => {
@@ -49,12 +51,10 @@ export function ItemsTable({ items, selected, onSelect, showSeller = false, rang
 
   const rows: ReactNode[] = [];
   let band: string | null = null;
-  let product: string | null | undefined;
   items.slice(...(range ?? [0, items.length])).forEach((item) => {
     const title = bandTitle(item.value_band);
     if (title !== band) {
       band = title;
-      product = undefined;
       rows.push(
         <TableRow key={`band-${band}`} className="hover:bg-transparent">
           <TableHead colSpan={columns} scope="colgroup" className="h-9 bg-muted/50 text-xs font-semibold">
@@ -63,19 +63,8 @@ export function ItemsTable({ items, selected, onSelect, showSeller = false, rang
         </TableRow>,
       );
     }
-    const tied = item.tie_size > 1 && item.sales_price !== null;
-    if (tied && item.product !== product && item.product && item.sales_price !== null) {
-      rows.push(
-        <TableRow key={`tie-${item.opportunity_id}`} className="border-b-0 hover:bg-transparent">
-          <TableCell colSpan={columns} className="pt-3 pb-0 text-xs text-muted-foreground">
-            {tieText(item.tie_size, item.product, item.sales_price)}
-          </TableCell>
-        </TableRow>,
-      );
-    }
-    product = item.product;
     rows.push(
-      <Row key={item.opportunity_id} item={item} tied={tied} showSeller={showSeller}
+      <Row key={item.opportunity_id} item={item} showSeller={showSeller} meta={meta}
            active={selected === item.opportunity_id} onSelect={onSelect} />,
     );
   });
@@ -100,20 +89,20 @@ export function ItemsTable({ items, selected, onSelect, showSeller = false, rang
 
 type RowProps = {
   item: Item;
-  tied: boolean;
   showSeller: boolean;
+  meta?: AgeContextMeta;
   active: boolean;
   onSelect: (id: string) => void;
 };
 
-function Row({ item, tied, showSeller, active, onSelect }: RowProps) {
+function Row({ item, showSeller, meta, active, onSelect }: RowProps) {
   return (
     <TableRow
       data-state={active ? "selected" : undefined}
       className="cursor-pointer data-[state=selected]:bg-accent"
       onClick={() => onSelect(item.opportunity_id)}
     >
-      <TableCell className={cn("pl-4", tied && "pl-8")}>
+      <TableCell className="pl-4">
         <Button
           variant="link"
           size="sm"
@@ -141,8 +130,32 @@ function Row({ item, tied, showSeller, active, onSelect }: RowProps) {
       </TableCell>
       <TableCell className="tabular-nums">{item.engage_date ? formatDate(item.engage_date) : UI.empty}</TableCell>
       <TableCell className="pr-4 text-right tabular-nums">
-        {item.age_days === null ? UI.empty : UI.ageDays(item.age_days)}
+        {item.age_days === null ? UI.empty : meta ? <AgeContext age={item.age_days} meta={meta} /> : UI.ageDays(item.age_days)}
       </TableCell>
     </TableRow>
+  );
+}
+
+/** A idade como botão discreto: abre o contexto histórico (fatos das vendas ganhas), sem cor nem contagem. */
+function AgeContext({ age, meta }: { age: number; meta: AgeContextMeta }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-auto px-1.5 py-0.5 font-normal tabular-nums underline decoration-dotted underline-offset-4"
+          aria-label={`${UI.ageDays(age)}. ${UI.ageContextHelp}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {UI.ageDays(age)}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="gap-2 text-left" onClick={(event) => event.stopPropagation()}>
+        <p className="text-xs font-medium text-muted-foreground">{UI.ageContextTitle}</p>
+        <p>{ageContextText(age, meta)}</p>
+        <p className="text-xs text-muted-foreground">{UI.ageContextNote}</p>
+      </PopoverContent>
+    </Popover>
   );
 }

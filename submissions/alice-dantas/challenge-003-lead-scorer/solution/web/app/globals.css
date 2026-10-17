@@ -42,6 +42,12 @@
 
   --chart-1: #8091fa;
   --chart-2: #5b6577;
+
+  /* Intensidade da matriz vendedor × produto: o número da célula fica sempre escrito por cima. */
+  --heat-1: #f3f4fe;
+  --heat-2: #e2e6fd;
+  --heat-3: #c9d0fc;
+  --heat-4: #adb8fb;
 }
 
 .dark {
@@ -78,6 +84,11 @@
 
   --chart-1: #8091fa;
   --chart-2: #a3aebd;
+
+  --heat-1: #222e45;
+  --heat-2: #2a3758;
+  --heat-3: #34436d;
+  --heat-4: #3f5084;
 }
 
 @theme inline {
@@ -119,6 +130,10 @@
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
+  --color-heat-1: var(--heat-1);
+  --color-heat-2: var(--heat-2);
+  --color-heat-3: var(--heat-3);
+  --color-heat-4: var(--heat-4);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);

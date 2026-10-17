@@ -14,7 +14,8 @@ export function MainNav({ className }: { className?: string }) {
   const pathname = usePathname();
   return (
     <NavigationMenu viewport={false} aria-label={UI.navLabel} className={className}>
-      <NavigationMenuList className="gap-0.5 sm:gap-1">
+      {/* A partir de `md` as cinco páginas cabem numa linha; abaixo disso o cabeçalho usa o `MobileNav`. */}
+      <NavigationMenuList className="flex-nowrap justify-center gap-1">
         {NAV_ITEMS.map((item) => (
           <NavigationMenuItem key={item.key}>
             <NavigationMenuLink
@@ -22,10 +23,10 @@ export function MainNav({ className }: { className?: string }) {
               active={isActive(pathname, item.href)}
               className={cn(
                 navigationMenuTriggerStyle(),
-                "relative px-2 text-[13px] text-muted-foreground sm:px-3 sm:text-sm",
+                "relative px-3 text-sm text-muted-foreground",
                 "data-[active=true]:bg-muted data-[active=true]:text-foreground",
                 "after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary",
-                "after:opacity-0 data-[active=true]:after:opacity-100 sm:after:inset-x-3",
+                "after:opacity-0 data-[active=true]:after:opacity-100 after:inset-x-3",
               )}
             >
               <Link href={item.href}>{NAV[item.key]}</Link>

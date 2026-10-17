@@ -2,10 +2,13 @@
 import type { ZodType } from "zod";
 
 import { CONTRACT_ERROR, errorText, httpError, networkError } from "@/copy/pt-BR";
-import type { Evidence, Meta, Rules, SellerList, SellerPipeline, TeamPipeline } from "@/lib/contract";
+import type {
+  Evidence, Intelligence, IntelligenceDeals, IntelligenceFilter, Meta, Rules, SellerList, SellerPipeline, TeamPipeline,
+} from "@/lib/contract";
 import {
-  zErrorBody, zEvidence, zMeta, zRules, zSellerList, zSellerPipeline, zTeamPipeline,
+  zErrorBody, zEvidence, zIntelligence, zIntelligenceDeals, zMeta, zRules, zSellerList, zSellerPipeline, zTeamPipeline,
 } from "@/lib/contract/zod.gen";
+import { type DealOutcome, apiQuery } from "@/lib/intelligence";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -43,4 +46,14 @@ export const api = {
   },
   rules: () => getJson<Rules>("/api/rules", zRules),
   evidence: () => getJson<Evidence>("/api/evidence", zEvidence),
+  intelligence: (filter: IntelligenceFilter) => {
+    const suffix = apiQuery(filter).toString();
+    return getJson<Intelligence>(`/api/intelligence${suffix ? `?${suffix}` : ""}`, zIntelligence);
+  },
+  intelligenceDeals: (filter: IntelligenceFilter, outcome: DealOutcome, group?: string | null) => {
+    const query = apiQuery(filter);
+    query.set("outcome", outcome);
+    if (group) query.set("group", group);
+    return getJson<IntelligenceDeals>(`/api/intelligence/deals?${query}`, zIntelligenceDeals);
+  },
 };

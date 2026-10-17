@@ -6,9 +6,12 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import { zSellerPipeline } from "@/lib/contract/zod.gen";
+import { zIntelligence, zSellerPipeline } from "@/lib/contract/zod.gen";
 
-import { SELLER_PIPELINES, TEAM_PIPELINES, WEB_DIR, errors, load, meta, sellerPipeline, sellers, teamPipeline } from "./fixtures";
+import {
+  INTELLIGENCE_DEALS, INTELLIGENCE_PAGES, SELLER_PIPELINES, TEAM_PIPELINES, WEB_DIR, errors, intelligence,
+  intelligenceDeals, load, meta, sellerPipeline, sellers, teamPipeline,
+} from "./fixtures";
 
 describe("respostas da API passam na validação do contrato", () => {
   test.each(SELLER_PIPELINES)("%s", (name) => {
@@ -17,8 +20,14 @@ describe("respostas da API passam na validação do contrato", () => {
   test.each(TEAM_PIPELINES)("%s", (name) => {
     expect(() => teamPipeline(name)).not.toThrow();
   });
+  test.each(INTELLIGENCE_PAGES)("%s", (name) => {
+    expect(() => intelligence(name)).not.toThrow();
+  });
+  test.each(INTELLIGENCE_DEALS)("%s", (name) => {
+    expect(() => intelligenceDeals(name)).not.toThrow();
+  });
   test("meta, vendedores e erros", () => {
-    expect(meta().contract_version).toBe(5);
+    expect(meta().contract_version).toBe(7);
     expect(sellers().sellers.length).toBeGreaterThan(0);
     expect(Object.keys(errors())).toEqual(["404", "422", "503"]);
   });
@@ -41,6 +50,14 @@ describe("resposta fora do contrato é recusada", () => {
     const payload = base();
     delete payload.groups[0].items[0].next_action;
     expect(zSellerPipeline.safeParse(payload).success).toBe(false);
+  });
+  test("diagnóstico ou descoberta desconhecidos", () => {
+    const payload = structuredClone(load("intelligence-rich")) as any;
+    payload.diagnostics[0].code = "venda_mais";
+    expect(zIntelligence.safeParse(payload).success).toBe(false);
+    const other = structuredClone(load("intelligence-rich")) as any;
+    other.findings[0].code = "melhor_vendedor";
+    expect(zIntelligence.safeParse(other).success).toBe(false);
   });
   test("campo novo do back é tolerado (mudança aditiva não quebra a tela)", () => {
     const payload = base();

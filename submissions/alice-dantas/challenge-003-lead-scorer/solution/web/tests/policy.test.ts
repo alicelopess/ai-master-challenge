@@ -7,7 +7,7 @@ import { describe, expect, test } from "vitest";
 
 import { GROUP_LABELS } from "@/copy/pt-BR";
 
-import { WEB_DIR, allPipelines, load, readContract } from "./fixtures";
+import { WEB_DIR, allPipelines, intelligence, load, readContract, teamPipeline } from "./fixtures";
 
 const GROUP_KEYS = readContract().components.schemas.Group.properties.state.enum as string[];
 
@@ -48,4 +48,14 @@ describe("as fixtures seguem uma política só", () => {
   test("todo grupo do contrato tem nome no catálogo", () => {
     expect(Object.keys(GROUP_LABELS).sort()).toEqual([...GROUP_KEYS].sort());
   });
+});
+
+test("a Inteligência mostra as abertas com a política da Equipe (mesmo recorte, mesmos grupos)", () => {
+  for (const [page, team] of [["intelligence-all", "team-all"], ["intelligence-east", "team-east"]]) {
+    const intel = intelligence(page);
+    const equipe = teamPipeline(team);
+    expect(intel.open.summary).toEqual(equipe.summary);
+    expect(intel.ordering).toEqual(equipe.ordering);
+    expect(intel.meta).toEqual(equipe.meta);
+  }
 });

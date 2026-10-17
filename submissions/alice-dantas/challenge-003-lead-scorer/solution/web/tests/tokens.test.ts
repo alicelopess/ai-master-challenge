@@ -35,6 +35,7 @@ const PAIRS = [
   ["status-revisar", "status-revisar-bg"],
   ["status-revisar", "background"], ["status-qualificar", "status-qualificar-bg"],
   ["status-nao-pontuavel", "status-nao-pontuavel-bg"],
+  ["foreground", "heat-1"], ["foreground", "heat-2"], ["foreground", "heat-3"], ["foreground", "heat-4"],
 ] as const;
 
 describe.each([[":root", "claro"], [".dark", "escuro"]])("tema %s (%s)", (selector) => {

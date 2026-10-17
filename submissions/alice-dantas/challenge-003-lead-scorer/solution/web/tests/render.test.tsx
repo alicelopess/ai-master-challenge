@@ -3,8 +3,11 @@ import { act, fireEvent, render as renderDom, screen, waitFor, within } from "@t
 import type { ReactElement } from "react";
 import { describe, expect, test, vi } from "vitest";
 
+import { DataBadge } from "@/components/app/data-badge";
 import { MainNav } from "@/components/app/main-nav";
+import { MobileNav } from "@/components/app/mobile-nav";
 import { EvidencePage } from "@/components/evidence/evidence-page";
+import { IntelligencePage } from "@/components/intelligence/intelligence-page";
 import { GroupTabs } from "@/components/portfolio/group-tabs";
 import { PortfolioPage } from "@/components/portfolio/portfolio-page";
 import { RulesPage } from "@/components/rules/rules-page";
@@ -12,15 +15,16 @@ import { TeamPage } from "@/components/team/team-page";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/app/page";
 import {
-  CONTRACT_ERROR, EVIDENCE, EVIDENCE_TEXT, GROUP_LABELS, NAV, RANKER_LABELS, ROLE_LABELS, RULES, TECH_COLUMNS, TEAM, UI,
-  actionText, bandRange,
-  bandTitle, errorText, groupDescription, groupEmptyText, pipelineEmptyText, reasonText, tieText,
+  CONTRACT_ERROR, DIMENSION_LABELS, EVIDENCE, EVIDENCE_TEXT, GROUP_LABELS, INTELLIGENCE, NAV, RANKER_LABELS,
+  ROLE_LABELS, RULES, TECH_COLUMNS, TEAM, UI, actionText, bandRange, bandTitle, diagnosticText, errorText,
+  ageContextText, findingText, groupDescription, groupEmptyText, historyEmptyText, pipelineEmptyText, reasonText,
+  suggestionText, suggestionsFor, tieNote, tieText,
 } from "@/copy/pt-BR";
 import type { Evidence, Rules, SellerPipeline, TeamPipeline } from "@/lib/contract";
-import { formatPct, formatPp } from "@/lib/format";
+import { formatCompact, formatPct, formatPp } from "@/lib/format";
 
 import { navigation } from "./navigation";
-import { errors, load, sellerPipeline, teamPipeline } from "./fixtures";
+import { errors, intelligence, intelligenceDeals, load, sellerPipeline, teamPipeline } from "./fixtures";
 
 // Os mesmos provedores do layout que os componentes usam.
 const render = (ui: ReactElement) => renderDom(ui, { wrapper: TooltipProvider });
@@ -46,13 +50,37 @@ const bySeller = (url: string): Reply => {
 const tab = (label: string) => screen.findByRole("tab", { name: new RegExp(`^${label}`) });
 
 describe("navegação central", () => {
-  test("quatro páginas, com a ativa marcada", () => {
+  test("cinco páginas, com a ativa marcada; a Inteligência entre Equipe e Evidência", () => {
     navigation.go("/equipe");
     render(<MainNav />);
     const links = within(screen.getByRole("navigation")).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual(Object.values(NAV));
+    expect(links.map((link) => link.textContent).slice(1, 4)).toEqual([NAV.equipe, NAV.inteligencia, NAV.evidencia]);
     expect(screen.getByRole("link", { name: NAV.equipe }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: NAV.carteira }).getAttribute("aria-current")).toBeNull();
+  });
+
+  test("no celular o menu é um botão que abre as cinco páginas, com a ativa marcada", async () => {
+    navigation.go("/equipe");
+    render(<MobileNav />);
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    fireEvent.keyDown(screen.getByRole("button", { name: UI.menu }), { key: "Enter" });
+    const links = await screen.findAllByRole("menuitem");
+    expect(links.map((link) => link.textContent)).toEqual(Object.values(NAV));
+    expect(links.find((link) => link.textContent === NAV.equipe)?.getAttribute("aria-current")).toBe("page");
+  });
+
+  test("a data dos dados que não carrega diz que falta a conexão e deixa tentar de novo", async () => {
+    let attempts = 0;
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      attempts += 1;
+      return attempts === 1 ? new Response("{}", { status: 503 }) : new Response(JSON.stringify(load("meta")), { status: 200 });
+    }));
+    render(<DataBadge />);
+    const retry = await screen.findByRole("button", { name: new RegExp(UI.dataUnavailable) });
+    expect(retry.textContent).toBe(UI.dataUnavailable);
+    fireEvent.click(retry);
+    expect(await screen.findByText(/^Dados até /)).toBeTruthy();
   });
 
   test("a página inicial leva à carteira", () => {
@@ -140,6 +168,94 @@ describe("carteira", () => {
 
     fireEvent.keyDown(sheet, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  test("o painel traz o contexto histórico da idade, sem contagem nem urgência", async () => {
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(bySeller);
+    render(<PortfolioPage />);
+    const { groups, meta } = sellerPipeline("pipeline-ana-alfa");
+    const item = groups[0].items[0];
+    fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(item.opportunity_id) }));
+    const sheet = await screen.findByRole("dialog", { name: UI.whyHere });
+    expect(within(sheet).getByText(UI.ageContextTitle)).toBeTruthy();
+    expect(within(sheet).getByText(ageContextText(item.age_days!, meta))).toBeTruthy();
+    expect(within(sheet).getByText(UI.ageContextNote)).toBeTruthy();
+    expect(within(sheet).getByText(UI.nextStep)).toBeTruthy();
+    expect(sheet.textContent).not.toMatch(/faltam|restam|dias para/i);
+  });
+
+  test("a tabela não traz linha de empate e todos os IDs ficam alinhados; o painel ainda diz que o empate é só pelo código", async () => {
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(bySeller);
+    render(<PortfolioPage />);
+    const tied = sellerPipeline("pipeline-ana-alfa").groups[0].items.find((i) => i.tie_size > 1)!;
+    const buttons = await screen.findAllByRole("button", { name: /^Por que .* está aqui$/ });
+    expect(screen.queryByText(/oportunidades empatadas/)).toBeNull();
+    const cells = new Set(buttons.map((b) => (b.closest("td") as HTMLElement).className));
+    expect(cells.size).toBe(1);
+    fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(tied.opportunity_id) }));
+    const sheet = await screen.findByRole("dialog", { name: UI.whyHere });
+    expect(within(sheet).getByText(tieNote(tied)!)).toBeTruthy();
+    expect(tieNote(sellerPipeline("pipeline-ana-alfa").groups[0].items[0])).toBeNull();
+  });
+
+  test("as abas seguem a ordem Focar, Qualificar, Acompanhar, Confirmar, Completar", async () => {
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(bySeller);
+    render(<PortfolioPage />);
+    const tabs = within(await screen.findByRole("tablist", { name: UI.groupsLabel })).getAllByRole("tab");
+    expect(tabs.map((t) => t.textContent!.replace(/\d+$/, ""))).toEqual(
+      ["Focar", "Qualificar", "Acompanhar", "Confirmar", "Completar"]);
+  });
+
+  test("o painel traz sugestões de negociação por cenário e o aviso novo", async () => {
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(bySeller);
+    render(<PortfolioPage />);
+    const item = sellerPipeline("pipeline-ana-alfa").groups[0].items[0];  // sem conta registrada
+    fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(item.opportunity_id) }));
+    const sheet = await screen.findByRole("dialog", { name: UI.whyHere });
+    const box = within(sheet).getByRole("region", { name: UI.suggestionsTitle });
+    expect(within(box).getByText(UI.suggestionsIntro)).toBeTruthy();
+    for (const suggestion of suggestionsFor(item)) expect(within(box).getByText(suggestionText(suggestion))).toBeTruthy();
+    expect(within(box).getByText(/^Se a conta não está registrada:/)).toBeTruthy();
+    expect(within(sheet).getByText(UI.limitsNote)).toBeTruthy();
+    // Com conta registrada, a sugestão da conta ausente não aparece.
+    fireEvent.click(within(sheet).getByRole("button", { name: UI.next }));
+    const withAccount = sellerPipeline("pipeline-ana-alfa").groups[0].items[1];
+    expect(withAccount.account).not.toBeNull();
+    expect(within(sheet).queryByText(/^Se a conta não está registrada:/)).toBeNull();
+  });
+
+  test("busca e filtros: a lista, a contagem e a URL; limpar volta tudo", async () => {
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(bySeller);
+    render(<PortfolioPage />);
+    const ids = async () => (await screen.findAllByRole("button", { name: /^Por que .* está aqui$/ })).map((b) => b.textContent);
+    const all = await ids();
+    expect(all).toEqual(["EPP", "EGP", "E050", "E100", "EMG"]);
+
+    fireEvent.change(screen.getByRole("searchbox", { name: UI.listFilters.searchLabel }), { target: { value: "beta" } });
+    await waitFor(() => expect(navigation.params.get("q")).toBe("beta"));
+    expect(await ids()).toEqual(["EGP"]);
+    expect(screen.getByRole("status").textContent).toBe(UI.listFilters.result(2, 8));
+
+    fireEvent.click(screen.getByRole("button", { name: UI.listFilters.clear }));
+    await waitFor(() => expect(navigation.params.get("q")).toBeNull());
+    expect(await ids()).toEqual(all);
+  });
+
+  test("filtro de cliente na URL: só as com (ou sem) cliente registrado, sem mudar a ordem nem a classificação", async () => {
+    navigation.go("/carteira?vendedor=Ana%20Alfa&cliente=com");
+    stubApi(bySeller);
+    render(<PortfolioPage />);
+    const ids = async () => (await screen.findAllByRole("button", { name: /^Por que .* está aqui$/ })).map((b) => b.textContent);
+    expect(await ids()).toEqual(["EGP"]);
+    fireEvent.mouseDown(await tab(GROUP_LABELS.acompanhar));
+    await waitFor(async () => expect(await ids()).toEqual(["E101"]));
+    navigation.go("/carteira?vendedor=Ana%20Alfa&cliente=sem&grupo=revisar");
+    expect(await screen.findByText(UI.listFilters.noneHere)).toBeTruthy();
   });
 
   test("resposta fora do contrato vira mensagem de erro, não tela quebrada", async () => {
@@ -323,5 +439,157 @@ describe("como funciona", () => {
     }
     expect(screen.getByText(RULES.wonLimit(rules.meta.won_cycle_limit_days, rules.meta.cycle_percentile))).toBeTruthy();
     expect(screen.getByText(RULES.longestLimit(rules.meta.cycle_limit_days))).toBeTruthy();
+  });
+});
+
+describe("inteligência", () => {
+  /** API simulada: a página responde com `page`; o detalhamento, com as ganhas da Ana Alfa. */
+  const intelApi = (page = "intelligence-rich") => stubApi((url) =>
+    url.includes("/api/intelligence/deals") ? ok(load("intelligence-deals-won")) : ok(load(page)));
+  const called = (fetch: ReturnType<typeof stubApi>, suffix: string) =>
+    fetch.mock.calls.some(([url]) => String(url).endsWith(suffix));
+  /** Abre "Ver análises" (o rótulo traz a contagem) e devolve o painel. */
+  const openAnalyses = async (count: number) => {
+    const name = new RegExp(`^${INTELLIGENCE.analyses.button}\\s*${count}$`);
+    fireEvent.click(await screen.findByRole("button", { name }));
+    return screen.findByRole("dialog", { name: INTELLIGENCE.analyses.title });
+  };
+
+  test("números, diagnósticos e descobertas vêm do payload; a carteira aberta fica à parte", async () => {
+    const fetch = intelApi();
+    navigation.go("/inteligencia");
+    render(<IntelligencePage />);
+    const payload = intelligence("intelligence-rich");
+    // O Intl põe um espaço fixo antes de "mil"/"mi"; a busca por texto normaliza os espaços.
+    expect((await screen.findAllByText(formatCompact(payload.history.revenue).replace(/\s/g, " "))).length)
+      .toBeGreaterThan(0);
+    expect(called(fetch, "/api/intelligence")).toBe(true);
+    const open = screen.getByRole("region", { name: INTELLIGENCE.open.title });
+    expect(open.textContent).toContain(INTELLIGENCE.open.notRevenue);
+    expect(within(open).getAllByRole("listitem").map((li) => li.textContent?.split(" ")[0])).toEqual(
+      payload.ordering.group_order.map((state) => GROUP_LABELS[state]));
+    // No corpo, só números: diagnósticos e descobertas ficam no painel "Ver análises".
+    expect(screen.queryByText(diagnosticText(payload.diagnostics[0]).title)).toBeNull();
+    const panel = await openAnalyses(payload.diagnostics.length + payload.findings.length);
+    for (const d of payload.diagnostics) expect(within(panel).getByText(diagnosticText(d).title)).toBeTruthy();
+    expect(within(panel).getByText(INTELLIGENCE.process.crmTitle)).toBeTruthy();
+    fireEvent.mouseDown(within(panel).getByRole("tab", { name: new RegExp(`^${INTELLIGENCE.analyses.findings}`) }));
+    for (const f of payload.findings) expect(within(panel).getAllByText(findingText(f).title).length).toBeGreaterThan(0);
+    // Sem jargão estatístico e sem promessa de chance na página.
+    expect(document.body.textContent).not.toMatch(/IC95%|qui-quadrado|Bonferroni|Wilson|probabilidade/i);
+  });
+
+  test("filtros vão para a URL e para a chamada; limpar tira todos", async () => {
+    const fetch = intelApi("intelligence-sector");
+    navigation.go("/inteligencia?escritorio=East&setor=retail");
+    render(<IntelligencePage />);
+    await screen.findByText(INTELLIGENCE.open.notRevenue, { exact: false });
+    expect(called(fetch, "/api/intelligence?office=East&sector=retail")).toBe(true);
+    const excluded = intelligence("intelligence-sector").open.excluded_without_account!;
+    expect(screen.getByText(INTELLIGENCE.open.excluded(excluded))).toBeTruthy();
+    // O recorte ativo fica à vista, um chip por filtro, e o botão mostra quantos são.
+    const chips = screen.getByRole("group", { name: INTELLIGENCE.filters.activeLabel });
+    expect(within(chips).getByText(INTELLIGENCE.filters.chip(DIMENSION_LABELS.office, "East"))).toBeTruthy();
+    expect(screen.getByRole("button", { name: new RegExp(`^${INTELLIGENCE.filters.button}\\s*2$`) })).toBeTruthy();
+    fireEvent.click(within(chips).getByRole("button", {
+      name: INTELLIGENCE.filters.remove(DIMENSION_LABELS.sector, "retail") }));
+    expect(navigation.params.get("setor")).toBeNull();
+    expect(navigation.params.get("escritorio")).toBe("East");
+    fireEvent.click(within(chips).getByRole("button", { name: UI.filters.clear }));
+    expect(navigation.params.get("escritorio")).toBeNull();
+    expect(navigation.params.get("setor")).toBeNull();
+  });
+
+  test("filtrar por uma linha muda a página inteira (URL), sem perder os outros filtros", async () => {
+    intelApi();
+    navigation.go("/inteligencia?gerente=Mara%20Um");
+    render(<IntelligencePage />);
+    const filterButton = await screen.findByRole("button", { name: INTELLIGENCE.explore.filterBy("Alfa Pro") });
+    // O ícone sozinho não se explica: o tooltip diz o que a ação faz.
+    fireEvent.focus(filterButton);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(INTELLIGENCE.explore.filterBy("Alfa Pro"));
+    fireEvent.click(filterButton);
+    expect(navigation.params.get("produto")).toBe("Alfa Pro");
+    expect(navigation.params.get("gerente")).toBe("Mara Um");
+  });
+
+  test("pessoas: ordem da API (alfabética), sem gráfico e sem escolha de métrica", async () => {
+    intelApi();
+    navigation.go("/inteligencia?ver=seller");
+    render(<IntelligencePage />);
+    expect(await screen.findByText(INTELLIGENCE.explore.peopleNote, { exact: false })).toBeTruthy();
+    expect(screen.queryByRole("combobox", { name: INTELLIGENCE.explore.metric })).toBeNull();
+    const card = screen.getAllByText(DIMENSION_LABELS.seller).map((el) => el.closest("[data-slot=card]"))
+      .find((el) => el?.querySelector("table")) as HTMLElement;
+    const sellers = intelligence("intelligence-rich").breakdowns.find((b) => b.dimension === "seller")!.segments;
+    const names = within(card).getAllByRole("row").slice(1).map((row) => row.querySelector("td")?.textContent);
+    expect(names).toEqual(sellers.map((s) => s.key));
+    expect(names).toEqual([...names].sort());
+  });
+
+  test("detalhamento: a linha abre as negociações com o recorte somado, e o diagnóstico abre o grupo", async () => {
+    const fetch = intelApi();
+    navigation.go("/inteligencia?escritorio=Central");
+    render(<IntelligencePage />);
+    fireEvent.click(await screen.findByRole("button", { name: INTELLIGENCE.explore.dealsOf("Alfa Pro") }));
+    await waitFor(() => expect(called(fetch, "/api/intelligence/deals?product=Alfa+Pro&office=Central&outcome=won"))
+      .toBe(true));
+    const sheet = await screen.findByRole("dialog");
+    const deals = intelligenceDeals("intelligence-deals-won");
+    expect(within(sheet).getByText(INTELLIGENCE.deals.total(deals.total))).toBeTruthy();
+    expect(within(sheet).getByText(INTELLIGENCE.deals.scope([
+      INTELLIGENCE.deals.filterPart(DIMENSION_LABELS.product, "Alfa Pro"),
+      INTELLIGENCE.deals.filterPart(DIMENSION_LABELS.office, "Central")]))).toBeTruthy();
+    fireEvent.click(within(sheet).getByRole("button", { name: UI.closePanel }));
+
+    const rich = intelligence("intelligence-rich");
+    const panel = await openAnalyses(rich.diagnostics.length + rich.findings.length);
+    const beyond = rich.diagnostics.find((d) => d.code === "engaging_beyond_longest_cycle")!;
+    const card = within(panel).getByText(diagnosticText(beyond).title).closest("[data-slot=card]") as HTMLElement;
+    // Só gerente e escritório no recorte: o atalho para a Equipe leva ao mesmo grupo.
+    expect(within(card).getByRole("link", { name: INTELLIGENCE.process.seeTeam }).getAttribute("href")).toBe(
+      "/equipe?visao=oportunidades&grupo=revisar&escritorio=Central");
+    fireEvent.click(within(card).getByRole("button", { name: INTELLIGENCE.process.seeDeals }));
+    await waitFor(() => expect(called(fetch, "/api/intelligence/deals?office=Central&outcome=open&group=revisar"))
+      .toBe(true));
+  });
+
+  test("o botão Filtros abre os sete filtros num painel", async () => {
+    intelApi();
+    navigation.go("/inteligencia");
+    render(<IntelligencePage />);
+    await screen.findByText(INTELLIGENCE.open.notRevenue, { exact: false });
+    // Os filtros não ficam encadeados no corpo da página.
+    expect(screen.queryByRole("combobox", { name: DIMENSION_LABELS.product })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: INTELLIGENCE.filters.button }));
+    const popover = await screen.findByRole("dialog", { name: INTELLIGENCE.filtersLabel });
+    expect(within(popover).getAllByRole("combobox").map((box) => box.getAttribute("aria-label"))).toEqual(
+      ["product", "seller", "manager", "office", "sector", "account", "size"].map(
+        (key) => DIMENSION_LABELS[key as keyof typeof DIMENSION_LABELS]));
+  });
+
+  test("Como funciona abre as definições num painel", async () => {
+    intelApi();
+    navigation.go("/inteligencia");
+    render(<IntelligencePage />);
+    fireEvent.click(await screen.findByRole("button", { name: INTELLIGENCE.guide.button }));
+    const guide = await screen.findByRole("dialog", { name: INTELLIGENCE.guide.title });
+    for (const line of [...INTELLIGENCE.reading.definitions, ...INTELLIGENCE.reading.limits]) {
+      expect(within(guide).getByText(line)).toBeTruthy();
+    }
+  });
+
+  test("recorte sem fechadas", async () => {
+    intelApi("intelligence-empty");
+    navigation.go("/inteligencia?cliente=Ninguem");
+    render(<IntelligencePage />);
+    expect(await screen.findByText(historyEmptyText(intelligence("intelligence-empty").history_empty!))).toBeTruthy();
+  });
+
+  test("resposta fora do contrato", async () => {
+    stubApi(() => ok({ meta: {} }));
+    navigation.go("/inteligencia");
+    render(<IntelligencePage />);
+    expect((await screen.findByRole("alert")).textContent).toBe(CONTRACT_ERROR);
   });
 });

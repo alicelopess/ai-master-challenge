@@ -21,3 +21,18 @@ export function formatPp(fraction: number): string {
 }
 
 export const formatDecimal = (value: number, digits = 2): string => decimal(value, digits);
+
+/** Valor grande em forma curta: 10005534 → "10,01 mi"; 950000 → "950 mil" (o Intl põe um espaço fixo antes). */
+export const formatCompact = (value: number): string =>
+  value.toLocaleString("pt-BR", { notation: "compact", maximumFractionDigits: 2 });
+
+/** Valor sem casas decimais: 2360.91 → "2.361". */
+export const formatWhole = (value: number): string => value.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+
+const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+/** "2017-11" → "nov/2017". */
+export function formatMonth(month: string): string {
+  const [year, number] = month.split("-");
+  return `${MONTHS[Number(number) - 1]}/${year}`;
+}

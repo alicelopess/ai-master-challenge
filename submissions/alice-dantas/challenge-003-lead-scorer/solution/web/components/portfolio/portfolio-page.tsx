@@ -1,7 +1,7 @@
 "use client";
 
 import { ChartNoAxesColumnIncreasing, Inbox } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { DataWarning, ErrorAlert } from "@/components/app/error-alert";
 import { PageHeader } from "@/components/app/page-header";
@@ -11,11 +11,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BRAND, PAGES, UI, pipelineEmptyText } from "@/copy/pt-BR";
 import { api } from "@/lib/api";
 import type { Group } from "@/lib/contract";
-import { defaultTab, startGroup } from "@/lib/portfolio";
+import {
+  defaultTab, filterGroups, filtersToQuery, hasFilters, parseFilters, productsIn, startGroup, type ListFilters,
+} from "@/lib/portfolio";
 import { useApi } from "@/lib/use-api";
 import { useQuery } from "@/lib/use-query";
 
 import { GroupTabs } from "./group-tabs";
+import { ListFiltersBar } from "./list-filters";
 import { NextStepCard } from "./next-step-card";
 import { PortfolioSummary } from "./portfolio-summary";
 import { ReasonSheet } from "./reason-sheet";
@@ -62,9 +65,12 @@ export function PortfolioPage() {
   const payload = pipeline.data;
   const fromQuery = query.get("grupo");
   const tab = payload?.groups.some((g) => g.state === fromQuery) ? (fromQuery as Group["state"]) : payload && defaultTab(payload);
-  const openGroup = payload?.groups.find((g) => g.items.some((i) => i.opportunity_id === selected));
+  const filters = parseFilters(query);
+  const groups = payload ? filterGroups(payload.groups, filters) : [];
+  const openGroup = groups.find((g) => g.items.some((i) => i.opportunity_id === selected));
 
   const pickSeller = (name: string) => setQuery({ vendedor: name, grupo: null });
+  const changeFilters = useCallback((next: ListFilters) => setQuery(filtersToQuery(next)), [setQuery]);
   const showGroup = (state: Group["state"]) => {
     setQuery({ grupo: state });
     document.getElementById("grupos")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -120,19 +126,22 @@ export function PortfolioPage() {
             <>
               <NextStepCard payload={payload} onSelect={setSelected} onShowGroup={showGroup} />
               <PortfolioSummary payload={payload} />
+              <ListFiltersBar filters={filters} onChange={changeFilters} products={productsIn(payload.groups)}
+                              shown={groups.reduce((sum, g) => sum + g.items.length, 0)} total={payload.summary.total} />
               <GroupTabs
-                key={seller}
-                groups={payload.groups}
+                key={`${seller}:${JSON.stringify(filters)}`}
+                groups={groups}
                 tab={tab}
                 onTab={(state) => setQuery({ grupo: state })}
                 selected={selected}
                 onSelect={setSelected}
                 limits={payload.meta}
+                filtered={hasFilters(filters)}
                 actionShownFor={startGroup(payload)?.state}
               />
             </>
           )}
-          <ReasonSheet items={openGroup?.items ?? []} selected={selected} onSelect={setSelected} />
+          <ReasonSheet items={openGroup?.items ?? []} selected={selected} onSelect={setSelected} meta={payload.meta} />
         </>
       )}
     </div>
