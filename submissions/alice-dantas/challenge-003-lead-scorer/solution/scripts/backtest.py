@@ -14,6 +14,10 @@ tabela, data de engajamento e o histórico de fechadas até T. O desfecho (ganho
 data de fechamento) fica à parte e só serve para medir. A única exceção, marcada como
 vazamento, é a armadilha do mês de fechamento.
 
+A regra servida (regra A, ADR-006) não é reescrita aqui: o grupo de cada negociação em T
+vem de `triage.engaging_group`, com os limites de `triage.resolve_context(frame, T)`, a
+mesma função e os mesmos limites que a lista usa. Ela é a referência das diferenças.
+
 Habilidade (AUC, com IC95% por bootstrap) e lista do vendedor ficam separadas. A lista
 mede o que cada vendedor veria nas TOP_K primeiras: acertos (P@K), acertos sobre o
 esperado ao acaso (Lift@K) e valor ganho sobre o da melhor lista possível sabendo o
@@ -27,9 +31,8 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -105,19 +108,15 @@ def age_days(cut: Cut) -> np.ndarray:
     return (cut.as_of - cut.features["engage_date"]).dt.days.to_numpy()
 
 
-def won_cycle_p90(cut: Cut) -> int:
-    """P90 do ciclo das ganhas até T. A idade é inteira, então idade ≤ P90 equivale
-    a idade ≤ piso do P90."""
-    cycles = cut.train.loc[cut.train["won"] == 1, "cycle_days"]
-    return int(math.floor(cycles.quantile(policy.CYCLE_PERCENTILE / 100)))
+GROUP_RANK = {policy.FOCAR: 2, policy.ACOMPANHAR: 1, policy.REVISAR: 0}
 
 
-def by_age_group(cut: Cut, first_limit: int) -> np.ndarray:
-    """Grupo 1: idade até `first_limit`; grupo 2: até o maior ciclo fechado até T;
-    grupo 3: acima dele. Dentro do grupo, maior preço de tabela primeiro."""
-    age = age_days(cut)
-    group = np.select([age <= first_limit, age <= cut.ctx.cycle_limit_days], [2, 1], 0)
-    return group * 1e6 + cut.features["sales_price"].to_numpy(float)
+def served_order(cut: Cut, ctx: Optional[triage.Context] = None) -> np.ndarray:
+    """A ordem da lista em T: o grupo de `triage.engaging_group` (com os limites de `ctx`,
+    por padrão os do corte) e, dentro dele, maior preço de tabela primeiro."""
+    groups = triage.engaging_group(age_days(cut), cut.ctx if ctx is None else ctx)
+    rank = pd.Series(groups).map(GROUP_RANK).to_numpy(float)
+    return rank * 1e6 + cut.features["sales_price"].to_numpy(float)
 
 
 # Ordenadores legítimos: recebem a negociação como era em T, nunca o desfecho.
@@ -144,21 +143,20 @@ def youngest_first(cut: Cut) -> np.ndarray:
     return -age_days(cut).astype(float)
 
 
-def tool_rule(cut: Cut) -> np.ndarray:
-    """A ordem da ferramenta em T: Focar (idade até o maior ciclo fechado até T)
-    antes de Revisar e, dentro do estado, maior preço de tabela primeiro."""
-    return by_age_group(cut, cut.ctx.cycle_limit_days)
+def served_rule(cut: Cut) -> np.ndarray:
+    """A regra servida (A): até o P90 das ganhas em T, depois até o maior ciclo, depois acima."""
+    return served_order(cut)
 
 
-def rule_a(cut: Cut) -> np.ndarray:
-    """Abordagem A: até o P90 das ganhas, depois até o maior ciclo, depois acima;
-    maior preço de tabela primeiro dentro de cada grupo."""
-    return by_age_group(cut, won_cycle_p90(cut))
+def max_cycle_only(cut: Cut) -> np.ndarray:
+    """A regra até a v4: um corte só, no maior ciclo fechado até T (L1 = L2)."""
+    return served_order(cut, replace(cut.ctx, won_cycle_limit_days=cut.ctx.cycle_limit_days))
 
 
 def fixed_limit(days: int) -> Callable[[Cut], np.ndarray]:
+    """Primeiro limite fixo em `days` (nunca acima do maior ciclo em T)."""
     def ranker(cut: Cut) -> np.ndarray:
-        return by_age_group(cut, days)
+        return served_order(cut, replace(cut.ctx, won_cycle_limit_days=min(days, cut.ctx.cycle_limit_days)))
     return ranker
 
 
@@ -168,16 +166,18 @@ def closing_month_trap(cut: Cut) -> np.ndarray:
     return (month_of_quarter == 3).astype(float).to_numpy()
 
 
-REFERENCE = "Regra atual: até o maior ciclo → preço"
-RULE_A = "Regra A: até o P90 das ganhas → até o maior ciclo → preço"
+SERVED = "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço"
+MAX_CYCLE = "Regra anterior: só até o maior ciclo → preço"
+REFERENCE = SERVED  # as diferenças são sempre contra a regra que a lista serve
+LIST_PRICE = "Só valor de tabela"
 RANKERS: List[Tuple[str, Callable[[Cut], np.ndarray], bool]] = [
     ("Taxa global", global_rate, False),
     ("Taxa por produto", product_rate, False),
     ("Aleatório", random_order, False),
-    ("Só valor de tabela", table_value, False),
+    (LIST_PRICE, table_value, False),
     ("Idade: mais nova primeiro", youngest_first, False),
-    (REFERENCE, tool_rule, False),
-    (RULE_A, rule_a, False),
+    (MAX_CYCLE, max_cycle_only, False),
+    (SERVED, served_rule, False),
     ("[VAZAMENTO] fechou no 3º mês do trimestre", closing_month_trap, True),
 ]
 LIMITS: List[Tuple[str, Callable[[Cut], np.ndarray], bool]] = [
@@ -187,16 +187,15 @@ CODES = {
     "Taxa global": codes.RANKER_GLOBAL_RATE,
     "Taxa por produto": codes.RANKER_PRODUCT_RATE,
     "Aleatório": codes.RANKER_RANDOM,
-    "Só valor de tabela": codes.RANKER_LIST_PRICE_ONLY,
+    LIST_PRICE: codes.RANKER_LIST_PRICE_ONLY,
     "Idade: mais nova primeiro": codes.RANKER_AGE_NEWEST_FIRST,
-    REFERENCE: codes.RANKER_CURRENT_RULE,
-    RULE_A: codes.RANKER_RULE_A,
+    MAX_CYCLE: codes.RANKER_AGE_MAX_CYCLE_ONLY,
+    SERVED: codes.RANKER_AGE_P90_THEN_MAX_CYCLE,
     "[VAZAMENTO] fechou no 3º mês do trimestre": codes.RANKER_LEAK_QUARTER_END,
     **{name: f"limit_{days}_days" for (name, _, _), days in zip(LIMITS, FIXED_LIMITS)},
 }
 # Sem as que nunca fecham, só os que ordenam por preço e idade interessam.
-SENSITIVE = [(name, ranker, leak) for name, ranker, leak in RANKERS if name in
-             ("Só valor de tabela", REFERENCE, RULE_A)]
+SENSITIVE = [(name, ranker, leak) for name, ranker, leak in RANKERS if name in (LIST_PRICE, MAX_CYCLE, SERVED)]
 
 
 def auc(y: np.ndarray, scores: np.ndarray) -> float:
@@ -318,11 +317,11 @@ def walk_forward(rows: List[Dict], lists: Dict[str, pd.DataFrame], candidates: L
     for i, cut in enumerate(cuts[1:], 1):
         past = {name: list_metrics(lists[name][lists[name]["cut"] < cut])["val_at_k"] for name in candidates}
         chosen = max(candidates, key=lambda name: past[name])
-        now = {name: list_metrics(lists[name][lists[name]["cut"] == cut])["val_at_k"] for name in (chosen, RULE_A, REFERENCE)}
+        now = {name: list_metrics(lists[name][lists[name]["cut"] == cut])["val_at_k"] for name in (chosen, SERVED, MAX_CYCLE)}
         steps.append({"cut": cut, "chosen": chosen, "val_walk_forward": round(now[chosen], 3),
-                      "val_rule_a": round(now[RULE_A], 3), "val_reference": round(now[REFERENCE], 3)})
+                      "val_served": round(now[SERVED], 3), "val_max_cycle": round(now[MAX_CYCLE], 3)})
     mean = {key: round(float(np.mean([s[key] for s in steps])), 3)
-            for key in ("val_walk_forward", "val_rule_a", "val_reference")}
+            for key in ("val_walk_forward", "val_served", "val_max_cycle")}
     return {"steps": steps, "mean": mean}
 
 
@@ -337,7 +336,7 @@ def run(raw_dir: Path = policy.RAW_DIR) -> Dict:
             "cut": cut.as_of.date().isoformat(), "n_train": len(cut.train), "n_test": len(cut.features),
             "share_no_outcome": round(float(cut.outcome["no_outcome"].mean()), 3),
             "test_win_rate": round(float(cut.outcome["won"].mean()), 3),
-            "cycle_limit_days": cut.ctx.cycle_limit_days, "won_p90_days": won_cycle_p90(cut),
+            "cycle_limit_days": cut.ctx.cycle_limit_days, "won_cycle_limit_days": cut.ctx.won_cycle_limit_days,
             "share_above_limit": round(float((age > cut.ctx.cycle_limit_days).mean()), 3),
             "sellers_with_k": int((cut.features["sales_agent"].value_counts() >= TOP_K).sum())})
     observations = sum(len(cut.features) for cut in cuts)
@@ -348,22 +347,25 @@ def run(raw_dir: Path = policy.RAW_DIR) -> Dict:
 
     limit_rows, limit_lists = evaluate(cuts, LIMITS, with_ci=False)
     all_rows, all_lists = rows + limit_rows, {**lists, **limit_lists}
-    first_limits = {RULE_A: won_cycle_p90, REFERENCE: lambda cut: cut.ctx.cycle_limit_days,
+    first_limits = {SERVED: lambda cut: cut.ctx.won_cycle_limit_days, MAX_CYCLE: lambda cut: cut.ctx.cycle_limit_days,
                     **{name: (lambda cut, d=days: d) for (name, _, _), days in zip(LIMITS, FIXED_LIMITS)}}
-    limit_names = [REFERENCE, *[name for name, _, _ in LIMITS], RULE_A]
+    limit_names = [MAX_CYCLE, *[name for name, _, _ in LIMITS], SERVED]
     limits = summarize(all_rows, all_lists, [(n, None, False) for n in limit_names], lists[REFERENCE])
     for entry in limits:
         entry["wins_outside_first_group"] = round(wins_outside_first_group(cuts, first_limits[entry["ranker"]]), 3)
-    forward = walk_forward(all_rows, all_lists, [*[name for name, _, _ in LIMITS], REFERENCE])
+    forward = walk_forward(all_rows, all_lists, [*[name for name, _, _ in LIMITS], MAX_CYCLE])
 
     trimmed = [without_no_outcome(cut) for cut in cuts]
     trim_rows, trim_lists = evaluate(trimmed, SENSITIVE, with_ci=False)
     without = summarize(trim_rows, trim_lists, SENSITIVE, trim_lists[REFERENCE])
 
+    today = triage.resolve_context(dataset.opportunities)
     return {"design": {"cuts": list(CUTS), "horizon_days": HORIZON_DAYS, "top_k": TOP_K, "seed": SEED,
                        "smooth_m": SMOOTH_M, "n_boot": N_BOOT, "n_boot_sellers": N_BOOT_SELLERS,
                        "fixed_limits": list(FIXED_LIMITS), "observations": observations,
-                       "unique_opportunities": unique, "audited_data": dataset.audited},
+                       "unique_opportunities": unique, "audited_data": dataset.audited,
+                       "served_rule": codes.SERVED_RANKER, "as_of": today.as_of.date().isoformat(),
+                       "won_cycle_limit_days": today.won_cycle_limit_days},
             "cuts": cut_rows, "rows": rows, "summary": summary, "limits": limits,
             "walk_forward": forward, "without_no_outcome": without}
 
@@ -406,8 +408,7 @@ def list_table(entries: List[Dict], extra: Optional[Tuple[str, str]] = None) -> 
 def markdown(result: Dict) -> str:
     design, cuts = result["design"], result["design"]["cuts"]
     summary = {s["ranker"]: s for s in result["summary"]}
-    without = {s["ranker"]: s for s in result["without_no_outcome"]}
-    rule_a, forward = summary[RULE_A], result["walk_forward"]["mean"]
+    previous, forward = summary[MAX_CYCLE], result["walk_forward"]["mean"]
     lines = ["# Backtest temporal da ordenação", "",
              "Gerado por `scripts/backtest.py` (não editar à mão).", "",
              "## Desenho", "",
@@ -426,14 +427,14 @@ def markdown(result: Dict) -> str:
              "melhores da carteira sabendo o futuro (o oráculo). As somas cobrem todos os vendedor-cortes.",
              f"- **Dependência:** os cortes se sobrepõem ({design['observations']} observações para "
              f"{design['unique_opportunities']} negociações únicas) e o mesmo vendedor aparece em todos. Os Δ contra a "
-             f"regra atual têm IC95% por bootstrap de vendedores ({design['n_boot_sellers']} reamostragens, cada "
+             f"regra servida têm IC95% por bootstrap de vendedores ({design['n_boot_sellers']} reamostragens, cada "
              "vendedor com todos os seus cortes).",
              "", "## Cortes", "",
              "| Corte | Fechadas até T | Abertas em T | Sem desfecho até o fim da base | Ganharam em 90 d "
-             "| Maior ciclo em T | P90 das ganhas em T | Acima do maior ciclo | Vendedores com 10+ |",
+             "| Maior ciclo em T (L2) | P90 das ganhas em T (L1) | Acima do maior ciclo | Vendedores com 10+ |",
              "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     lines += [f"| {c['cut']} | {c['n_train']} | {c['n_test']} | {pct(c['share_no_outcome'])} | "
-              f"{pct(c['test_win_rate'])} | {c['cycle_limit_days']} d | {c['won_p90_days']} d | "
+              f"{pct(c['test_win_rate'])} | {c['cycle_limit_days']} d | {c['won_cycle_limit_days']} d | "
               f"{pct(c['share_above_limit'])} | {c['sellers_with_k']} |" for c in result["cuts"]]
     lines += ["", "## Habilidade: AUC (IC95%) por corte", "",
               "| Ordenador | " + " | ".join(cuts) + " | Média |", "| --- |" + " --- |" * (len(cuts) + 1)]
@@ -450,35 +451,40 @@ def markdown(result: Dict) -> str:
             cells = [pct(r["val_at_k"]) for r in result["rows"] if r["ranker"] == s["ranker"]]
             lines.append(f"| {s['ranker']} | " + " | ".join(cells) + " |")
     lines += ["", "## Sensibilidade ao limite do primeiro grupo", "",
-              "Os limites fixos foram escolhidos depois de olhar a base (106 d é o P90 em 31/12/2017). Só a regra A "
-              "calcula o limite com o que se sabia em T.", ""]
+              f"Os limites fixos foram escolhidos depois de olhar a base ({design['won_cycle_limit_days']} d é o P90 "
+              f"das ganhas em {pd.Timestamp(design['as_of']).strftime('%d/%m/%Y')}). Só a regra servida calcula o "
+              "limite com o que se sabia em T.", ""]
     lines += list_table(result["limits"], ("wins_outside_first_group", "Ganhas fora do 1º grupo"))
     lines += ["", "### Escolha do limite sem olhar o teste (walk-forward)", "",
-              "| Corte | Limite escolhido nos cortes anteriores | Val@10 do escolhido | Val@10 da regra A | "
-              "Val@10 da regra atual |", "| --- | --- | --- | --- | --- |"]
-    lines += [f"| {s['cut']} | {s['chosen']} | {pct(s['val_walk_forward'])} | {pct(s['val_rule_a'])} | "
-              f"{pct(s['val_reference'])} |" for s in result["walk_forward"]["steps"]]
-    lines += [f"| Média | | {pct(forward['val_walk_forward'])} | {pct(forward['val_rule_a'])} | "
-              f"{pct(forward['val_reference'])} |"]
+              "| Corte | Limite escolhido nos cortes anteriores | Val@10 do escolhido | Val@10 da regra servida | "
+              "Val@10 da regra anterior |", "| --- | --- | --- | --- | --- |"]
+    lines += [f"| {s['cut']} | {s['chosen']} | {pct(s['val_walk_forward'])} | {pct(s['val_served'])} | "
+              f"{pct(s['val_max_cycle'])} |" for s in result["walk_forward"]["steps"]]
+    lines += [f"| Média | | {pct(forward['val_walk_forward'])} | {pct(forward['val_served'])} | "
+              f"{pct(forward['val_max_cycle'])} |"]
     lines += ["", "## Sensibilidade: sem as negociações que nunca fecham", "",
               "Mesmos cortes, tirando as que seguem abertas no fim da base. Mostra quanto da diferença entre as "
               "regras depende delas.", ""]
     lines += list_table(result["without_no_outcome"])
-    trimmed = without[RULE_A]
-    depends = ("a vantagem das regras por idade depende desses registros, e a auditoria indica que eles podem vir "
-               "da construção da base" if trimmed["d_val_high"] <= 0 else
-               "a vantagem não depende só desses registros")
+    ahead = [s for s in result["without_no_outcome"] if s.get("d_val_low", 0) > 0]
+    if ahead:
+        best = max(ahead, key=lambda s: s["d_val_at_k"])
+        depends = (f"\"{best['ranker']}\" fica {pp(best['d_val_at_k'])} pp à frente da regra servida em Val@10 "
+                   f"(IC95% {pp(best['d_val_low'])} a {pp(best['d_val_high'])}). A vantagem das regras por idade "
+                   "depende desses registros, e a auditoria indica que eles podem vir da construção da base")
+    else:
+        depends = "nenhuma alternativa fica à frente da regra servida com o IC95% acima de zero"
     beats = ("nenhum limite fixo escolhido assim supera o P90 calculado em T"
-             if forward["val_walk_forward"] <= forward["val_rule_a"] else
+             if forward["val_walk_forward"] <= forward["val_served"] else
              "um limite fixo escolhido assim supera o P90 calculado em T")
     lines += ["", "## Leitura", "",
-              f"- A regra A fica {pp(rule_a['d_val_at_k'])} pp em relação à regra atual em Val@10 (IC95% "
-              f"{pp(rule_a['d_val_low'])} a {pp(rule_a['d_val_high'])}) e {pp(rule_a['d_p_at_k'])} pp em P@10, com "
-              f"Val@10 maior em {rule_a['cuts_val_above_reference']} de {len(cuts)} cortes.",
-              f"- Sem as negociações que nunca fecham, a diferença em Val@10 passa a {pp(trimmed['d_val_at_k'])} "
-              f"pp (IC95% {pp(trimmed['d_val_low'])} a {pp(trimmed['d_val_high'])}): {depends}.",
+              f"- A regra anterior (só o maior ciclo) fica {pp(previous['d_val_at_k'])} pp em relação à regra servida "
+              f"em Val@10 (IC95% {pp(previous['d_val_low'])} a {pp(previous['d_val_high'])}) e "
+              f"{pp(previous['d_p_at_k'])} pp em P@10, com Val@10 acima da servida em "
+              f"{previous['cuts_val_above_reference']} de {len(cuts)} cortes.",
+              f"- Sem as negociações que nunca fecham: {depends}.",
               f"- Escolher o limite olhando só os cortes anteriores rende {pct(forward['val_walk_forward'])} de Val@10, "
-              f"contra {pct(forward['val_rule_a'])} da regra A: {beats}.",
+              f"contra {pct(forward['val_served'])} da regra servida: {beats}.",
               "- Ordenar por preço captura valor por construção, sem acertar mais. Por isso P@10 e Val@10 aparecem "
               "lado a lado.",
               "- O backtest mede quem teria ganhado de qualquer forma. Não mede o efeito de trabalhar a lista: isso "

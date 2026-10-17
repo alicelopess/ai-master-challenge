@@ -1,7 +1,8 @@
 """Parâmetros e premissas da solução, sem lógica.
 
-Faixas de valor e limite de ciclo são política provisória (U-06): sem
-validação da Head de RevOps, editáveis aqui sem tocar no motor.
+Faixas de valor e percentil do primeiro limite são política provisória (U-06): sem
+validação da Head de RevOps, editáveis aqui sem tocar no motor. A regra de grupos
+é a regra A (ADR-006).
 """
 from __future__ import annotations
 
@@ -41,23 +42,25 @@ OPEN_STAGES = ("Engaging", "Prospecting")
 CLOSED_STAGES = ("Won", "Lost")
 
 # Únicos campos que a classificação enxerga (RD-02). `close_date` entra só
-# na régua de ciclo, e só de fechadas até o as_of.
+# nos dois limites de idade, e só de fechadas até o as_of.
 CLASSIFICATION_FIELDS = (
     "opportunity_id", "sales_agent", "manager", "regional_office",
     "product", "sales_price", "account", "deal_stage", "engage_date",
 )
 
 # Estados (grupos), na ordem da lista. São chaves: o nome de cada grupo é de quem apresenta.
-FOCAR, REVISAR, QUALIFICAR, NAO_PONTUAVEL = "focar", "revisar", "qualificar", "nao_pontuavel"
-STATES = (FOCAR, REVISAR, QUALIFICAR, NAO_PONTUAVEL)
+# Engaging (regra A): focar até L1; acompanhar acima de L1 até L2; revisar acima de L2.
+FOCAR, ACOMPANHAR, REVISAR = "focar", "acompanhar", "revisar"
+QUALIFICAR, NAO_PONTUAVEL = "qualificar", "nao_pontuavel"
+STATES = (FOCAR, ACOMPANHAR, REVISAR, QUALIFICAR, NAO_PONTUAVEL)
 
 # Campos necessários para pontuar; a ordem define qual é citado primeiro (RD-03).
 MISSING_FIELDS = ("product", "sales_price", "engage_date")
 
-# Referência de ciclo por produto: P90 das ganhas até o as_of (quantil
-# linear, arredondado para dia inteiro); abaixo de MIN_CASES, só indicação.
+# Primeiro limite de idade (L1): o piso deste percentil (quantil linear) do ciclo das
+# ganhas até o as_of, um número só para todos os produtos. O segundo (L2) é o maior
+# ciclo fechado até o as_of.
 CYCLE_PERCENTILE = 90
-MIN_CASES = 30
 
 # Faixa de valor de tabela: alto >= 3.000; médio de 500 a 2.999; baixo < 500.
 VALUE_BANDS = (("alto", 3000), ("médio", 500), ("baixo", 0))
@@ -65,16 +68,22 @@ VALUE_BANDS = (("alto", 3000), ("médio", 500), ("baixo", 0))
 # Próximo passo por estado (PRD, P0-3), como código. A ferramenta só lê o CRM (RE-03).
 NEXT_ACTIONS = {
     FOCAR: codes.WORK_HIGHEST_LIST_PRICE_FIRST,
+    ACOMPANHAR: codes.CHECK_PROGRESS,
     REVISAR: codes.CONFIRM_STILL_ACTIVE,
     QUALIFICAR: codes.ADVANCE_PROSPECTING,
 }
 # Focar vazio aponta o primeiro grupo seguinte que tem oportunidades (Q-01), com esta ação.
 START_ACTION_CODES = {
+    ACOMPANHAR: codes.CHECK_PROGRESS,
     REVISAR: codes.CONFIRM_STILL_ACTIVE,
     QUALIFICAR: codes.ADVANCE_PROSPECTING,
     NAO_PONTUAVEL: codes.FIX_MISSING_FIELDS,
 }
 
-# Nenhum texto mostrado ao vendedor pode conter estes termos (AC-3.8). Os catálogos
-# da tela e da CLI são verificados contra esta lista.
-FORBIDDEN_TERMS = ("probabilidade", "perdida", "encerre", "prioridade alta", "chance alta", "score")
+# Nenhum texto mostrado ao vendedor pode conter palavras que comecem por estes termos (AC-3.8):
+# a checagem é por início de palavra, então "parad" pega "paradas" mas não "comparado". Os
+# catálogos da tela e da CLI são verificados contra esta lista (a tela a lê de uma fixture).
+# Além de prometer chance, nenhum texto apresenta um limite de idade como prazo ou afirma
+# inatividade: o sistema não vê ligações nem reuniões.
+FORBIDDEN_TERMS = ("probabilidade", "perdida", "encerre", "prioridade alta", "chance alta", "score",
+                   "prazo", "vence", "vencid", "atrasad", "expir", "faltam", "parad", "inativ", "chance zero")

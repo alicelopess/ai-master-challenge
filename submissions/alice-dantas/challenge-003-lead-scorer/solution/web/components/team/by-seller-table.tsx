@@ -8,16 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { GROUP_LABELS, TEAM, UI } from "@/copy/pt-BR";
-import type { SellerSummary } from "@/lib/contract";
+import type { Ordering, SellerSummary } from "@/lib/contract";
 import { formatInt } from "@/lib/format";
 import { PAGE_SIZE } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 
-const GROUPS = ["focar", "revisar", "qualificar", "nao_pontuavel"] as const;
-
 /** A carteira de cada vendedor do filtro, na ordem da API (alfabética). Sem controles de ordenação:
- * a tela não ranqueia pessoas (AC-2.9). O nome leva à carteira do vendedor. */
-export function BySellerTable({ rows }: { rows: SellerSummary[] }) {
+ * a tela não ranqueia pessoas (AC-2.9). As colunas de grupo seguem `ordering.group_order`, então um
+ * grupo novo do back aparece sem mudar este componente. O nome leva à carteira do vendedor. */
+export function BySellerTable({ rows, groups }: { rows: SellerSummary[]; groups: Ordering["group_order"] }) {
   const [page, setPage] = useState(1);
   const visible = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const cell = (key: string, value: number, className?: string) => (
@@ -36,7 +35,7 @@ export function BySellerTable({ rows }: { rows: SellerSummary[] }) {
             <TableRow className="hover:bg-transparent">
               <TableHead className="pl-6">{UI.columns.seller}</TableHead>
               <TableHead className="text-right">{TEAM.total}</TableHead>
-              {GROUPS.map((state) => (
+              {groups.map((state) => (
                 <TableHead key={state} className="text-right">{GROUP_LABELS[state]}</TableHead>
               ))}
               <TableHead className="pr-6 text-right">{TEAM.withoutAccount}</TableHead>
@@ -51,7 +50,7 @@ export function BySellerTable({ rows }: { rows: SellerSummary[] }) {
                   </Button>
                 </TableCell>
                 {cell("total", row.total)}
-                {GROUPS.map((state) => cell(state, row[state]))}
+                {groups.map((state) => cell(state, row[state]))}
                 {cell("without_account", row.without_account, "pr-6")}
               </TableRow>
             ))}

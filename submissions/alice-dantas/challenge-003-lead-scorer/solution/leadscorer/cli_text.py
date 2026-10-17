@@ -16,7 +16,9 @@ from .fmt import fmt_date, fmt_int
 
 Params = Dict[str, Any]
 
-GROUP_LABELS = {"focar": "Focar", "revisar": "Revisar", "qualificar": "Qualificar", "nao_pontuavel": "Não pontuável"}
+# Verbos no infinitivo: os moldes "Comece por {nome}" e "{nome} porque…" leem bem com todos.
+GROUP_LABELS = {"focar": "Focar", "acompanhar": "Acompanhar", "revisar": "Confirmar", "qualificar": "Qualificar",
+                "nao_pontuavel": "Completar"}
 
 # Campo ausente → (motivo curto na linha, nome usado nas frases).
 MISSING = {
@@ -71,27 +73,18 @@ def value_label(band: str) -> str:
     return f"valor de tabela {band}"
 
 
-def _won_cycle(p: Params) -> str:
-    text = (f"Referência do {p['product']}: em {p['percentile']}% das vendas ganhas, o ciclo foi de até "
-            f"{p['p90_days']} dias (N = {fmt_int(p['won_n'])}). Esta está há {p['age_days']} dias; o maior ciclo "
-            f"já fechado foi de {p['cycle_limit_days']} dias.")
-    return f"{text} Poucos casos; leia como indicação." if p["few_cases"] else text
-
-
-NO_CYCLE: Dict[str, Callable[[Params], str]] = {
-    codes.CAUSE_NO_PRODUCT: lambda p: "Sem produto: não há ciclo de referência para comparar.",
-    codes.CAUSE_NO_AGE: lambda p: "Sem data de engajamento: não há idade para comparar.",
-    codes.CAUSE_NO_WINS: lambda p: (f"Sem vendas ganhas deste produto até {iso_date(p['as_of'])}: "
-                                    "não há ciclo de referência para comparar."),
-}
-
+# Os limites aparecem como fato do histórico, nunca como prazo.
 REASONS: Dict[str, Callable[[Params], str]] = {
-    codes.AGE_WITHIN_CYCLE_LIMIT: lambda p: (
-        f"{GROUP_LABELS['focar']} porque está em negociação há {p['age_days']} dias, dentro do maior ciclo "
-        f"já fechado ({p['cycle_limit_days']} d)."),
+    codes.AGE_WITHIN_WON_CYCLE: lambda p: (
+        f"{GROUP_LABELS['focar']} porque está aberta há {p['age_days']} dias; {p['percentile']}% das vendas "
+        f"ganhas fecharam em até {p['won_cycle_limit_days']} dias."),
+    codes.AGE_ABOVE_WON_CYCLE: lambda p: (
+        f"{GROUP_LABELS['acompanhar']} porque está aberta há {p['age_days']} dias: mais do que {p['percentile']}% "
+        f"das vendas ganhas levaram ({p['won_cycle_limit_days']} d), sem passar da venda mais longa já fechada "
+        f"({p['cycle_limit_days']} d)."),
     codes.AGE_ABOVE_CYCLE_LIMIT: lambda p: (
-        f"{GROUP_LABELS['revisar']} porque está em negociação há {p['age_days']} dias, acima do maior ciclo "
-        f"já fechado ({p['cycle_limit_days']} d)."),
+        f"{GROUP_LABELS['revisar']} porque está aberta há {p['age_days']} dias, mais do que qualquer venda já "
+        f"fechada aqui ({p['cycle_limit_days']} d)."),
     # A regra é o estágio, não a falta de data (o texto antigo dizia mais do que o código).
     codes.PROSPECTING_STAGE: lambda p: f"{GROUP_LABELS['qualificar']} porque ainda está em prospecção.",
     codes.MISSING_FIELD: lambda p: f"{GROUP_LABELS['nao_pontuavel']} porque falta {MISSING[p['field']][1]}.",
@@ -100,19 +93,16 @@ REASONS: Dict[str, Callable[[Params], str]] = {
         f"{p['product']}, não valor negociado."),
     codes.NO_PRODUCT: lambda p: "Sem valor de tabela: a oportunidade não tem produto.",
     codes.NO_LIST_PRICE: lambda p: f"Sem valor de tabela: o {p['product']} não tem preço no catálogo.",
-    codes.WON_CYCLE_REFERENCE: _won_cycle,
-    codes.NO_CYCLE_REFERENCE: lambda p: NO_CYCLE[p["cause"]](p),
-    # A taxa das fechadas não prova que as abertas não se diferenciam: a frase só diz o que o código diz.
-    codes.CLOSED_BASE_RATE: lambda p: (
-        f"Não sabemos a chance de fechar desta oportunidade: cerca de {p['pct']}% das fechadas foram ganhas "
-        f"({p['low_pct']}% a {p['high_pct']}% contando as abertas)."),
 }
+# O que o sistema não vê: dito uma vez no "Por que está aqui", não como motivo.
+LIMITS_NOTE = "O sistema só vê datas, produto e preço de tabela: não vê ligações, reuniões nem e-mails."
 
 ACTIONS: Dict[str, Callable[[Params], str]] = {
     codes.WORK_HIGHEST_LIST_PRICE_FIRST: lambda p: (
-        "Trabalhe primeiro os de maior valor de tabela; empates do mesmo produto valem o mesmo."),
+        "Avance primeiro as de maior valor de tabela; as do mesmo produto valem o mesmo."),
+    codes.CHECK_PROGRESS: lambda p: "Veja no CRM o último avanço e o que falta para fechar.",
     codes.CONFIRM_STILL_ACTIVE: lambda p: (
-        "Confirme no CRM se segue ativa: idade acima do ciclo não prova que o negócio terminou."),
+        "Confirme com o cliente ou no CRM se a negociação segue: o tempo aberta não prova que ela terminou."),
     codes.ADVANCE_PROSPECTING: lambda p: (
         "Ainda em prospecção: avance no CRM os de maior valor de tabela e registre a data de engajamento "
         "quando houver contato."),
@@ -122,16 +112,27 @@ ACTIONS: Dict[str, Callable[[Params], str]] = {
 
 # Ação de "comece por", em minúscula, no meio da frase de Focar vazio.
 START_ACTIONS = {
+    codes.CHECK_PROGRESS: "veja no CRM o último avanço de cada uma",
     codes.CONFIRM_STILL_ACTIVE: "confirme no CRM quais seguem ativas",
     codes.ADVANCE_PROSPECTING: "avance no CRM as de maior valor de tabela",
     codes.FIX_MISSING_FIELDS: "corrija o cadastro no CRM",
 }
 
+def _start_with(p: Params) -> str:
+    """Focar vazio: cita só o limite que importa para o grupo indicado."""
+    group = p["group"]
+    if group == "acompanhar":
+        why = f"Nenhuma aberta há até {p['won_cycle_limit_days']} dias."
+    elif group == "revisar":
+        why = f"Todas as negociações em andamento estão abertas há mais de {p['cycle_limit_days']} dias."
+    else:
+        why = "Nenhuma negociação em andamento."
+    return f"{why} Comece por {GROUP_LABELS[group]}: {START_ACTIONS[p['action']]}."
+
+
 EMPTY: Dict[str, Callable[[Params], str]] = {
     codes.GROUP_EMPTY: lambda p: "Nenhuma oportunidade neste grupo.",
-    codes.START_WITH_GROUP: lambda p: (
-        f"Nenhuma oportunidade dentro do ciclo observado (até {p['cycle_limit_days']} d). "
-        f"Comece por {GROUP_LABELS[p['group']]}: {START_ACTIONS[p['action']]}."),
+    codes.START_WITH_GROUP: _start_with,
     codes.NO_OPEN_FOR_SELLER: lambda p: "Nenhuma oportunidade aberta para este vendedor.",
     codes.NO_OPEN_FOR_FILTER: lambda p: "Nenhuma oportunidade aberta para este filtro.",
 }

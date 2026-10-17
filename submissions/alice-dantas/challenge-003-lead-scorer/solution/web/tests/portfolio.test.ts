@@ -15,6 +15,12 @@ describe("por onde começar", () => {
     expect(startGroup(payload)?.state).toBe("qualificar");
     expect(defaultTab(payload)).toBe("qualificar");
   });
+  test.each([["pipeline-edges-davi-delta", "acompanhar"], ["pipeline-edges-eva-epsilon", "revisar"]])(
+    "Focar vazio em %s: começa pelo grupo seguinte com itens (%s)", (name, state) => {
+      const payload = sellerPipeline(name);
+      expect(startGroup(payload)?.state).toBe(state);
+      expect(defaultTab(payload)).toBe(state);
+    });
   test("sem abertas: nenhum grupo; a aba inicial é a primeira da ordem", () => {
     const payload = sellerPipeline("pipeline-carla-gama");
     expect(startGroup(payload)).toBeNull();
@@ -30,10 +36,10 @@ describe("primeiro bloco", () => {
   test("empate no topo: o bloco inteiro", () => {
     const focar = sellerPipeline("pipeline-ana-alfa").groups[0];
     const tied = { ...focar, items: focar.items.filter((i) => i.tie_size > 1) };
-    expect(firstBlock(tied).map((i) => i.opportunity_id)).toEqual(["E050", "E138"]);
+    expect(firstBlock(tied).map((i) => i.opportunity_id)).toEqual(["E050", "E100"]);
   });
   test("sem preço de tabela não há empate", () => {
-    const naoPontuavel = sellerPipeline("pipeline-edges-bruno-beta").groups[3];
+    const naoPontuavel = sellerPipeline("pipeline-edges-bruno-beta").groups.find((g) => g.state === "nao_pontuavel")!;
     const noPrice = { ...naoPontuavel, items: naoPontuavel.items.filter((i) => i.sales_price === null) };
     expect(firstBlock(noPrice)).toHaveLength(1);
   });

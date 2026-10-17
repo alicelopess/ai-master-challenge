@@ -39,7 +39,7 @@
             }
           },
           "503": {
-            "description": "CSVs ausentes ou inválidos",
+            "description": "CSVs ausentes ou inválidos, ou sem venda ganha até o as_of",
             "content": {
               "application/json": {
                 "schema": {
@@ -77,7 +77,7 @@
             }
           },
           "503": {
-            "description": "CSVs ausentes ou inválidos",
+            "description": "CSVs ausentes ou inválidos, ou sem venda ganha até o as_of",
             "content": {
               "application/json": {
                 "schema": {
@@ -132,7 +132,7 @@
             }
           },
           "503": {
-            "description": "CSVs ausentes ou inválidos",
+            "description": "CSVs ausentes ou inválidos, ou sem venda ganha até o as_of",
             "content": {
               "application/json": {
                 "schema": {
@@ -230,7 +230,7 @@
             }
           },
           "503": {
-            "description": "CSVs ausentes ou inválidos",
+            "description": "CSVs ausentes ou inválidos, ou sem venda ganha até o as_of",
             "content": {
               "application/json": {
                 "schema": {
@@ -286,7 +286,7 @@
             }
           },
           "503": {
-            "description": "CSVs ausentes ou inválidos",
+            "description": "CSVs ausentes ou inválidos, ou sem venda ganha até o as_of",
             "content": {
               "application/json": {
                 "schema": {
@@ -324,7 +324,7 @@
             }
           },
           "503": {
-            "description": "Resultado do backtest ausente ou inválido",
+            "description": "Resultado do backtest ausente, inválido ou de outra regra",
             "content": {
               "application/json": {
                 "schema": {
@@ -352,7 +352,7 @@
             "title": "Role"
           },
           "params": {
-            "$ref": "#/components/schemas/AgeParams"
+            "$ref": "#/components/schemas/LongestCycleParams"
           }
         },
         "additionalProperties": false,
@@ -363,34 +363,13 @@
           "params"
         ],
         "title": "AgeAboveCycleLimit",
-        "description": "Engaging com idade acima do maior ciclo fechado: grupo revisar."
+        "description": "Engaging com idade acima de L2: grupo revisar."
       },
-      "AgeParams": {
-        "properties": {
-          "age_days": {
-            "type": "integer",
-            "title": "Age Days",
-            "description": "Dias corridos desde engage_date até o as_of."
-          },
-          "cycle_limit_days": {
-            "type": "integer",
-            "title": "Cycle Limit Days",
-            "description": "Maior ciclo entre as fechadas até o as_of."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "age_days",
-          "cycle_limit_days"
-        ],
-        "title": "AgeParams"
-      },
-      "AgeWithinCycleLimit": {
+      "AgeAboveWonCycle": {
         "properties": {
           "code": {
             "type": "string",
-            "const": "age_within_cycle_limit",
+            "const": "age_above_won_cycle",
             "title": "Code"
           },
           "role": {
@@ -399,7 +378,7 @@
             "title": "Role"
           },
           "params": {
-            "$ref": "#/components/schemas/AgeParams"
+            "$ref": "#/components/schemas/BetweenLimitsParams"
           }
         },
         "additionalProperties": false,
@@ -409,65 +388,23 @@
           "role",
           "params"
         ],
-        "title": "AgeWithinCycleLimit",
-        "description": "Engaging com idade até o maior ciclo fechado: grupo focar."
+        "title": "AgeAboveWonCycle",
+        "description": "Engaging com idade acima de L1 e até L2: grupo acompanhar."
       },
-      "BaseRate": {
-        "properties": {
-          "won": {
-            "type": "integer",
-            "title": "Won"
-          },
-          "closed": {
-            "type": "integer",
-            "title": "Closed"
-          },
-          "open": {
-            "type": "integer",
-            "title": "Open"
-          },
-          "pct": {
-            "type": "integer",
-            "title": "Pct",
-            "description": "Ganhas sobre fechadas, em %."
-          },
-          "low_pct": {
-            "type": "integer",
-            "title": "Low Pct",
-            "description": "Se todas as abertas fossem perdidas, em %."
-          },
-          "high_pct": {
-            "type": "integer",
-            "title": "High Pct",
-            "description": "Se todas as abertas fossem ganhas, em %."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "won",
-          "closed",
-          "open",
-          "pct",
-          "low_pct",
-          "high_pct"
-        ],
-        "title": "BaseRate"
-      },
-      "ClosedBaseRate": {
+      "AgeWithinWonCycle": {
         "properties": {
           "code": {
             "type": "string",
-            "const": "closed_base_rate",
+            "const": "age_within_won_cycle",
             "title": "Code"
           },
           "role": {
             "type": "string",
-            "const": "context",
+            "const": "group",
             "title": "Role"
           },
           "params": {
-            "$ref": "#/components/schemas/BaseRate"
+            "$ref": "#/components/schemas/WonCycleParams"
           }
         },
         "additionalProperties": false,
@@ -477,34 +414,39 @@
           "role",
           "params"
         ],
-        "title": "ClosedBaseRate",
-        "description": "Taxa de ganho das fechadas: igual para todas as oportunidades, só contexto."
+        "title": "AgeWithinWonCycle",
+        "description": "Engaging com idade até L1: grupo focar."
       },
-      "CycleReference": {
+      "BetweenLimitsParams": {
         "properties": {
-          "p90_days": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "P90 Days"
-          },
-          "won_n": {
+          "age_days": {
             "type": "integer",
-            "title": "Won N"
+            "title": "Age Days"
+          },
+          "won_cycle_limit_days": {
+            "type": "integer",
+            "title": "Won Cycle Limit Days",
+            "description": "L1: piso do P90 do ciclo das ganhas até o as_of."
+          },
+          "cycle_limit_days": {
+            "type": "integer",
+            "title": "Cycle Limit Days",
+            "description": "L2: maior ciclo entre as fechadas até o as_of."
+          },
+          "percentile": {
+            "type": "integer",
+            "title": "Percentile"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "p90_days",
-          "won_n"
+          "age_days",
+          "won_cycle_limit_days",
+          "cycle_limit_days",
+          "percentile"
         ],
-        "title": "CycleReference"
+        "title": "BetweenLimitsParams"
       },
       "Delta": {
         "properties": {
@@ -554,7 +496,8 @@
               "as_of_before_last_close",
               "seller_not_found",
               "opportunity_not_found",
-              "evidence_unavailable"
+              "evidence_unavailable",
+              "no_won_history"
             ],
             "title": "Code"
           },
@@ -596,9 +539,17 @@
           },
           "reference": {
             "type": "string",
-            "const": "current_rule",
+            "enum": [
+              "global_rate",
+              "product_rate",
+              "random",
+              "list_price_only",
+              "age_newest_first",
+              "age_max_cycle_only",
+              "age_p90_then_max_cycle"
+            ],
             "title": "Reference",
-            "description": "A regra servida, base das diferenças."
+            "description": "A regra servida hoje, base das diferenças."
           },
           "rankers": {
             "items": {
@@ -615,6 +566,10 @@
             "type": "array",
             "title": "Without No Outcome",
             "description": "As mesmas medidas sem as oportunidades que nunca fecham na base."
+          },
+          "without_no_outcome_verdict": {
+            "$ref": "#/components/schemas/EvidenceVerdict",
+            "description": "A regra servida sem as que nunca fecham: a limitação principal da evidência."
           }
         },
         "additionalProperties": false,
@@ -623,7 +578,8 @@
           "design",
           "reference",
           "rankers",
-          "without_no_outcome"
+          "without_no_outcome",
+          "without_no_outcome_verdict"
         ],
         "title": "Evidence"
       },
@@ -681,6 +637,60 @@
         ],
         "title": "EvidenceDesign"
       },
+      "EvidenceVerdict": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "reference_behind",
+              "inconclusive",
+              "reference_ahead"
+            ],
+            "title": "Code"
+          },
+          "ranker": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "global_rate",
+                  "product_rate",
+                  "random",
+                  "list_price_only",
+                  "age_newest_first",
+                  "age_max_cycle_only",
+                  "age_p90_then_max_cycle"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranker",
+            "description": "A alternativa que decidiu o veredito; nulo se inconclusivo."
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Delta"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A diferença dessa alternativa contra a servida."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "ranker",
+          "delta"
+        ],
+        "title": "EvidenceVerdict",
+        "description": "Como fica a regra servida contra as alternativas, pelo IC95% de cada diferença."
+      },
       "FieldParams": {
         "properties": {
           "field": {
@@ -725,6 +735,7 @@
             "type": "string",
             "enum": [
               "focar",
+              "acompanhar",
               "revisar",
               "qualificar",
               "nao_pontuavel"
@@ -776,6 +787,7 @@
                   "propertyName": "code",
                   "mapping": {
                     "advance_prospecting": "#/components/schemas/SimpleAction",
+                    "check_progress": "#/components/schemas/SimpleAction",
                     "confirm_still_active": "#/components/schemas/SimpleAction",
                     "fix_missing_field": "#/components/schemas/FixFieldAction",
                     "fix_missing_fields": "#/components/schemas/SimpleAction",
@@ -918,6 +930,7 @@
             "type": "string",
             "enum": [
               "focar",
+              "acompanhar",
               "revisar",
               "qualificar",
               "nao_pontuavel"
@@ -957,7 +970,10 @@
             "items": {
               "oneOf": [
                 {
-                  "$ref": "#/components/schemas/AgeWithinCycleLimit"
+                  "$ref": "#/components/schemas/AgeWithinWonCycle"
+                },
+                {
+                  "$ref": "#/components/schemas/AgeAboveWonCycle"
                 },
                 {
                   "$ref": "#/components/schemas/AgeAboveCycleLimit"
@@ -976,36 +992,25 @@
                 },
                 {
                   "$ref": "#/components/schemas/NoListPrice"
-                },
-                {
-                  "$ref": "#/components/schemas/WonCycleReference"
-                },
-                {
-                  "$ref": "#/components/schemas/NoCycleReference"
-                },
-                {
-                  "$ref": "#/components/schemas/ClosedBaseRate"
                 }
               ],
               "discriminator": {
                 "propertyName": "code",
                 "mapping": {
                   "age_above_cycle_limit": "#/components/schemas/AgeAboveCycleLimit",
-                  "age_within_cycle_limit": "#/components/schemas/AgeWithinCycleLimit",
-                  "closed_base_rate": "#/components/schemas/ClosedBaseRate",
+                  "age_above_won_cycle": "#/components/schemas/AgeAboveWonCycle",
+                  "age_within_won_cycle": "#/components/schemas/AgeWithinWonCycle",
                   "list_price": "#/components/schemas/ListPrice",
                   "missing_field": "#/components/schemas/MissingFieldReason",
-                  "no_cycle_reference": "#/components/schemas/NoCycleReference",
                   "no_list_price": "#/components/schemas/NoListPrice",
                   "no_product": "#/components/schemas/NoProduct",
-                  "prospecting_stage": "#/components/schemas/ProspectingStage",
-                  "won_cycle_reference": "#/components/schemas/WonCycleReference"
+                  "prospecting_stage": "#/components/schemas/ProspectingStage"
                 }
               }
             },
             "type": "array",
             "title": "Reasons",
-            "description": "Um motivo de grupo, um de ordem e os de contexto, nesta ordem."
+            "description": "Exatamente dois: o que decidiu o grupo e o que decidiu a ordem."
           },
           "next_action": {
             "oneOf": [
@@ -1021,6 +1026,7 @@
               "propertyName": "code",
               "mapping": {
                 "advance_prospecting": "#/components/schemas/SimpleAction",
+                "check_progress": "#/components/schemas/SimpleAction",
                 "confirm_still_active": "#/components/schemas/SimpleAction",
                 "fix_missing_field": "#/components/schemas/FixFieldAction",
                 "fix_missing_fields": "#/components/schemas/SimpleAction",
@@ -1105,6 +1111,26 @@
         ],
         "title": "ListPriceParams"
       },
+      "LongestCycleParams": {
+        "properties": {
+          "age_days": {
+            "type": "integer",
+            "title": "Age Days"
+          },
+          "cycle_limit_days": {
+            "type": "integer",
+            "title": "Cycle Limit Days",
+            "description": "L2: maior ciclo entre as fechadas até o as_of."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "age_days",
+          "cycle_limit_days"
+        ],
+        "title": "LongestCycleParams"
+      },
       "Meta": {
         "properties": {
           "as_of": {
@@ -1112,27 +1138,20 @@
             "format": "date",
             "title": "As Of"
           },
+          "won_cycle_limit_days": {
+            "type": "integer",
+            "title": "Won Cycle Limit Days",
+            "description": "L1: piso do P90 do ciclo das ganhas até o as_of."
+          },
           "cycle_limit_days": {
             "type": "integer",
-            "title": "Cycle Limit Days"
+            "title": "Cycle Limit Days",
+            "description": "L2: maior ciclo entre as fechadas até o as_of."
           },
           "cycle_percentile": {
             "type": "integer",
-            "title": "Cycle Percentile"
-          },
-          "min_cases": {
-            "type": "integer",
-            "title": "Min Cases"
-          },
-          "cycle_references": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/CycleReference"
-            },
-            "type": "object",
-            "title": "Cycle References"
-          },
-          "base_rate": {
-            "$ref": "#/components/schemas/BaseRate"
+            "title": "Cycle Percentile",
+            "description": "Percentil do ciclo das ganhas que define L1."
           },
           "audited": {
             "type": "boolean",
@@ -1141,7 +1160,7 @@
           },
           "contract_version": {
             "type": "integer",
-            "const": 4,
+            "const": 5,
             "title": "Contract Version"
           }
         },
@@ -1149,11 +1168,9 @@
         "type": "object",
         "required": [
           "as_of",
+          "won_cycle_limit_days",
           "cycle_limit_days",
           "cycle_percentile",
-          "min_cases",
-          "cycle_references",
-          "base_rate",
           "audited",
           "contract_version"
         ],
@@ -1184,74 +1201,6 @@
         ],
         "title": "MissingFieldReason",
         "description": "Falta um campo necessário: grupo nao_pontuavel."
-      },
-      "NoCycleParams": {
-        "properties": {
-          "cause": {
-            "type": "string",
-            "enum": [
-              "no_product",
-              "no_age",
-              "no_wins"
-            ],
-            "title": "Cause"
-          },
-          "product": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Product"
-          },
-          "as_of": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "As Of"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "cause"
-        ],
-        "title": "NoCycleParams"
-      },
-      "NoCycleReference": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "const": "no_cycle_reference",
-            "title": "Code"
-          },
-          "role": {
-            "type": "string",
-            "const": "context",
-            "title": "Role"
-          },
-          "params": {
-            "$ref": "#/components/schemas/NoCycleParams"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "code",
-          "role",
-          "params"
-        ],
-        "title": "NoCycleReference",
-        "description": "Não há referência de ciclo (sem produto, sem idade ou sem ganhas até o as_of)."
       },
       "NoListPrice": {
         "properties": {
@@ -1319,6 +1268,7 @@
               "type": "string",
               "enum": [
                 "focar",
+                "acompanhar",
                 "revisar",
                 "qualificar",
                 "nao_pontuavel"
@@ -1442,8 +1392,8 @@
               "random",
               "list_price_only",
               "age_newest_first",
-              "current_rule",
-              "rule_a"
+              "age_max_cycle_only",
+              "age_p90_then_max_cycle"
             ],
             "title": "Code"
           },
@@ -1657,6 +1607,10 @@
             "type": "integer",
             "title": "Focar"
           },
+          "acompanhar": {
+            "type": "integer",
+            "title": "Acompanhar"
+          },
           "revisar": {
             "type": "integer",
             "title": "Revisar"
@@ -1680,6 +1634,7 @@
           "seller",
           "total",
           "focar",
+          "acompanhar",
           "revisar",
           "qualificar",
           "nao_pontuavel",
@@ -1694,6 +1649,7 @@
             "type": "string",
             "enum": [
               "work_highest_list_price_first",
+              "check_progress",
               "confirm_still_active",
               "advance_prospecting",
               "fix_missing_fields"
@@ -1738,6 +1694,7 @@
             "type": "string",
             "enum": [
               "focar",
+              "acompanhar",
               "revisar",
               "qualificar",
               "nao_pontuavel"
@@ -1748,15 +1705,22 @@
           "action": {
             "type": "string",
             "enum": [
+              "check_progress",
               "confirm_still_active",
               "advance_prospecting",
               "fix_missing_fields"
             ],
             "title": "Action"
           },
+          "won_cycle_limit_days": {
+            "type": "integer",
+            "title": "Won Cycle Limit Days",
+            "description": "L1, o limite que deixou o grupo focar vazio."
+          },
           "cycle_limit_days": {
             "type": "integer",
-            "title": "Cycle Limit Days"
+            "title": "Cycle Limit Days",
+            "description": "L2, o limite de acompanhar."
           }
         },
         "additionalProperties": false,
@@ -1764,6 +1728,7 @@
         "required": [
           "group",
           "action",
+          "won_cycle_limit_days",
           "cycle_limit_days"
         ],
         "title": "StartWithParams"
@@ -1777,6 +1742,10 @@
           "focar": {
             "type": "integer",
             "title": "Focar"
+          },
+          "acompanhar": {
+            "type": "integer",
+            "title": "Acompanhar"
           },
           "revisar": {
             "type": "integer",
@@ -1801,6 +1770,7 @@
         "required": [
           "total",
           "focar",
+          "acompanhar",
           "revisar",
           "qualificar",
           "nao_pontuavel",
@@ -1936,76 +1906,30 @@
       },
       "WonCycleParams": {
         "properties": {
-          "product": {
-            "type": "string",
-            "title": "Product"
+          "age_days": {
+            "type": "integer",
+            "title": "Age Days",
+            "description": "Dias corridos desde engage_date até o as_of."
+          },
+          "won_cycle_limit_days": {
+            "type": "integer",
+            "title": "Won Cycle Limit Days",
+            "description": "L1: piso do P90 do ciclo das ganhas até o as_of."
           },
           "percentile": {
             "type": "integer",
-            "title": "Percentile"
-          },
-          "p90_days": {
-            "type": "integer",
-            "title": "P90 Days",
-            "description": "Ciclo até o qual fecharam `percentile`% das ganhas do produto."
-          },
-          "won_n": {
-            "type": "integer",
-            "title": "Won N",
-            "description": "Vendas ganhas do produto até o as_of."
-          },
-          "few_cases": {
-            "type": "boolean",
-            "title": "Few Cases",
-            "description": "won_n abaixo do mínimo de casos: ler como indicação."
-          },
-          "age_days": {
-            "type": "integer",
-            "title": "Age Days"
-          },
-          "cycle_limit_days": {
-            "type": "integer",
-            "title": "Cycle Limit Days"
+            "title": "Percentile",
+            "description": "Percentil do ciclo das ganhas que define L1."
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "product",
-          "percentile",
-          "p90_days",
-          "won_n",
-          "few_cases",
           "age_days",
-          "cycle_limit_days"
+          "won_cycle_limit_days",
+          "percentile"
         ],
         "title": "WonCycleParams"
-      },
-      "WonCycleReference": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "const": "won_cycle_reference",
-            "title": "Code"
-          },
-          "role": {
-            "type": "string",
-            "const": "context",
-            "title": "Role"
-          },
-          "params": {
-            "$ref": "#/components/schemas/WonCycleParams"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "code",
-          "role",
-          "params"
-        ],
-        "title": "WonCycleReference",
-        "description": "Referência de ciclo das ganhas do produto: só contexto."
       }
     }
   }

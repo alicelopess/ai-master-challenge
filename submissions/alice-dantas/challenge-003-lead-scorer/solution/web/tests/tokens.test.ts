@@ -31,7 +31,8 @@ const PAIRS = [
   ["muted-foreground", "muted"], ["primary-foreground", "primary"], ["primary-strong", "background"],
   ["primary-strong", "card"], ["primary-strong", "accent"], ["secondary-foreground", "secondary"],
   ["accent-foreground", "accent"], ["destructive", "card"], ["destructive", "background"],
-  ["status-focar", "status-focar-bg"], ["status-revisar", "status-revisar-bg"],
+  ["status-focar", "status-focar-bg"], ["status-acompanhar", "status-acompanhar-bg"],
+  ["status-revisar", "status-revisar-bg"],
   ["status-revisar", "background"], ["status-qualificar", "status-qualificar-bg"],
   ["status-nao-pontuavel", "status-nao-pontuavel-bg"],
 ] as const;

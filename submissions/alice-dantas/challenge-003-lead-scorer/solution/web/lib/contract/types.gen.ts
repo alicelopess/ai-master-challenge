@@ -7,7 +7,7 @@ export type ClientOptions = {
 /**
  * AgeAboveCycleLimit
  *
- * Engaging com idade acima do maior ciclo fechado: grupo revisar.
+ * Engaging com idade acima de L2: grupo revisar.
  */
 export type AgeAboveCycleLimit = {
     /**
@@ -18,109 +18,67 @@ export type AgeAboveCycleLimit = {
      * Role
      */
     role: 'group';
-    params: AgeParams;
+    params: LongestCycleParams;
 };
 
 /**
- * AgeParams
- */
-export type AgeParams = {
-    /**
-     * Age Days
-     *
-     * Dias corridos desde engage_date até o as_of.
-     */
-    age_days: number;
-    /**
-     * Cycle Limit Days
-     *
-     * Maior ciclo entre as fechadas até o as_of.
-     */
-    cycle_limit_days: number;
-};
-
-/**
- * AgeWithinCycleLimit
+ * AgeAboveWonCycle
  *
- * Engaging com idade até o maior ciclo fechado: grupo focar.
+ * Engaging com idade acima de L1 e até L2: grupo acompanhar.
  */
-export type AgeWithinCycleLimit = {
+export type AgeAboveWonCycle = {
     /**
      * Code
      */
-    code: 'age_within_cycle_limit';
+    code: 'age_above_won_cycle';
     /**
      * Role
      */
     role: 'group';
-    params: AgeParams;
+    params: BetweenLimitsParams;
 };
 
 /**
- * BaseRate
- */
-export type BaseRate = {
-    /**
-     * Won
-     */
-    won: number;
-    /**
-     * Closed
-     */
-    closed: number;
-    /**
-     * Open
-     */
-    open: number;
-    /**
-     * Pct
-     *
-     * Ganhas sobre fechadas, em %.
-     */
-    pct: number;
-    /**
-     * Low Pct
-     *
-     * Se todas as abertas fossem perdidas, em %.
-     */
-    low_pct: number;
-    /**
-     * High Pct
-     *
-     * Se todas as abertas fossem ganhas, em %.
-     */
-    high_pct: number;
-};
-
-/**
- * ClosedBaseRate
+ * AgeWithinWonCycle
  *
- * Taxa de ganho das fechadas: igual para todas as oportunidades, só contexto.
+ * Engaging com idade até L1: grupo focar.
  */
-export type ClosedBaseRate = {
+export type AgeWithinWonCycle = {
     /**
      * Code
      */
-    code: 'closed_base_rate';
+    code: 'age_within_won_cycle';
     /**
      * Role
      */
-    role: 'context';
-    params: BaseRate;
+    role: 'group';
+    params: WonCycleParams;
 };
 
 /**
- * CycleReference
+ * BetweenLimitsParams
  */
-export type CycleReference = {
+export type BetweenLimitsParams = {
     /**
-     * P90 Days
+     * Age Days
      */
-    p90_days: number | null;
+    age_days: number;
     /**
-     * Won N
+     * Won Cycle Limit Days
+     *
+     * L1: piso do P90 do ciclo das ganhas até o as_of.
      */
-    won_n: number;
+    won_cycle_limit_days: number;
+    /**
+     * Cycle Limit Days
+     *
+     * L2: maior ciclo entre as fechadas até o as_of.
+     */
+    cycle_limit_days: number;
+    /**
+     * Percentile
+     */
+    percentile: number;
 };
 
 /**
@@ -158,7 +116,7 @@ export type ErrorBody = {
     /**
      * Code
      */
-    code: 'data_file_missing' | 'data_file_empty' | 'data_file_invalid' | 'data_columns_missing' | 'data_unknown_label' | 'data_bad_date' | 'data_duplicate_key' | 'data_bad_price' | 'invalid_as_of_format' | 'as_of_before_last_close' | 'seller_not_found' | 'opportunity_not_found' | 'evidence_unavailable';
+    code: 'data_file_missing' | 'data_file_empty' | 'data_file_invalid' | 'data_columns_missing' | 'data_unknown_label' | 'data_bad_date' | 'data_duplicate_key' | 'data_bad_price' | 'invalid_as_of_format' | 'as_of_before_last_close' | 'seller_not_found' | 'opportunity_not_found' | 'evidence_unavailable' | 'no_won_history';
     /**
      * Params
      *
@@ -177,9 +135,9 @@ export type Evidence = {
     /**
      * Reference
      *
-     * A regra servida, base das diferenças.
+     * A regra servida hoje, base das diferenças.
      */
-    reference: 'current_rule';
+    reference: 'global_rate' | 'product_rate' | 'random' | 'list_price_only' | 'age_newest_first' | 'age_max_cycle_only' | 'age_p90_then_max_cycle';
     /**
      * Rankers
      *
@@ -192,6 +150,10 @@ export type Evidence = {
      * As mesmas medidas sem as oportunidades que nunca fecham na base.
      */
     without_no_outcome: Array<RankerResult>;
+    /**
+     * A regra servida sem as que nunca fecham: a limitação principal da evidência.
+     */
+    without_no_outcome_verdict: EvidenceVerdict;
 };
 
 /**
@@ -241,6 +203,28 @@ export type EvidenceDesign = {
 };
 
 /**
+ * EvidenceVerdict
+ *
+ * Como fica a regra servida contra as alternativas, pelo IC95% de cada diferença.
+ */
+export type EvidenceVerdict = {
+    /**
+     * Code
+     */
+    code: 'reference_behind' | 'inconclusive' | 'reference_ahead';
+    /**
+     * Ranker
+     *
+     * A alternativa que decidiu o veredito; nulo se inconclusivo.
+     */
+    ranker: 'global_rate' | 'product_rate' | 'random' | 'list_price_only' | 'age_newest_first' | 'age_max_cycle_only' | 'age_p90_then_max_cycle' | null;
+    /**
+     * A diferença dessa alternativa contra a servida.
+     */
+    delta: Delta | null;
+};
+
+/**
  * FieldParams
  */
 export type FieldParams = {
@@ -268,7 +252,7 @@ export type Group = {
     /**
      * State
      */
-    state: 'focar' | 'revisar' | 'qualificar' | 'nao_pontuavel';
+    state: 'focar' | 'acompanhar' | 'revisar' | 'qualificar' | 'nao_pontuavel';
     /**
      * Count
      */
@@ -289,7 +273,7 @@ export type Group = {
      * Nulo quando o grupo está vazio.
      */
     next_action: ({
-        code: 'advance_prospecting' | 'confirm_still_active' | 'fix_missing_fields' | 'work_highest_list_price_first';
+        code: 'advance_prospecting' | 'check_progress' | 'confirm_still_active' | 'fix_missing_fields' | 'work_highest_list_price_first';
     } & SimpleAction) | ({
         code: 'fix_missing_field';
     } & FixFieldAction) | null;
@@ -357,7 +341,7 @@ export type Item = {
     /**
      * Group
      */
-    group: 'focar' | 'revisar' | 'qualificar' | 'nao_pontuavel';
+    group: 'focar' | 'acompanhar' | 'revisar' | 'qualificar' | 'nao_pontuavel';
     /**
      * Deal Stage
      */
@@ -375,11 +359,13 @@ export type Item = {
     /**
      * Reasons
      *
-     * Um motivo de grupo, um de ordem e os de contexto, nesta ordem.
+     * Exatamente dois: o que decidiu o grupo e o que decidiu a ordem.
      */
     reasons: Array<({
-        code: 'age_within_cycle_limit';
-    } & AgeWithinCycleLimit) | ({
+        code: 'age_within_won_cycle';
+    } & AgeWithinWonCycle) | ({
+        code: 'age_above_won_cycle';
+    } & AgeAboveWonCycle) | ({
         code: 'age_above_cycle_limit';
     } & AgeAboveCycleLimit) | ({
         code: 'prospecting_stage';
@@ -391,18 +377,12 @@ export type Item = {
         code: 'no_product';
     } & NoProduct) | ({
         code: 'no_list_price';
-    } & NoListPrice) | ({
-        code: 'won_cycle_reference';
-    } & WonCycleReference) | ({
-        code: 'no_cycle_reference';
-    } & NoCycleReference) | ({
-        code: 'closed_base_rate';
-    } & ClosedBaseRate)>;
+    } & NoListPrice)>;
     /**
      * Next Action
      */
     next_action: ({
-        code: 'advance_prospecting' | 'confirm_still_active' | 'fix_missing_fields' | 'work_highest_list_price_first';
+        code: 'advance_prospecting' | 'check_progress' | 'confirm_still_active' | 'fix_missing_fields' | 'work_highest_list_price_first';
     } & SimpleAction) | ({
         code: 'fix_missing_field';
     } & FixFieldAction);
@@ -446,6 +426,22 @@ export type ListPriceParams = {
 };
 
 /**
+ * LongestCycleParams
+ */
+export type LongestCycleParams = {
+    /**
+     * Age Days
+     */
+    age_days: number;
+    /**
+     * Cycle Limit Days
+     *
+     * L2: maior ciclo entre as fechadas até o as_of.
+     */
+    cycle_limit_days: number;
+};
+
+/**
  * Meta
  */
 export type Meta = {
@@ -454,24 +450,23 @@ export type Meta = {
      */
     as_of: string;
     /**
+     * Won Cycle Limit Days
+     *
+     * L1: piso do P90 do ciclo das ganhas até o as_of.
+     */
+    won_cycle_limit_days: number;
+    /**
      * Cycle Limit Days
+     *
+     * L2: maior ciclo entre as fechadas até o as_of.
      */
     cycle_limit_days: number;
     /**
      * Cycle Percentile
+     *
+     * Percentil do ciclo das ganhas que define L1.
      */
     cycle_percentile: number;
-    /**
-     * Min Cases
-     */
-    min_cases: number;
-    /**
-     * Cycle References
-     */
-    cycle_references: {
-        [key: string]: CycleReference;
-    };
-    base_rate: BaseRate;
     /**
      * Audited
      *
@@ -481,7 +476,7 @@ export type Meta = {
     /**
      * Contract Version
      */
-    contract_version: 4;
+    contract_version: 5;
 };
 
 /**
@@ -499,41 +494,6 @@ export type MissingFieldReason = {
      */
     role: 'group';
     params: FieldParams;
-};
-
-/**
- * NoCycleParams
- */
-export type NoCycleParams = {
-    /**
-     * Cause
-     */
-    cause: 'no_product' | 'no_age' | 'no_wins';
-    /**
-     * Product
-     */
-    product?: string | null;
-    /**
-     * As Of
-     */
-    as_of?: string | null;
-};
-
-/**
- * NoCycleReference
- *
- * Não há referência de ciclo (sem produto, sem idade ou sem ganhas até o as_of).
- */
-export type NoCycleReference = {
-    /**
-     * Code
-     */
-    code: 'no_cycle_reference';
-    /**
-     * Role
-     */
-    role: 'context';
-    params: NoCycleParams;
 };
 
 /**
@@ -588,7 +548,7 @@ export type Ordering = {
     /**
      * Group Order
      */
-    group_order: Array<'focar' | 'revisar' | 'qualificar' | 'nao_pontuavel'>;
+    group_order: Array<'focar' | 'acompanhar' | 'revisar' | 'qualificar' | 'nao_pontuavel'>;
     /**
      * Within Group
      *
@@ -656,7 +616,7 @@ export type RankerResult = {
     /**
      * Code
      */
-    code: 'global_rate' | 'product_rate' | 'random' | 'list_price_only' | 'age_newest_first' | 'current_rule' | 'rule_a';
+    code: 'global_rate' | 'product_rate' | 'random' | 'list_price_only' | 'age_newest_first' | 'age_max_cycle_only' | 'age_p90_then_max_cycle';
     /**
      * Auc Mean
      *
@@ -795,6 +755,10 @@ export type SellerSummary = {
      */
     focar: number;
     /**
+     * Acompanhar
+     */
+    acompanhar: number;
+    /**
      * Revisar
      */
     revisar: number;
@@ -819,7 +783,7 @@ export type SimpleAction = {
     /**
      * Code
      */
-    code: 'work_highest_list_price_first' | 'confirm_still_active' | 'advance_prospecting' | 'fix_missing_fields';
+    code: 'work_highest_list_price_first' | 'check_progress' | 'confirm_still_active' | 'advance_prospecting' | 'fix_missing_fields';
     params: NoParams;
 };
 
@@ -845,13 +809,21 @@ export type StartWithParams = {
      *
      * Primeiro grupo seguinte que tem oportunidades.
      */
-    group: 'focar' | 'revisar' | 'qualificar' | 'nao_pontuavel';
+    group: 'focar' | 'acompanhar' | 'revisar' | 'qualificar' | 'nao_pontuavel';
     /**
      * Action
      */
-    action: 'confirm_still_active' | 'advance_prospecting' | 'fix_missing_fields';
+    action: 'check_progress' | 'confirm_still_active' | 'advance_prospecting' | 'fix_missing_fields';
+    /**
+     * Won Cycle Limit Days
+     *
+     * L1, o limite que deixou o grupo focar vazio.
+     */
+    won_cycle_limit_days: number;
     /**
      * Cycle Limit Days
+     *
+     * L2, o limite de acompanhar.
      */
     cycle_limit_days: number;
 };
@@ -868,6 +840,10 @@ export type Summary = {
      * Focar
      */
     focar: number;
+    /**
+     * Acompanhar
+     */
+    acompanhar: number;
     /**
      * Revisar
      */
@@ -955,56 +931,23 @@ export type ValueBandRule = {
  */
 export type WonCycleParams = {
     /**
-     * Product
-     */
-    product: string;
-    /**
-     * Percentile
-     */
-    percentile: number;
-    /**
-     * P90 Days
-     *
-     * Ciclo até o qual fecharam `percentile`% das ganhas do produto.
-     */
-    p90_days: number;
-    /**
-     * Won N
-     *
-     * Vendas ganhas do produto até o as_of.
-     */
-    won_n: number;
-    /**
-     * Few Cases
-     *
-     * won_n abaixo do mínimo de casos: ler como indicação.
-     */
-    few_cases: boolean;
-    /**
      * Age Days
+     *
+     * Dias corridos desde engage_date até o as_of.
      */
     age_days: number;
     /**
-     * Cycle Limit Days
+     * Won Cycle Limit Days
+     *
+     * L1: piso do P90 do ciclo das ganhas até o as_of.
      */
-    cycle_limit_days: number;
-};
-
-/**
- * WonCycleReference
- *
- * Referência de ciclo das ganhas do produto: só contexto.
- */
-export type WonCycleReference = {
+    won_cycle_limit_days: number;
     /**
-     * Code
+     * Percentile
+     *
+     * Percentil do ciclo das ganhas que define L1.
      */
-    code: 'won_cycle_reference';
-    /**
-     * Role
-     */
-    role: 'context';
-    params: WonCycleParams;
+    percentile: number;
 };
 
 export type GetMetaApiMetaGetData = {
@@ -1025,7 +968,7 @@ export type GetMetaApiMetaGetErrors = {
      */
     422: ErrorBody;
     /**
-     * CSVs ausentes ou inválidos
+     * CSVs ausentes ou inválidos, ou sem venda ganha até o as_of
      */
     503: ErrorBody;
 };
@@ -1050,7 +993,7 @@ export type GetSellersApiSellersGetData = {
 
 export type GetSellersApiSellersGetErrors = {
     /**
-     * CSVs ausentes ou inválidos
+     * CSVs ausentes ou inválidos, ou sem venda ganha até o as_of
      */
     503: ErrorBody;
 };
@@ -1093,7 +1036,7 @@ export type GetSellerPipelineApiSellersSellerPipelineGetErrors = {
      */
     422: ErrorBody;
     /**
-     * CSVs ausentes ou inválidos
+     * CSVs ausentes ou inválidos, ou sem venda ganha até o as_of
      */
     503: ErrorBody;
 };
@@ -1135,7 +1078,7 @@ export type GetPipelineApiPipelineGetErrors = {
      */
     422: ErrorBody;
     /**
-     * CSVs ausentes ou inválidos
+     * CSVs ausentes ou inválidos, ou sem venda ganha até o as_of
      */
     503: ErrorBody;
 };
@@ -1169,7 +1112,7 @@ export type GetRulesApiRulesGetErrors = {
      */
     422: ErrorBody;
     /**
-     * CSVs ausentes ou inválidos
+     * CSVs ausentes ou inválidos, ou sem venda ganha até o as_of
      */
     503: ErrorBody;
 };
@@ -1194,7 +1137,7 @@ export type GetEvidenceApiEvidenceGetData = {
 
 export type GetEvidenceApiEvidenceGetErrors = {
     /**
-     * Resultado do backtest ausente ou inválido
+     * Resultado do backtest ausente, inválido ou de outra regra
      */
     503: ErrorBody;
 };

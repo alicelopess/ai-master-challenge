@@ -11,7 +11,7 @@
     "n_boot_sellers": 20,
     "audited_data": false
   },
-  "reference": "current_rule",
+  "reference": "age_p90_then_max_cycle",
   "rankers": [
     {
       "code": "global_rate",
@@ -23,9 +23,9 @@
       "lift_at_k": 1.05,
       "val_at_k": 0.25,
       "delta_val": {
-        "value": -0.32,
-        "low": -0.33,
-        "high": -0.31
+        "value": -0.33,
+        "low": -0.34,
+        "high": -0.32
       },
       "cuts_val_above_reference": 0
     },
@@ -39,9 +39,9 @@
       "lift_at_k": 1.05,
       "val_at_k": 0.14,
       "delta_val": {
-        "value": -0.43,
-        "low": -0.44,
-        "high": -0.42
+        "value": -0.44,
+        "low": -0.45,
+        "high": -0.43
       },
       "cuts_val_above_reference": 0
     },
@@ -55,9 +55,9 @@
       "lift_at_k": 1.05,
       "val_at_k": 0.23,
       "delta_val": {
-        "value": -0.34,
-        "low": -0.35,
-        "high": -0.33
+        "value": -0.35,
+        "low": -0.36,
+        "high": -0.34
       },
       "cuts_val_above_reference": 0
     },
@@ -71,9 +71,9 @@
       "lift_at_k": 1.05,
       "val_at_k": 0.54,
       "delta_val": {
-        "value": -0.03,
-        "low": -0.04,
-        "high": -0.02
+        "value": -0.04,
+        "low": -0.05,
+        "high": -0.03
       },
       "cuts_val_above_reference": 0
     },
@@ -87,14 +87,14 @@
       "lift_at_k": 1.05,
       "val_at_k": 0.27,
       "delta_val": {
-        "value": -0.3,
-        "low": -0.31,
-        "high": -0.29
+        "value": -0.31,
+        "low": -0.32,
+        "high": -0.3
       },
       "cuts_val_above_reference": 0
     },
     {
-      "code": "current_rule",
+      "code": "age_max_cycle_only",
       "auc_mean": 0.557,
       "auc_min": 0.5,
       "auc_max": 0.6,
@@ -102,11 +102,15 @@
       "p_at_k": 0.4,
       "lift_at_k": 1.05,
       "val_at_k": 0.57,
-      "delta_val": null,
-      "cuts_val_above_reference": null
+      "delta_val": {
+        "value": -0.01,
+        "low": -0.02,
+        "high": 0.0
+      },
+      "cuts_val_above_reference": 0
     },
     {
-      "code": "rule_a",
+      "code": "age_p90_then_max_cycle",
       "auc_mean": 0.558,
       "auc_min": 0.5,
       "auc_max": 0.6,
@@ -114,12 +118,8 @@
       "p_at_k": 0.4,
       "lift_at_k": 1.05,
       "val_at_k": 0.58,
-      "delta_val": {
-        "value": 0.01,
-        "low": 0.0,
-        "high": 0.02
-      },
-      "cuts_val_above_reference": 1
+      "delta_val": null,
+      "cuts_val_above_reference": null
     }
   ],
   "without_no_outcome": [
@@ -133,14 +133,14 @@
       "lift_at_k": 1.05,
       "val_at_k": 0.79,
       "delta_val": {
-        "value": 0.22,
-        "low": 0.21,
-        "high": 0.23
+        "value": 0.01,
+        "low": 0.005,
+        "high": 0.015
       },
       "cuts_val_above_reference": 1
     },
     {
-      "code": "current_rule",
+      "code": "age_max_cycle_only",
       "auc_mean": 0.579,
       "auc_min": 0.5,
       "auc_max": 0.6,
@@ -148,11 +148,15 @@
       "p_at_k": 0.4,
       "lift_at_k": 1.05,
       "val_at_k": 0.79,
-      "delta_val": null,
-      "cuts_val_above_reference": null
+      "delta_val": {
+        "value": 0.01,
+        "low": 0.005,
+        "high": 0.015
+      },
+      "cuts_val_above_reference": 1
     },
     {
-      "code": "rule_a",
+      "code": "age_p90_then_max_cycle",
       "auc_mean": 0.578,
       "auc_min": 0.5,
       "auc_max": 0.6,
@@ -160,12 +164,17 @@
       "p_at_k": 0.4,
       "lift_at_k": 1.05,
       "val_at_k": 0.78,
-      "delta_val": {
-        "value": 0.21,
-        "low": 0.2,
-        "high": 0.22
-      },
-      "cuts_val_above_reference": 1
+      "delta_val": null,
+      "cuts_val_above_reference": null
     }
-  ]
+  ],
+  "without_no_outcome_verdict": {
+    "code": "reference_behind",
+    "ranker": "list_price_only",
+    "delta": {
+      "value": 0.01,
+      "low": 0.005,
+      "high": 0.015
+    }
+  }
 }

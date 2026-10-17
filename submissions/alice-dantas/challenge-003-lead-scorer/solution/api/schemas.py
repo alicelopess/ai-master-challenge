@@ -1,4 +1,4 @@
-"""Contrato tipado das respostas da API (plano do contrato, fases F1, F2 e F5; v4 na fase U5).
+"""Contrato tipado das respostas da API (plano do contrato, fases F1, F2 e F5; v4 na fase U5; v5 na regra A).
 
 Espelha o payload de `views`. Os modelos proíbem campos extras: um campo novo em
 `views` sem par aqui quebra a resposta e os testes, em vez de passar sem contrato.
@@ -23,6 +23,10 @@ MissingField = Literal[tuple(policy.MISSING_FIELDS)]
 OrderCriterion = Literal[codes.ORDER_CRITERIA]
 ErrorCode = Literal[codes.ERROR_CODES]
 RankerCode = Literal[codes.RANKER_CODES]
+VerdictCode = Literal[codes.VERDICT_CODES]
+# Ações vindas da política: a de cada grupo e a do grupo nao_pontuavel.
+SimpleActionCode = Literal[tuple(dict.fromkeys([*policy.NEXT_ACTIONS.values(), codes.FIX_MISSING_FIELDS]))]
+StartActionCode = Literal[tuple(dict.fromkeys(policy.START_ACTION_CODES.values()))]
 
 class Contract(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -32,24 +36,44 @@ class NoParams(Contract):
     """Código sem parâmetros."""
 
 
-# Motivos: o que decidiu o grupo (role "group"), a ordem ("order") ou só contexto ("context").
-class AgeParams(Contract):
+# Motivos: o que decidiu o grupo (role "group") e a ordem dentro dele ("order"). Só entra o que decide.
+class WonCycleParams(Contract):
     age_days: int = Field(description="Dias corridos desde engage_date até o as_of.")
-    cycle_limit_days: int = Field(description="Maior ciclo entre as fechadas até o as_of.")
+    won_cycle_limit_days: int = Field(description="L1: piso do P90 do ciclo das ganhas até o as_of.")
+    percentile: int = Field(description="Percentil do ciclo das ganhas que define L1.")
 
 
-class AgeWithinCycleLimit(Contract):
-    """Engaging com idade até o maior ciclo fechado: grupo focar."""
-    code: Literal[codes.AGE_WITHIN_CYCLE_LIMIT]
+class AgeWithinWonCycle(Contract):
+    """Engaging com idade até L1: grupo focar."""
+    code: Literal[codes.AGE_WITHIN_WON_CYCLE]
     role: Literal[codes.ROLE_GROUP]
-    params: AgeParams
+    params: WonCycleParams
+
+
+class BetweenLimitsParams(Contract):
+    age_days: int
+    won_cycle_limit_days: int = Field(description="L1: piso do P90 do ciclo das ganhas até o as_of.")
+    cycle_limit_days: int = Field(description="L2: maior ciclo entre as fechadas até o as_of.")
+    percentile: int
+
+
+class AgeAboveWonCycle(Contract):
+    """Engaging com idade acima de L1 e até L2: grupo acompanhar."""
+    code: Literal[codes.AGE_ABOVE_WON_CYCLE]
+    role: Literal[codes.ROLE_GROUP]
+    params: BetweenLimitsParams
+
+
+class LongestCycleParams(Contract):
+    age_days: int
+    cycle_limit_days: int = Field(description="L2: maior ciclo entre as fechadas até o as_of.")
 
 
 class AgeAboveCycleLimit(Contract):
-    """Engaging com idade acima do maior ciclo fechado: grupo revisar."""
+    """Engaging com idade acima de L2: grupo revisar."""
     code: Literal[codes.AGE_ABOVE_CYCLE_LIMIT]
     role: Literal[codes.ROLE_GROUP]
-    params: AgeParams
+    params: LongestCycleParams
 
 
 class ProspectingParams(Contract):
@@ -105,61 +129,14 @@ class NoListPrice(Contract):
     params: ProductParams
 
 
-class WonCycleParams(Contract):
-    product: str
-    percentile: int
-    p90_days: int = Field(description="Ciclo até o qual fecharam `percentile`% das ganhas do produto.")
-    won_n: int = Field(description="Vendas ganhas do produto até o as_of.")
-    few_cases: bool = Field(description="won_n abaixo do mínimo de casos: ler como indicação.")
-    age_days: int
-    cycle_limit_days: int
-
-
-class WonCycleReference(Contract):
-    """Referência de ciclo das ganhas do produto: só contexto."""
-    code: Literal[codes.WON_CYCLE_REFERENCE]
-    role: Literal[codes.ROLE_CONTEXT]
-    params: WonCycleParams
-
-
-class NoCycleParams(Contract):
-    cause: Literal[codes.CYCLE_CAUSES]
-    product: Optional[str] = None
-    as_of: Optional[date] = None
-
-
-class NoCycleReference(Contract):
-    """Não há referência de ciclo (sem produto, sem idade ou sem ganhas até o as_of)."""
-    code: Literal[codes.NO_CYCLE_REFERENCE]
-    role: Literal[codes.ROLE_CONTEXT]
-    params: NoCycleParams
-
-
-class BaseRate(Contract):
-    won: int
-    closed: int
-    open: int
-    pct: int = Field(description="Ganhas sobre fechadas, em %.")
-    low_pct: int = Field(description="Se todas as abertas fossem perdidas, em %.")
-    high_pct: int = Field(description="Se todas as abertas fossem ganhas, em %.")
-
-
-class ClosedBaseRate(Contract):
-    """Taxa de ganho das fechadas: igual para todas as oportunidades, só contexto."""
-    code: Literal[codes.CLOSED_BASE_RATE]
-    role: Literal[codes.ROLE_CONTEXT]
-    params: BaseRate
-
-
-Reason = Annotated[Union[AgeWithinCycleLimit, AgeAboveCycleLimit, ProspectingStage, MissingFieldReason, ListPrice,
-                         NoProduct, NoListPrice, WonCycleReference, NoCycleReference, ClosedBaseRate],
+Reason = Annotated[Union[AgeWithinWonCycle, AgeAboveWonCycle, AgeAboveCycleLimit, ProspectingStage,
+                         MissingFieldReason, ListPrice, NoProduct, NoListPrice],
                    Field(discriminator="code")]
 
 
 # Ação sugerida pela regra.
 class SimpleAction(Contract):
-    code: Literal[codes.WORK_HIGHEST_LIST_PRICE_FIRST, codes.CONFIRM_STILL_ACTIVE, codes.ADVANCE_PROSPECTING,
-                  codes.FIX_MISSING_FIELDS]
+    code: SimpleActionCode
     params: NoParams
 
 
@@ -179,8 +156,9 @@ class GroupEmpty(Contract):
 
 class StartWithParams(Contract):
     group: StateKey = Field(description="Primeiro grupo seguinte que tem oportunidades.")
-    action: Literal[codes.CONFIRM_STILL_ACTIVE, codes.ADVANCE_PROSPECTING, codes.FIX_MISSING_FIELDS]
-    cycle_limit_days: int
+    action: StartActionCode
+    won_cycle_limit_days: int = Field(description="L1, o limite que deixou o grupo focar vazio.")
+    cycle_limit_days: int = Field(description="L2, o limite de acompanhar.")
 
 
 class StartWithGroup(Contract):
@@ -217,7 +195,7 @@ class Item(Contract):
     deal_stage: OpenStage
     missing_field: Optional[MissingField]
     tie_size: int = Field(description="Quantas oportunidades do mesmo grupo e produto (mesmo preço) há na carteira.")
-    reasons: List[Reason] = Field(description="Um motivo de grupo, um de ordem e os de contexto, nesta ordem.")
+    reasons: List[Reason] = Field(description="Exatamente dois: o que decidiu o grupo e o que decidiu a ordem.")
     next_action: NextAction
 
 
@@ -232,24 +210,18 @@ class Group(Contract):
 class Summary(Contract):
     total: int
     focar: int
+    acompanhar: int
     revisar: int
     qualificar: int
     nao_pontuavel: int
     without_account: int = Field(description="Oportunidades sem conta registrada.")
 
 
-class CycleReference(Contract):
-    p90_days: Optional[int]
-    won_n: int
-
-
 class Meta(Contract):
     as_of: date
-    cycle_limit_days: int
-    cycle_percentile: int
-    min_cases: int
-    cycle_references: Dict[str, CycleReference]
-    base_rate: BaseRate
+    won_cycle_limit_days: int = Field(description="L1: piso do P90 do ciclo das ganhas até o as_of.")
+    cycle_limit_days: int = Field(description="L2: maior ciclo entre as fechadas até o as_of.")
+    cycle_percentile: int = Field(description="Percentil do ciclo das ganhas que define L1.")
     audited: bool = Field(description="Os CSVs são a versão auditada (hash).")
     contract_version: Literal[codes.CONTRACT_VERSION]
 
@@ -273,6 +245,7 @@ class SellerSummary(Contract):
     seller: str
     total: int
     focar: int
+    acompanhar: int
     revisar: int
     qualificar: int
     nao_pontuavel: int
@@ -337,12 +310,21 @@ class RankerResult(Contract):
     cuts_val_above_reference: Optional[int] = Field(description="Cortes com val_at_k acima da referência.")
 
 
+class EvidenceVerdict(Contract):
+    """Como fica a regra servida contra as alternativas, pelo IC95% de cada diferença."""
+    code: VerdictCode
+    ranker: Optional[RankerCode] = Field(description="A alternativa que decidiu o veredito; nulo se inconclusivo.")
+    delta: Optional[Delta] = Field(description="A diferença dessa alternativa contra a servida.")
+
+
 class Evidence(Contract):
     design: EvidenceDesign
-    reference: Literal[codes.RANKER_CURRENT_RULE] = Field(description="A regra servida, base das diferenças.")
+    reference: RankerCode = Field(description="A regra servida hoje, base das diferenças.")
     rankers: List[RankerResult] = Field(description="Estratégias na ordem do relatório.")
     without_no_outcome: List[RankerResult] = Field(
         description="As mesmas medidas sem as oportunidades que nunca fecham na base.")
+    without_no_outcome_verdict: EvidenceVerdict = Field(
+        description="A regra servida sem as que nunca fecham: a limitação principal da evidência.")
 
 
 class Seller(Contract):

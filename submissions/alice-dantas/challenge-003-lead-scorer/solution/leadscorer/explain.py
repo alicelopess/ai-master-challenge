@@ -1,9 +1,9 @@
 """'Por que está aqui' como dado: motivos e próximo passo em código (P0-3).
 
-Sem texto e sem LLM. Cada motivo é {code, role, params}: o papel diz o que ele
-decidiu (grupo, ordem ou só contexto) e os parâmetros são os valores que a regra
-usou, tirados do item e do `meta` do payload (RE-04). Quem apresenta (tela e CLI)
-escreve o texto a partir do código.
+Sem texto e sem LLM. Cada item tem exatamente dois motivos {code, role, params}: o
+que decidiu o grupo e o que decidiu a ordem dentro dele. Os parâmetros são os valores
+que a regra usou, tirados do item e do `meta` do payload (RE-04); nada que não decide
+entra como motivo (regra A, ADR-006). Quem apresenta (tela e CLI) escreve o texto.
 """
 from __future__ import annotations
 
@@ -19,14 +19,20 @@ def _reason(code: str, role: str, **params: Any) -> Reason:
 
 
 def group_reason(item: Dict[str, Any], meta: Dict[str, Any]) -> Reason:
-    """O que decidiu o grupo, com os valores usados na regra de `triage.classify`."""
+    """O que decidiu o grupo, com os valores usados em `triage.classify`."""
     group = item["group"]
     if group == policy.NAO_PONTUAVEL:
         return _reason(codes.MISSING_FIELD, codes.ROLE_GROUP, field=item["missing_field"])
     if group == policy.QUALIFICAR:
         return _reason(codes.PROSPECTING_STAGE, codes.ROLE_GROUP, deal_stage=item["deal_stage"])
-    code = codes.AGE_WITHIN_CYCLE_LIMIT if group == policy.FOCAR else codes.AGE_ABOVE_CYCLE_LIMIT
-    return _reason(code, codes.ROLE_GROUP, age_days=item["age_days"], cycle_limit_days=meta["cycle_limit_days"])
+    age, won, longest = item["age_days"], meta["won_cycle_limit_days"], meta["cycle_limit_days"]
+    if group == policy.FOCAR:
+        return _reason(codes.AGE_WITHIN_WON_CYCLE, codes.ROLE_GROUP, age_days=age, won_cycle_limit_days=won,
+                       percentile=meta["cycle_percentile"])
+    if group == policy.ACOMPANHAR:
+        return _reason(codes.AGE_ABOVE_WON_CYCLE, codes.ROLE_GROUP, age_days=age, won_cycle_limit_days=won,
+                       cycle_limit_days=longest, percentile=meta["cycle_percentile"])
+    return _reason(codes.AGE_ABOVE_CYCLE_LIMIT, codes.ROLE_GROUP, age_days=age, cycle_limit_days=longest)
 
 
 def order_reason(item: Dict[str, Any]) -> Reason:
@@ -39,30 +45,8 @@ def order_reason(item: Dict[str, Any]) -> Reason:
                    sales_price=item["sales_price"], value_band=item["value_band"])
 
 
-def cycle_reason(item: Dict[str, Any], meta: Dict[str, Any]) -> Reason:
-    """Referência de ciclo do produto: só contexto, não decide grupo nem ordem."""
-    product, age = item["product"], item["age_days"]
-    if product is None:
-        return _reason(codes.NO_CYCLE_REFERENCE, codes.ROLE_CONTEXT, cause=codes.CAUSE_NO_PRODUCT)
-    if age is None:
-        return _reason(codes.NO_CYCLE_REFERENCE, codes.ROLE_CONTEXT, cause=codes.CAUSE_NO_AGE, product=product)
-    ref = meta["cycle_references"][product]
-    if ref["won_n"] == 0:
-        return _reason(codes.NO_CYCLE_REFERENCE, codes.ROLE_CONTEXT, cause=codes.CAUSE_NO_WINS,
-                       product=product, as_of=meta["as_of"])
-    return _reason(codes.WON_CYCLE_REFERENCE, codes.ROLE_CONTEXT, product=product,
-                   percentile=meta["cycle_percentile"], p90_days=ref["p90_days"], won_n=ref["won_n"],
-                   few_cases=ref["won_n"] < meta["min_cases"], age_days=age,
-                   cycle_limit_days=meta["cycle_limit_days"])
-
-
-def base_rate_reason(meta: Dict[str, Any]) -> Reason:
-    """Taxa de ganho das fechadas: igual para todas, só contexto."""
-    return _reason(codes.CLOSED_BASE_RATE, codes.ROLE_CONTEXT, **meta["base_rate"])
-
-
 def reasons(item: Dict[str, Any], meta: Dict[str, Any]) -> List[Reason]:
-    return [group_reason(item, meta), order_reason(item), cycle_reason(item, meta), base_rate_reason(meta)]
+    return [group_reason(item, meta), order_reason(item)]
 
 
 def _action(code: str, **params: Any) -> Dict[str, Any]:

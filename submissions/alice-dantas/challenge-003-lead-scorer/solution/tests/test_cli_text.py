@@ -11,24 +11,16 @@ import pytest
 from leadscorer import cli_text, codes, data, policy, views
 from leadscorer.__main__ import main, render_detail, render_list
 
-from conftest import PIPELINE, PRODUCTS, opp, write_raw
+from conftest import EDGE_TABLES, PIPELINE, opp, write_raw
 from test_explain import assert_vocabulary
 
 NUMBER = re.compile(r"\d{2}/\d{2}/\d{4}|\d{1,3}(?:\.\d{3})+|\d+")
-
-EDGE_PRODUCTS = PRODUCTS + [{"product": "GTX Ultra", "series": "GTX", "sales_price": ""}]
-EDGE_PIPELINE = PIPELINE + [
-    opp("N1", "Bruno Beta", "GTX Basic", "Engaging"),
-    opp("N2", "Bruno Beta", "", "Prospecting"),
-    opp("U1", "Bruno Beta", "GTX Ultra", "Engaging", engaged=20),
-    opp("PE", "Ana Alfa", "GTX Basic", "Prospecting", engaged=40),
-]
 
 
 @pytest.fixture
 def payloads(raw_dir, tmp_path):
     base = data.load(raw_dir)
-    edges = data.load(write_raw(tmp_path / "edges", sales_pipeline=EDGE_PIPELINE, products=EDGE_PRODUCTS))
+    edges = data.load(write_raw(tmp_path / "edges", **EDGE_TABLES))
     return [views.seller_pipeline(dataset, seller) for dataset in (base, edges) for seller in dataset.sellers]
 
 
@@ -38,7 +30,6 @@ def items(payload):
 
 def test_every_contract_code_has_cli_text():
     assert set(cli_text.REASONS) == set(codes.REASON_CODES)
-    assert set(cli_text.NO_CYCLE) == set(codes.CYCLE_CAUSES)
     assert set(cli_text.ACTIONS) == set(codes.ACTION_CODES)
     assert set(cli_text.EMPTY) == set(codes.EMPTY_CODES)
     assert set(cli_text.START_ACTIONS) == set(policy.START_ACTION_CODES.values())
@@ -55,6 +46,9 @@ def test_fixtures_exercise_every_code(payloads):
     assert reasons == set(codes.REASON_CODES)
     assert actions == set(codes.ACTION_CODES)
     assert empty == set(codes.EMPTY_CODES) - {codes.NO_OPEN_FOR_FILTER}  # filtro só existe na visão de time
+    starts = {g["empty"]["params"]["group"] for p in payloads for g in p["groups"]
+              if g["empty"] and g["empty"]["code"] == codes.START_WITH_GROUP}
+    assert starts == {"acompanhar", "revisar", "qualificar"}  # cada destino com o seu texto
 
 
 def catalog_strings():

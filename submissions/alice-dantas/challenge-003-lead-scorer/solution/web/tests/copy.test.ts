@@ -7,14 +7,16 @@ import {
   UI, accountWarning, actionText, bandRange, bandTitle, clientText, dataLabel, errorText, groupDescription,
   groupEmptyText, legendText, missingShort, pipelineEmptyText, reasonText, summaryCounts, tieText, valueLabel,
 } from "@/copy/pt-BR";
-import type { Evidence, Rules } from "@/lib/contract";
+import type { Evidence, Meta, Rules } from "@/lib/contract";
 import type { Item } from "@/lib/contract";
 import { formatDate, formatInt, formatPct, formatPp } from "@/lib/format";
 
 import { allPipelines, errors, load, readContract, sellerPipeline } from "./fixtures";
 
-// Mesma lista do núcleo (leadscorer/policy.py, FORBIDDEN_TERMS).
-const FORBIDDEN_TERMS = ["probabilidade", "perdida", "encerre", "prioridade alta", "chance alta", "score"];
+// A lista do núcleo (leadscorer/policy.py, FORBIDDEN_TERMS), exportada como fixture: uma lista só.
+const VOCABULARY = load("vocabulary") as { forbidden_terms: string[]; match: "word_start" };
+/** Começo de palavra: "parad" pega "paradas", mas não "comparado" (o \b do JS só conhece ASCII). */
+const startsAWord = (term: string) => new RegExp(`(?<![\\p{L}\\p{N}_])${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "u");
 const BAND_WORD = /\b(alt[oa]|médi[oa]|baix[oa])\b/gi;
 const NUMBER = /\d{2}\/\d{2}\/\d{4}|\d{1,3}(?:\.\d{3})+|\d+/g;
 
@@ -55,16 +57,17 @@ function renderedTexts(): string[] {
       text.method(design.cuts.length, design.cuts[0], design.cuts[design.cuts.length - 1], design.horizon_days),
       ...[...evidence.rankers, ...evidence.without_no_outcome].flatMap((r) => (r.delta_val ? [text.delta(r.delta_val)] : [])));
   }
+  for (const text of Object.values(EVIDENCE_TEXT)) texts.push(text.verdict(evidence.without_no_outcome_verdict));
   texts.push(TECH_COLUMNS.hits(design.top_k), TECH_COLUMNS.lift(design.top_k), EVIDENCE.outOf(6, 7),
-    RULES.cycleHelp(rules.meta.min_cases), RULES.cycleColumns.cycle(rules.meta.cycle_percentile),
-    RULES.chance(rules.meta.base_rate), RULES.days(105), ...rules.value_bands.map(bandRange),
+    RULES.wonLimit(rules.meta.won_cycle_limit_days, rules.meta.cycle_percentile),
+    RULES.longestLimit(rules.meta.cycle_limit_days), ...rules.value_bands.map(bandRange),
     ...rules.value_bands.map((b) => bandTitle(b.band)));
   texts.push(UI.seeGroup(GROUP_LABELS.revisar), UI.moreInTab(3, GROUP_LABELS.focar), UI.whyHereFor("EPP"),
     UI.position(1, 5), UI.ageDays(10), UI.ofTotal(2089), UI.pagination.page(2), UI.pagination.range(26, 50, 1291),
     UI.startWithTie(tieText(3, "GTX Plus Pro", 5482)));
   for (const p of pipelines) {
     texts.push(legendText(p.ordering), dataLabel(p.meta), accountWarning(p.summary.without_account, p.summary.total));
-    texts.push(...p.groups.map((g) => groupDescription(g.state, p.meta.cycle_limit_days)));
+    texts.push(...p.groups.map((g) => groupDescription(g.state, p.meta)));
     if (p.empty) texts.push(pipelineEmptyText(p.empty));
     for (const g of p.groups) {
       if (g.empty) texts.push(groupEmptyText(g.empty));
@@ -110,11 +113,29 @@ describe("cobertura: todo código do contrato tem texto", () => {
 });
 
 test("vocabulário: nenhum termo proibido; faixa sempre como valor de tabela", () => {
+  expect(VOCABULARY.match).toBe("word_start");
   for (const text of renderedTexts()) {
     const lowered = text.toLowerCase();
-    for (const term of FORBIDDEN_TERMS) expect(lowered, text).not.toContain(term);
+    for (const term of VOCABULARY.forbidden_terms) expect(lowered, `${term} em "${text}"`).not.toMatch(startsAWord(term));
     for (const match of text.matchAll(BAND_WORD)) {
       expect(lowered.slice(0, match.index).endsWith("de tabela "), text).toBe(true);
+    }
+  }
+});
+
+test("vocabulário por começo de palavra, como no núcleo", () => {
+  const hits = (text: string) => VOCABULARY.forbidden_terms.some((term) => startsAWord(term).test(text.toLowerCase()));
+  expect(hits("Comparado à regra atual, separadas por grupo.")).toBe(false);
+  for (const text of ["Negociação parada", "prazo de 106 dias", "Venceu ontem", "Atrasadas", "chance zero", "inativa"]) {
+    expect(hits(text), text).toBe(true);
+  }
+});
+
+test("todo número de uma frase de grupo vem do meta", () => {
+  for (const p of pipelines) {
+    const allowed = new Set([p.meta.won_cycle_limit_days, p.meta.cycle_limit_days, p.meta.cycle_percentile].map(String));
+    for (const g of p.groups) {
+      for (const number of groupDescription(g.state, p.meta).match(NUMBER) ?? []) expect(allowed).toContain(number);
     }
   }
 });
@@ -145,52 +166,57 @@ function itemOf(fixture: string, id: string): Item {
 }
 
 describe("textos de referência", () => {
-  test("motivos e próximo passo de Focar e Revisar", () => {
+  test("motivos e próximo passo dos três grupos de idade", () => {
     const epp = itemOf("pipeline-ana-alfa", "EPP");
     expect(epp.reasons.map(reasonText)).toEqual([
-      "Focar porque está em negociação há 10 dias, dentro do maior ciclo já fechado (138 d).",
+      "Focar porque está aberta há 10 dias; 90% das vendas ganhas fecharam em até 100 dias.",
       "Valor de tabela 5.482 (valor de tabela alto): preço de catálogo do GTX Plus Pro, não valor negociado.",
-      "Sem vendas ganhas deste produto até 31/12/2017: não há ciclo de referência para comparar.",
-      "Não sabemos a chance de fechar desta oportunidade: cerca de 67% das fechadas foram ganhas " +
-        "(20% a 90% contando as abertas).",
     ]);
     expect(actionText(epp.next_action)).toBe(
-      "Trabalhe primeiro os de maior valor de tabela; empates do mesmo produto valem o mesmo.");
-    expect(reasonText(itemOf("pipeline-ana-alfa", "EGP").reasons[2])).toBe(
-      "Referência do GTX Pro: em 90% das vendas ganhas, o ciclo foi de até 59 dias (N = 1). Esta está há 30 " +
-        "dias; o maior ciclo já fechado foi de 138 dias. Poucos casos; leia como indicação.");
+      "Avance primeiro as de maior valor de tabela; as do mesmo produto valem o mesmo.");
+    const e138 = itemOf("pipeline-ana-alfa", "E138");
+    expect(reasonText(e138.reasons[0])).toBe("Acompanhar porque está aberta há 138 dias: mais do que 90% das " +
+      "vendas ganhas levaram (100 d), sem passar da venda mais longa já fechada (138 d).");
+    expect(actionText(e138.next_action)).toBe("Veja no CRM o último avanço e o que falta para fechar.");
     const e139 = itemOf("pipeline-ana-alfa", "E139");
     expect(reasonText(e139.reasons[0])).toBe(
-      "Revisar porque está em negociação há 139 dias, acima do maior ciclo já fechado (138 d).");
+      "Confirmar porque está aberta há 139 dias, mais do que qualquer venda já fechada aqui (138 d).");
     expect(actionText(e139.next_action)).toBe(
-      "Confirme no CRM se segue ativa: idade acima do ciclo não prova que o negócio terminou.");
+      "Confirme com o cliente ou no CRM se a negociação segue: o tempo aberta não prova que ela terminou.");
+    expect(UI.limitsNote).toBe(
+      "O sistema só vê datas, produto e preço de tabela: não vê ligações, reuniões nem e-mails.");
   });
 
-  test("Qualificar e Não pontuável", () => {
+  test("Qualificar e Completar", () => {
     const p1 = itemOf("pipeline-edges-bruno-beta", "P1");
-    expect([reasonText(p1.reasons[0]), reasonText(p1.reasons[2])]).toEqual([
-      "Qualificar porque ainda está em prospecção.", "Sem data de engajamento: não há idade para comparar."]);
+    expect(p1.reasons.map(reasonText)).toEqual([
+      "Qualificar porque ainda está em prospecção.", "Valor de tabela 4.821 (valor de tabela alto): preço de " +
+        "catálogo do GTX Pro, não valor negociado."]);
     const n1 = itemOf("pipeline-edges-bruno-beta", "N1");
     expect([reasonText(n1.reasons[0]), actionText(n1.next_action), missingShort(n1.missing_field!)]).toEqual([
-      "Não pontuável porque falta a data de engajamento.", "Corrija a data de engajamento no CRM.",
+      "Completar porque falta a data de engajamento.", "Corrija a data de engajamento no CRM.",
       "sem data de engajamento"]);
     const n2 = itemOf("pipeline-edges-bruno-beta", "N2");
-    expect([reasonText(n2.reasons[1]), reasonText(n2.reasons[2])]).toEqual([
-      "Sem valor de tabela: a oportunidade não tem produto.", "Sem produto: não há ciclo de referência para comparar."]);
+    expect(reasonText(n2.reasons[1])).toBe("Sem valor de tabela: a oportunidade não tem produto.");
     expect(reasonText(itemOf("pipeline-edges-bruno-beta", "U1").reasons[1])).toBe(
       "Sem valor de tabela: o GTX Ultra não tem preço no catálogo.");
   });
 
   test("carteira, grupos vazios e avisos", () => {
     const ana = sellerPipeline("pipeline-ana-alfa");
-    expect(legendText(ana.ordering)).toBe("Ordem: Focar → Revisar → Qualificar → Não pontuável; em cada grupo, " +
-      "maior valor de tabela primeiro; a idade aparece, mas não muda a ordem.");
+    expect(legendText(ana.ordering)).toBe("Ordem: Focar → Acompanhar → Confirmar → Qualificar → Completar; em cada " +
+      "grupo, maior valor de tabela primeiro; a idade aparece, mas não muda a ordem.");
     expect(dataLabel(ana.meta)).toBe("Dados até 31/12/2017");
-    expect(accountWarning(ana.summary.without_account, ana.summary.total)).toBe("4 de 6 sem cliente registrado");
-    expect(summaryCounts(ana)).toBe("5 Focar + 1 Revisar + 0 Qualificar + 0 Não pontuável");
+    expect(accountWarning(ana.summary.without_account, ana.summary.total)).toBe("5 de 8 sem cliente registrado");
+    expect(summaryCounts(ana)).toBe("5 Focar + 2 Acompanhar + 1 Confirmar + 0 Qualificar + 0 Completar");
+    // Focar vazio: o texto cita só o limite que importa para o grupo indicado.
     expect(groupEmptyText(sellerPipeline("pipeline-bruno-beta").groups[0].empty!)).toBe(
-      "Nenhuma oportunidade dentro do ciclo observado (até 138 d). Comece por Qualificar: avance no CRM as de " +
-        "maior valor de tabela.");
+      "Nenhuma negociação em andamento. Comece por Qualificar: avance no CRM as de maior valor de tabela.");
+    expect(groupEmptyText(sellerPipeline("pipeline-edges-davi-delta").groups[0].empty!)).toBe(
+      "Nenhuma aberta há até 100 dias. Comece por Acompanhar: veja no CRM o último avanço de cada uma.");
+    expect(groupEmptyText(sellerPipeline("pipeline-edges-eva-epsilon").groups[0].empty!)).toBe(
+      "Todas as negociações em andamento estão abertas há mais de 138 dias. Comece por Confirmar: confirme no CRM " +
+        "quais seguem ativas.");
     expect(pipelineEmptyText(sellerPipeline("pipeline-carla-gama").empty!)).toBe(
       "Nenhuma oportunidade aberta para este vendedor.");
     expect(clientText(itemOf("pipeline-ana-alfa", "E138"))).toBe("sem cliente registrado");
@@ -198,19 +224,24 @@ describe("textos de referência", () => {
   });
 
   test("definição dos grupos, papéis dos motivos e cartão de próximo passo", () => {
-    const limit = sellerPipeline("pipeline-ana-alfa").meta.cycle_limit_days;
-    expect((["focar", "revisar", "qualificar", "nao_pontuavel"] as const).map((g) => groupDescription(g, limit))).toEqual([
-      "Em negociação há até 138 dias, dentro do maior ciclo já fechado.",
-      "Em negociação há mais de 138 dias, acima do maior ciclo já fechado.",
-      "Ainda em prospecção.",
+    const meta: Meta = sellerPipeline("pipeline-ana-alfa").meta;
+    expect((["focar", "acompanhar", "revisar", "qualificar", "nao_pontuavel"] as const)
+      .map((g) => groupDescription(g, meta))).toEqual([
+      "Abertas há até 100 dias. No histórico, 90% das vendas ganhas fecharam dentro desse tempo.",
+      "Abertas há mais de 100 e até 138 dias: mais do que 90% das vendas ganhas levaram, sem passar da venda mais " +
+        "longa já fechada.",
+      "Abertas há mais de 138 dias, mais do que qualquer venda já fechada aqui. O sistema não vê ligações nem reuniões.",
+      "Ainda em prospecção, sem data de início da negociação.",
       "Falta produto, preço de tabela ou data de engajamento no CRM.",
     ]);
-    expect(ROLE_LABELS).toEqual({
-      group: "Por que está neste grupo", order: "Por que nesta posição", context: "Para contexto (não muda a posição)",
-    });
+    expect(ROLE_LABELS).toEqual({ group: "Por que está neste grupo", order: "Por que nesta posição" });
     expect(UI.startWithTie(tieText(3, "GTX Plus Pro", 5482))).toBe(
       "Comece por estas 3 oportunidades de mesmo valor de tabela (GTX Plus Pro, 5.482):");
     expect([UI.ofTotal(2089), UI.pagination.range(26, 50, 1291)]).toEqual(["de 2.089 abertas", "26–50 de 1.291"]);
+    expect([RULES.wonLimit(106, 90), RULES.longestLimit(138)]).toEqual([
+      "90% das vendas ganhas fecharam em até 106 dias. Até esse tempo, a negociação fica em Focar.",
+      "A venda mais longa já fechada levou 138 dias. Entre os dois limites, a negociação fica em Acompanhar; acima, " +
+        "em Confirmar."]);
   });
 
   test("evidência e regras: frações em porcentagem, diferenças em pontos e faixas em palavras", () => {
@@ -226,18 +257,28 @@ describe("textos de referência", () => {
     const { negocio, tecnica } = EVIDENCE_TEXT;
     expect(negocio.question(10, 90)).toBe(
       "Se cada vendedor trabalhasse as 10 primeiras da lista, quanto do valor vendido nos 90 dias seguintes estaria nelas?");
-    expect(negocio.delta({ value: -0.031, low: -0.044, high: -0.019 })).toBe(
-      "3,1 pontos a menos que a regra atual (margem de erro: entre 1,9 e 4,4 pontos a menos)");
+    expect(negocio.delta({ value: -0.046, low: -0.068, high: -0.025 })).toBe(
+      "4,6 pontos a menos que a regra atual (margem de erro: entre 2,5 e 6,8 pontos a menos)");
     expect(negocio.delta({ value: 0.015, low: 0.002, high: 0.027 })).toBe(
       "1,5 ponto a mais que a regra atual (margem de erro: entre 0,2 e 2,7 pontos a mais)");
     expect(negocio.delta({ value: 0.004, low: -0.008, high: 0.016 })).toBe(
       "0,4 ponto a mais que a regra atual (margem de erro: entre 0,8 a menos e 1,6 a mais)");
     expect(negocio.delta({ value: 0, low: 0, high: 0 })).toBe("Igual à regra atual");
-    expect(tecnica.delta({ value: -0.031, low: -0.044, high: -0.019 })).toBe(
-      "Δ −3,1 pp contra a regra atual (IC95%: −4,4 pp a −1,9 pp)");
+    expect(tecnica.delta({ value: -0.046, low: -0.068, high: -0.025 })).toBe(
+      "Δ −4,6 pp contra a regra atual (IC95%: −6,8 pp a −2,5 pp)");
+    // A limitação principal, dita a partir do veredito que o back calculou (os números reais de hoje).
+    const behind = { code: "reference_behind", ranker: "list_price_only",
+      delta: { value: 0.01, low: 0.003, high: 0.019 } } as const;
+    expect(negocio.verdict(behind)).toBe("Sem elas, \"Só valor de tabela\" rende 1,0 ponto a mais que a regra atual " +
+      "(margem de erro: entre 0,3 e 1,9 pontos a mais). A vantagem da regra atual vem dessas negociações, e elas podem " +
+      "ser um efeito de como a base foi montada.");
+    expect(tecnica.verdict(behind)).toBe("\"Só valor de tabela\": Δ +1,0 pp (IC95%: +0,3 pp a +1,9 pp) contra a regra " +
+      "servida. A vantagem da regra servida depende das negociações sem desfecho.");
+    expect(negocio.verdict({ code: "inconclusive", ranker: null, delta: null })).toBe(
+      "Sem elas, a diferença entre a regra atual e as outras fica dentro da margem de erro.");
     // A linguagem de negócio não usa siglas nem jargão estatístico.
     const business = [...strings(negocio), ...Object.values(RANKER_DESCRIPTIONS), negocio.question(10, 90),
-      negocio.headline(10), negocio.columns.value(10), negocio.columns.delta(10)];
+      negocio.headline(10), negocio.columns.value(10), negocio.columns.delta(10), negocio.verdict(behind)];
     for (const line of business) expect(line, line).not.toMatch(/\bpp\b|IC95%|AUC|Val@|P@|Lift|bootstrap|oráculo/i);
   });
 });

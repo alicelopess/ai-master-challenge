@@ -73,23 +73,59 @@ def test_outcome_changes_never_move_legit_rankers(cut):
     assert not np.array_equal(TRAP(changed), TRAP(cut))  # só a armadilha depende do desfecho
 
 
-def hand_cut(ages, prices, won_cycles, limit):
+def hand_cut(ages, prices, won_limit, limit):
     as_of = pd.Timestamp("2017-06-30")
     features = pd.DataFrame({
         "opportunity_id": [f"O{i}" for i in range(len(ages))], "sales_agent": "Ana Alfa",
         "product": "GTX Basic", "sales_price": prices,
         "engage_date": [as_of - pd.Timedelta(days=a) for a in ages]})
-    train = pd.DataFrame({"product": "GTX Basic", "won": 1, "cycle_days": won_cycles})
-    return backtest.Cut(as_of, triage.Context(as_of, limit), train, features, pd.DataFrame())
+    ctx = triage.Context(as_of=as_of, won_cycle_limit_days=won_limit, cycle_limit_days=limit)
+    return backtest.Cut(as_of, ctx, pd.DataFrame(), features, pd.DataFrame())
 
 
-def test_rule_a_splits_at_the_floor_of_the_won_p90():
-    # P90 linear de 1..100 = 90,1 → idade até 90 no 1º grupo; maior ciclo 138 fecha o 2º.
-    cut = hand_cut(ages=[90, 91, 138, 139], prices=[550, 5482, 5482, 9999], won_cycles=range(1, 101), limit=138)
-    assert backtest.won_cycle_p90(cut) == 90
-    assert list(backtest.rule_a(cut)) == [2e6 + 550, 1e6 + 5482, 1e6 + 5482, 9999]
-    # A regra atual põe tudo até 138 d no mesmo grupo e ordena só por preço.
-    assert list(backtest.tool_rule(cut)) == [2e6 + 550, 2e6 + 5482, 2e6 + 5482, 9999]
+def test_served_rule_splits_at_both_limits():
+    cut = hand_cut(ages=[90, 91, 138, 139], prices=[550, 5482, 5482, 9999], won_limit=90, limit=138)
+    assert list(backtest.served_rule(cut)) == [2e6 + 550, 1e6 + 5482, 1e6 + 5482, 9999]
+    # A regra anterior põe tudo até 138 d no mesmo grupo e ordena só por preço.
+    assert list(backtest.max_cycle_only(cut)) == [2e6 + 550, 2e6 + 5482, 2e6 + 5482, 9999]
+    # Um limite fixo acima do maior ciclo é cortado nele.
+    assert list(backtest.fixed_limit(200)(cut)) == list(backtest.max_cycle_only(cut))
+
+
+def test_cut_ctx_is_the_core_context(tmp_path):
+    raw = write_raw(tmp_path / "raw", sales_pipeline=PIPELINE)
+    frame = data.load(raw).opportunities
+    cut = backtest.build_cut(frame, backtest.close_values(raw), CUT)
+    assert cut.ctx == triage.resolve_context(frame, CUT)  # só W1 (ganha, 10 d) fechou até o corte
+    assert (cut.ctx.won_cycle_limit_days, cut.ctx.cycle_limit_days) == (10, 10)
+
+
+def core_order_at_cut(frame, cut):
+    """A lista que o núcleo serviria em T: as abertas em T viram Engaging e passam por
+    triage.classify/order com o Context do corte."""
+    at_t = frame[frame["opportunity_id"].isin(cut.features["opportunity_id"])].assign(
+        deal_stage="Engaging", close_date=pd.NaT)
+    ordered = triage.order(triage.classify(at_t, cut.ctx))
+    return {seller: list(group["opportunity_id"]) for seller, group in ordered.groupby("sales_agent", sort=False)}
+
+
+def backtest_order(cut):
+    scores = pd.DataFrame({"seller": cut.features["sales_agent"], "id": cut.features["opportunity_id"],
+                           "score": backtest.served_rule(cut)})
+    return {seller: list(group.sort_values(["score", "id"], ascending=[False, True])["id"])
+            for seller, group in scores.groupby("seller", sort=False)}
+
+
+def test_served_ranker_reproduces_the_core_order_at_the_cut(tmp_path):
+    rows = PIPELINE + [opp(f"G{age}", "Ana Alfa", product, "Won", engaged=age + 250, closed=250)
+                       for age, product in ((5, "GTX Basic"), (20, "GTXPro"), (40, "MG Special"))] + [
+        opp(f"O{age}", "Ana Alfa", product, "Engaging", engaged=213 + age)
+        for age, product in ((3, "GTX Basic"), (15, "GTX Plus Pro"), (35, "GTXPro"), (60, "MG Special"))]
+    raw = write_raw(tmp_path / "raw", sales_pipeline=rows)
+    frame = data.load(raw).opportunities
+    cut = backtest.build_cut(frame, backtest.close_values(raw), CUT)
+    assert len(set(triage.engaging_group(backtest.age_days(cut), cut.ctx))) == 3  # os três grupos aparecem
+    assert backtest_order(cut) == core_order_at_cut(frame, cut)
 
 
 def test_auc_basics():
@@ -135,6 +171,18 @@ def test_real_population_includes_deals_without_outcome(real_result):
     assert [c["n_test"] for c in real_result["cuts"]] == [1330, 1618, 1535, 1686, 2257, 2265, 2409]
     assert real_result["cuts"][-1]["share_no_outcome"] == 0.612
     assert all(c["cycle_limit_days"] == 138 for c in real_result["cuts"])
+    assert [c["won_cycle_limit_days"] for c in real_result["cuts"]] == [114, 106, 105, 109, 107, 105, 107]
+    assert real_result["design"]["served_rule"] == codes.SERVED_RANKER
+
+
+@pytest.mark.real_data
+def test_real_served_ranker_reproduces_the_core_order_at_every_cut(real_dataset):
+    frame = real_dataset.opportunities
+    values = backtest.close_values(policy.RAW_DIR)
+    for as_of in backtest.CUTS:
+        cut = backtest.build_cut(frame, values, as_of)
+        assert cut.ctx == triage.resolve_context(frame, as_of)
+        assert backtest_order(cut) == core_order_at_cut(frame, cut), as_of
 
 
 @pytest.mark.real_data
@@ -148,16 +196,27 @@ def test_real_value_only_rankers_stay_at_chance(real_result):
 
 
 @pytest.mark.real_data
-def test_real_rule_a_beats_the_current_rule_only_with_deals_without_outcome(real_result):
+def test_real_served_rule_leads_only_with_deals_without_outcome(real_result):
     summary = {s["ranker"]: s for s in real_result["summary"]}
-    current, rule_a = summary[backtest.REFERENCE], summary[backtest.RULE_A]
-    assert (current["auc_mean"], rule_a["auc_mean"]) == (0.574, 0.604)
-    assert (current["val_at_k"], rule_a["val_at_k"]) == (0.569, 0.584)
-    assert rule_a["d_val_low"] > 0 and rule_a["d_p_low"] > 0
-    # A regra atual já supera "só valor": a divisão por idade agora tem rótulo.
-    assert current["val_at_k"] > summary["Só valor de tabela"]["val_at_k"]
+    served, previous = summary[backtest.SERVED], summary[backtest.MAX_CYCLE]
+    assert (served["auc_mean"], previous["auc_mean"]) == (0.604, 0.574)
+    assert (served["val_at_k"], previous["val_at_k"], summary[backtest.LIST_PRICE]["val_at_k"]) == (0.584, 0.569, 0.538)
+    assert (previous["d_val_at_k"], previous["d_val_low"], previous["d_val_high"]) == (-0.015, -0.027, -0.002)
+    assert previous["d_p_high"] < 0
+    # A limitação principal: sem as que nunca fecham, "só preço" fica à frente da regra servida.
     without = {s["ranker"]: s for s in real_result["without_no_outcome"]}
-    assert without[backtest.RULE_A]["d_val_high"] < 0
+    assert without[backtest.SERVED]["val_at_k"] == 0.781
+    price = without[backtest.LIST_PRICE]
+    assert (price["val_at_k"], price["d_val_at_k"], price["d_val_low"], price["d_val_high"]) == (0.791, 0.01, 0.003, 0.019)
+
+
+def test_delta_ci_is_antisymmetric():
+    a = pd.DataFrame({"seller": ["A", "B", "C"], "hits": [3, 1, 4], "expected_hits": [2.0, 2.0, 3.0],
+                      "value": [300.0, 0.0, 50.0], "oracle": [400.0, 100.0, 80.0]})
+    b = a.assign(hits=[2, 2, 1], value=[100.0, 50.0, 70.0])
+    ab, ba = backtest.delta_ci(a, b), backtest.delta_ci(b, a)
+    assert ab["d_val_at_k"] == pytest.approx(-ba["d_val_at_k"])
+    assert (ab["d_val_low"], ab["d_val_high"]) == pytest.approx((-ba["d_val_high"], -ba["d_val_low"]))
 
 
 def test_every_strategy_has_a_stable_code():

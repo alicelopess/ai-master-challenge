@@ -96,6 +96,7 @@ def render_detail(detail: Dict[str, Any]) -> str:
         cli_text.WHY_HERE,
     ]
     lines += [f"  • {cli_text.reason_text(reason)}" for reason in entry["reasons"]]
+    lines += [f"  {cli_text.LIMITS_NOTE}"]
     lines += ["", f"{cli_text.NEXT_STEP}: {cli_text.action_text(entry['next_action'])}"]
     return "\n".join(lines)
 

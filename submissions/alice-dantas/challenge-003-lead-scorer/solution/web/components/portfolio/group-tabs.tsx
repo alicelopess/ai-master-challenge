@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GROUP_LABELS, UI, actionText, groupDescription, groupEmptyText } from "@/copy/pt-BR";
+import { GROUP_LABELS, UI, actionText, groupDescription, groupEmptyText, type AgeLimits } from "@/copy/pt-BR";
 import type { Group } from "@/lib/contract";
 import { formatInt } from "@/lib/format";
 import { PAGE_SIZE, pageOf } from "@/lib/pagination";
@@ -24,7 +24,7 @@ type Props = {
   onTab: (state: State) => void;
   selected: string | null;
   onSelect: (id: string) => void;
-  cycleLimitDays: number;
+  limits: AgeLimits;
   showSeller?: boolean;
   /** Linhas por página em cada aba. */
   pageSize?: number;
@@ -34,7 +34,7 @@ type Props = {
 
 /** Um grupo por aba, na ordem da API, com a contagem no rótulo. */
 export function GroupTabs({
-  groups, tab, onTab, selected, onSelect, cycleLimitDays, showSeller, pageSize = PAGE_SIZE, actionShownFor,
+  groups, tab, onTab, selected, onSelect, limits, showSeller, pageSize = PAGE_SIZE, actionShownFor,
 }: Props) {
   const [pages, setPages] = useState<Partial<Record<State, number>>>({});
   const tables = useRef<Partial<Record<State, HTMLDivElement | null>>>({});
@@ -54,7 +54,8 @@ export function GroupTabs({
 
   return (
     <Tabs id="grupos" value={tab} onValueChange={(value) => onTab(value as State)} className="gap-4">
-      <TabsList aria-label={UI.groupsLabel} className="grid h-auto w-full grid-cols-2 sm:inline-flex sm:h-9 sm:w-fit">
+      <TabsList aria-label={UI.groupsLabel}
+                className="grid w-full grid-cols-2 group-data-horizontal/tabs:h-auto sm:inline-flex sm:w-fit sm:group-data-horizontal/tabs:h-9">
         {groups.map((group) => (
           <TabsTrigger key={group.state} value={group.state} className="h-8 px-3 sm:h-[calc(100%-1px)]">
             {GROUP_LABELS[group.state]}
@@ -71,7 +72,7 @@ export function GroupTabs({
         return (
           <TabsContent key={group.state} value={group.state} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <p className="text-muted-foreground">{groupDescription(group.state, cycleLimitDays)}</p>
+              <p className="text-muted-foreground">{groupDescription(group.state, limits)}</p>
               {group.items.length > 0 && group.next_action && group.state !== actionShownFor && (
                 <p>
                   <span className="font-medium">{UI.nextStep}:</span> {actionText(group.next_action)}

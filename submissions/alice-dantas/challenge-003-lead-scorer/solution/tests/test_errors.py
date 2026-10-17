@@ -1,6 +1,8 @@
 import pytest
+from fastapi.testclient import TestClient
 
-from leadscorer import data, policy, triage, views
+from api.main import create_app
+from leadscorer import codes, data, policy, triage, views
 from leadscorer.__main__ import main
 from leadscorer.errors import DataError, NotFoundError, PolicyError
 
@@ -103,17 +105,27 @@ def test_unknown_seller(raw_dir, capsys):
     assert code == 1 and out == "" and "não encontrado" in err
 
 
+def test_no_won_history_is_503_in_api_and_cli(tmp_path, capsys):
+    rows = [dict(row, deal_stage="Lost") if row["deal_stage"] == "Won" else row for row in PIPELINE]
+    raw = write_raw(tmp_path / "raw", sales_pipeline=rows)
+    body = TestClient(create_app(raw)).get("/api/meta")
+    assert (body.status_code, body.json()["code"]) == (503, codes.NO_WON_HISTORY)
+    code, out, err = run_cli(raw, capsys, "list", "--seller", "Ana Alfa")
+    assert code == 1 and out == "" and "Nenhuma venda ganha até 2017-12-31" in err
+
+
 @pytest.mark.real_data
 def test_real_data_has_no_warning(real_dataset):
     assert views.seller_pipeline(real_dataset, "Zane Levy")["meta"]["audited"] is True
 
 
 @pytest.mark.real_data
-@pytest.mark.parametrize("as_of, focar", [("2018-01-31", 160), ("2018-03-31", 34), ("2030-01-01", 0)])
-def test_real_as_of_sensitivity(real_dataset, as_of, focar):  # AC-1.8
+@pytest.mark.parametrize("as_of, focar, acompanhar", [("2018-01-31", 84, 76), ("2018-03-31", 9, 25),
+                                                      ("2030-01-01", 0, 0)])
+def test_real_as_of_sensitivity(real_dataset, as_of, focar, acompanhar):  # AC-1.8
     frame = real_dataset.opportunities
     ctx = triage.resolve_context(frame, triage.parse_as_of(frame, as_of))
     counts = triage.summary(triage.classify(frame, ctx))
-    assert counts[policy.FOCAR] == focar
+    assert (counts[policy.FOCAR], counts[policy.ACOMPANHAR]) == (focar, acompanhar)
     assert sum(counts.values()) == 2089
-    assert ctx.cycle_limit_days == 138
+    assert (ctx.won_cycle_limit_days, ctx.cycle_limit_days) == (106, 138)

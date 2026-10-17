@@ -75,8 +75,8 @@ export function TeamPage() {
 
       {pipeline.loading && (
         <div className="flex flex-col gap-4" aria-busy="true" aria-label={UI.loading}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((n) => <Skeleton key={n} className="h-32 rounded-xl" />)}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {[0, 1, 2, 3, 4].map((n) => <Skeleton key={n} className="h-32 rounded-xl" />)}
           </div>
           <Skeleton className="h-64 w-full rounded-xl" />
         </div>
@@ -101,7 +101,7 @@ export function TeamPage() {
 
             <TabsContent value="vendedores">
               {payload.by_seller.length ? (
-                <BySellerTable key={key} rows={payload.by_seller} />
+                <BySellerTable key={key} rows={payload.by_seller} groups={payload.ordering.group_order} />
               ) : (
                 <EmptyState text={TEAM.noSellers} />
               )}
@@ -120,7 +120,7 @@ export function TeamPage() {
                     onTab={(state) => setQuery({ grupo: state })}
                     selected={selected}
                     onSelect={setSelected}
-                    cycleLimitDays={payload.meta.cycle_limit_days}
+                    limits={payload.meta}
                     showSeller
                   />
                 </>

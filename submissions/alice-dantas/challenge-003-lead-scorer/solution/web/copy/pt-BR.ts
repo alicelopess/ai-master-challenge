@@ -7,7 +7,7 @@
  * vocabulário e a origem de cada número.
  */
 import type {
-  BaseRate, Delta, ErrorBody, EvidenceDesign, Group, Item, Meta, Ordering, RankerResult, SellerPipeline,
+  Delta, ErrorBody, Evidence, EvidenceDesign, Group, Item, Meta, Ordering, RankerResult, SellerPipeline,
   StartWithParams, ValueBandRule,
 } from "@/lib/contract";
 import { capitalize, formatDate, formatDecimal, formatInt, formatPp } from "@/lib/format";
@@ -23,6 +23,9 @@ type ValueBand = NonNullable<Item["value_band"]>;
 type ErrorParams = ErrorBody["params"];
 export type ReasonRole = Reason["role"];
 export type RankerCode = RankerResult["code"];
+export type EvidenceVerdict = Evidence["without_no_outcome_verdict"];
+/** Os dois limites de idade e o percentil, como o `meta` os entrega. */
+export type AgeLimits = Pick<Meta, "won_cycle_limit_days" | "cycle_limit_days" | "cycle_percentile">;
 
 function unreachable(value: never): never {
   throw new Error(`Código sem texto no catálogo: ${JSON.stringify(value)}`);
@@ -77,6 +80,7 @@ export const UI = {
   previous: "Anterior",
   next: "Próxima",
   position: (index: number, total: number) => `${index} de ${total}`,
+  limitsNote: "O sistema só vê datas, produto e preço de tabela: não vê ligações, reuniões nem e-mails.",
   copyId: "Copiar ID",
   copied: "ID copiado",
   noProduct: "sem produto",
@@ -119,8 +123,8 @@ export const RANKER_LABELS: Record<RankerCode, string> = {
   random: "Ordem aleatória",
   list_price_only: "Só valor de tabela",
   age_newest_first: "Mais recentes primeiro",
-  current_rule: "Regra atual",
-  rule_a: "Regra A (em estudo)",
+  age_max_cycle_only: "Regra anterior (só o maior ciclo)",
+  age_p90_then_max_cycle: "Regra atual",
 };
 
 export const RANKER_DESCRIPTIONS: Record<RankerCode, string> = {
@@ -129,8 +133,10 @@ export const RANKER_DESCRIPTIONS: Record<RankerCode, string> = {
   random: "Sorteio: o resultado do acaso.",
   list_price_only: "Maior valor de tabela primeiro, sem olhar a idade.",
   age_newest_first: "Engajadas há menos tempo primeiro.",
-  current_rule: "A lista desta ferramenta: dentro do maior ciclo já fechado primeiro; em cada grupo, maior valor de tabela.",
-  rule_a: "Variação testada: antes, as mais novas que o ciclo típico das ganhas do produto; depois, como a regra atual.",
+  age_max_cycle_only: "A lista até agora: as abertas até a venda mais longa já fechada primeiro; em cada grupo, maior " +
+    "valor de tabela.",
+  age_p90_then_max_cycle: "A lista desta ferramenta: primeiro as abertas há até o tempo em que 90% das vendas ganhas " +
+    "fecharam, depois as até a venda mais longa já fechada; em cada grupo, maior valor de tabela.",
 };
 
 // Evidência em duas linguagens: a de negócio (padrão, para gestores) e a técnica (para quem audita o método).
@@ -156,8 +162,9 @@ export const RANKER_TECH_DESCRIPTIONS: Record<RankerCode, string> = {
   random: "Permutação aleatória com semente fixa.",
   list_price_only: "Preço de tabela decrescente; ignora a idade.",
   age_newest_first: "engage_date mais recente primeiro.",
-  current_rule: "Idade até o maior ciclo fechado até T → faixa → preço de tabela decrescente → ID (a regra servida).",
-  rule_a: "Idade até o P90 do ciclo das ganhas do produto em T → até o maior ciclo → preço de tabela decrescente.",
+  age_max_cycle_only: "Idade até o maior ciclo fechado até T → faixa → preço de tabela decrescente → ID (a regra até a v4).",
+  age_p90_then_max_cycle: "Idade até o piso do P90 do ciclo de todas as ganhas até T → até o maior ciclo fechado até T → " +
+    "faixa → preço de tabela decrescente → ID (a regra servida).",
 };
 
 /** Pontos percentuais sem sinal, para a linguagem de negócio: −0.031 → "3,1". */
@@ -178,6 +185,40 @@ function businessDelta(delta: Delta): string {
   return `${points(delta.value)} ${pointWord(delta.value)} ${side} que a regra atual (${marginText(delta)})`;
 }
 
+const quoted = (code: RankerCode | null): string => `"${code ? RANKER_LABELS[code] : ""}"`;
+
+function businessVerdict(verdict: EvidenceVerdict): string {
+  const { ranker, delta } = verdict;
+  switch (verdict.code) {
+    case "reference_behind":
+      return `Sem elas, ${quoted(ranker)} rende ${delta ? businessDelta(delta) : ""}. A vantagem da regra atual vem ` +
+        "dessas negociações, e elas podem ser um efeito de como a base foi montada.";
+    case "reference_ahead":
+      return `Mesmo sem elas, a regra atual fica à frente de todas; a mais próxima é ${quoted(ranker)}, com ` +
+        `${delta ? businessDelta(delta) : ""}.`;
+    case "inconclusive":
+      return "Sem elas, a diferença entre a regra atual e as outras fica dentro da margem de erro.";
+    default:
+      return unreachable(verdict.code);
+  }
+}
+
+function technicalVerdict(verdict: EvidenceVerdict): string {
+  const { ranker, delta } = verdict;
+  const cited = delta ? `${quoted(ranker)}: Δ ${formatPp(delta.value)} (IC95%: ${formatPp(delta.low)} a ` +
+    `${formatPp(delta.high)})` : "";
+  switch (verdict.code) {
+    case "reference_behind":
+      return `${cited} contra a regra servida. A vantagem da regra servida depende das negociações sem desfecho.`;
+    case "reference_ahead":
+      return `A regra servida supera todas com o IC95% abaixo de zero; a mais próxima é ${cited}.`;
+    case "inconclusive":
+      return "Nenhuma diferença contra a regra servida tem o IC95% fora do zero.";
+    default:
+      return unreachable(verdict.code);
+  }
+}
+
 type EvidenceText = {
   question: (topK: number, horizonDays: number) => string;
   method: (count: number, first: string, last: string, horizonDays: number) => string;
@@ -190,6 +231,7 @@ type EvidenceText = {
   descriptions: Record<RankerCode, string>;
   withoutTitle: string;
   withoutHelp: string;
+  verdict: (verdict: EvidenceVerdict) => string;
   howTitle: string;
   how: (design: EvidenceDesign) => string;
   limitsTitle: string;
@@ -217,9 +259,10 @@ export const EVIDENCE_TEXT: Record<EvidenceLanguage, EvidenceText> = {
       delta: () => "Comparado à regra atual",
     },
     descriptions: RANKER_DESCRIPTIONS,
-    withoutTitle: "E sem as negociações paradas?",
-    withoutHelp: "A mesma conta sem as oportunidades que nunca fecharam na base. Mostra quanto da vantagem da regra " +
-      "vem de tirar da frente as negociações paradas.",
+    withoutTitle: "E sem as negociações que nunca fecharam na base?",
+    withoutHelp: "A mesma conta sem as oportunidades que seguem abertas no fim da base. Mostra se a vantagem da regra " +
+      "atual depende delas.",
+    verdict: businessVerdict,
     howTitle: "De onde vêm os números",
     how: (design) =>
       `${formatInt(design.unique_opportunities)} oportunidades da base, olhadas em ${design.cuts.length} datas. A ` +
@@ -256,8 +299,8 @@ export const EVIDENCE_TEXT: Record<EvidenceLanguage, EvidenceText> = {
     },
     descriptions: RANKER_TECH_DESCRIPTIONS,
     withoutTitle: "Sensibilidade: sem as negociações sem desfecho",
-    withoutHelp: "Mesmas métricas excluindo as negociações que seguem abertas no fim da base. Isola quanto da vantagem " +
-      "vem da divisão por idade aplicada a elas.",
+    withoutHelp: "Mesmas métricas excluindo as negociações que seguem abertas no fim da base.",
+    verdict: technicalVerdict,
     howTitle: "Desenho do backtest",
     how: (design) =>
       `${formatInt(design.observations)} observações (negociação × corte) de ${formatInt(design.unique_opportunities)} ` +
@@ -284,25 +327,19 @@ export const TECH_COLUMNS = {
 } as const;
 
 export const RULES = {
-  groupsTitle: "Os quatro grupos",
+  groupsTitle: "Os grupos",
   groupsHelp: "Cada oportunidade aberta cai em um grupo. A ordem dos grupos é a ordem da lista.",
   orderTitle: "A ordem dentro do grupo",
   bandsColumns: { band: "Faixa", range: "Valor de tabela" },
-  cycleTitle: "Referência de ciclo por produto",
-  cycleHelp: (minCases: number) =>
-    `Aparece no "Por que está aqui" só como contexto: não muda grupo nem ordem. Com menos de ${minCases} vendas ` +
-    "ganhas, leia como indicação.",
-  cycleColumns: {
-    product: "Produto",
-    cycle: (percentile: number) => `Ciclo de ${percentile}% das ganhas`,
-    won: "Vendas ganhas",
-  },
-  days: (days: number) => `${days} dias`,
-  chanceTitle: "Chance de fechar",
-  chance: (rate: BaseRate) =>
-    `Não sabemos a chance de fechar de cada oportunidade: cerca de ${rate.pct}% das fechadas foram ganhas ` +
-    `(${rate.low_pct}% a ${rate.high_pct}% contando as abertas). Por isso a lista não usa chance: ordena por grupo ` +
-    "e valor de tabela.",
+  ageTitle: "Os dois limites de idade",
+  ageHelp: "Separam as negociações em andamento pelo tempo que as vendas levaram no histórico. Descrevem o " +
+    "passado e não dizem quando uma negociação deve terminar: uma mais antiga pode seguir viva.",
+  wonLimit: (days: number, percentile: number) =>
+    `${percentile}% das vendas ganhas fecharam em até ${days} dias. Até esse tempo, a negociação fica em ` +
+    `${GROUP_LABELS.focar}.`,
+  longestLimit: (days: number) =>
+    `A venda mais longa já fechada levou ${days} dias. Entre os dois limites, a negociação fica em ` +
+    `${GROUP_LABELS.acompanhar}; acima, em ${GROUP_LABELS.revisar}.`,
   limitsTitle: "O que a ferramenta não faz",
   limits: [
     "Não calcula chance de fechar por oportunidade.",
@@ -323,18 +360,22 @@ export function bandRange(rule: ValueBandRule): string {
 export const ROLE_LABELS: Record<ReasonRole, string> = {
   group: "Por que está neste grupo",
   order: "Por que nesta posição",
-  context: "Para contexto (não muda a posição)",
 };
 
-/** Definição de uma linha de cada grupo; o limite vem do `meta`. */
-export function groupDescription(state: GroupKey, cycleLimitDays: number): string {
+/** Definição de uma linha de cada grupo; os limites vêm do `meta`, como fatos do histórico. */
+export function groupDescription(state: GroupKey, limits: AgeLimits): string {
+  const { won_cycle_limit_days: won, cycle_limit_days: longest, cycle_percentile: percentile } = limits;
   switch (state) {
     case "focar":
-      return `Em negociação há até ${cycleLimitDays} dias, dentro do maior ciclo já fechado.`;
+      return `Abertas há até ${won} dias. No histórico, ${percentile}% das vendas ganhas fecharam dentro desse tempo.`;
+    case "acompanhar":
+      return `Abertas há mais de ${won} e até ${longest} dias: mais do que ${percentile}% das vendas ganhas levaram, ` +
+        "sem passar da venda mais longa já fechada.";
     case "revisar":
-      return `Em negociação há mais de ${cycleLimitDays} dias, acima do maior ciclo já fechado.`;
+      return `Abertas há mais de ${longest} dias, mais do que qualquer venda já fechada aqui. O sistema não vê ` +
+        "ligações nem reuniões.";
     case "qualificar":
-      return "Ainda em prospecção.";
+      return "Ainda em prospecção, sem data de início da negociação.";
     case "nao_pontuavel":
       return "Falta produto, preço de tabela ou data de engajamento no CRM.";
     default:
@@ -342,11 +383,13 @@ export function groupDescription(state: GroupKey, cycleLimitDays: number): strin
   }
 }
 
+// Verbos no infinitivo: os moldes "Comece por {nome}" e "{nome} porque…" leem bem com todos.
 export const GROUP_LABELS: Record<GroupKey, string> = {
   focar: "Focar",
-  revisar: "Revisar",
+  acompanhar: "Acompanhar",
+  revisar: "Confirmar",
   qualificar: "Qualificar",
-  nao_pontuavel: "Não pontuável",
+  nao_pontuavel: "Completar",
 };
 
 // Campo ausente: motivo curto (na linha) e o nome usado nas frases.
@@ -360,12 +403,20 @@ export const NO_ACCOUNT = "sem cliente registrado";
 
 export function reasonText(reason: Reason): string {
   switch (reason.code) {
-    case "age_within_cycle_limit":
-      return `${GROUP_LABELS.focar} porque está em negociação há ${reason.params.age_days} dias, dentro do maior ` +
-        `ciclo já fechado (${reason.params.cycle_limit_days} d).`;
+    case "age_within_won_cycle": {
+      const p = reason.params;
+      return `${GROUP_LABELS.focar} porque está aberta há ${p.age_days} dias; ${p.percentile}% das vendas ganhas ` +
+        `fecharam em até ${p.won_cycle_limit_days} dias.`;
+    }
+    case "age_above_won_cycle": {
+      const p = reason.params;
+      return `${GROUP_LABELS.acompanhar} porque está aberta há ${p.age_days} dias: mais do que ${p.percentile}% das ` +
+        `vendas ganhas levaram (${p.won_cycle_limit_days} d), sem passar da venda mais longa já fechada ` +
+        `(${p.cycle_limit_days} d).`;
+    }
     case "age_above_cycle_limit":
-      return `${GROUP_LABELS.revisar} porque está em negociação há ${reason.params.age_days} dias, acima do maior ` +
-        `ciclo já fechado (${reason.params.cycle_limit_days} d).`;
+      return `${GROUP_LABELS.revisar} porque está aberta há ${reason.params.age_days} dias, mais do que qualquer venda ` +
+        `já fechada aqui (${reason.params.cycle_limit_days} d).`;
     case "prospecting_stage":
       return `${GROUP_LABELS.qualificar} porque ainda está em prospecção.`;
     case "missing_field":
@@ -379,40 +430,16 @@ export function reasonText(reason: Reason): string {
       return "Sem valor de tabela: a oportunidade não tem produto.";
     case "no_list_price":
       return `Sem valor de tabela: o ${reason.params.product} não tem preço no catálogo.`;
-    case "won_cycle_reference": {
-      const p = reason.params;
-      const text = `Referência do ${p.product}: em ${p.percentile}% das vendas ganhas, o ciclo foi de até ` +
-        `${p.p90_days} dias (N = ${formatInt(p.won_n)}). Esta está há ${p.age_days} dias; o maior ciclo já ` +
-        `fechado foi de ${p.cycle_limit_days} dias.`;
-      return p.few_cases ? `${text} Poucos casos; leia como indicação.` : text;
-    }
-    case "no_cycle_reference": {
-      const p = reason.params;
-      switch (p.cause) {
-        case "no_product":
-          return "Sem produto: não há ciclo de referência para comparar.";
-        case "no_age":
-          return "Sem data de engajamento: não há idade para comparar.";
-        case "no_wins":
-          return `Sem vendas ganhas deste produto até ${p.as_of ? formatDate(p.as_of) : "a data de referência"}: ` +
-            "não há ciclo de referência para comparar.";
-        default:
-          return unreachable(p.cause);
-      }
-    }
-    case "closed_base_rate": {
-      const p = reason.params;
-      return `Não sabemos a chance de fechar desta oportunidade: cerca de ${p.pct}% das fechadas foram ganhas ` +
-        `(${p.low_pct}% a ${p.high_pct}% contando as abertas).`;
-    }
     default:
       return unreachable(reason);
   }
 }
 
 const ACTIONS: Record<Exclude<NextAction["code"], "fix_missing_field">, string> = {
-  work_highest_list_price_first: "Trabalhe primeiro os de maior valor de tabela; empates do mesmo produto valem o mesmo.",
-  confirm_still_active: "Confirme no CRM se segue ativa: idade acima do ciclo não prova que o negócio terminou.",
+  work_highest_list_price_first: "Avance primeiro as de maior valor de tabela; as do mesmo produto valem o mesmo.",
+  check_progress: "Veja no CRM o último avanço e o que falta para fechar.",
+  confirm_still_active: "Confirme com o cliente ou no CRM se a negociação segue: o tempo aberta não prova que ela " +
+    "terminou.",
   advance_prospecting: "Ainda em prospecção: avance no CRM os de maior valor de tabela e registre a data de " +
     "engajamento quando houver contato.",
   fix_missing_fields: "Corrija no CRM o campo indicado em cada oportunidade.",
@@ -425,6 +452,7 @@ export function actionText(action: NextAction): string {
 
 // Ação de "comece por", em minúscula, no meio da frase de Focar vazio.
 const START_ACTIONS: Record<StartWithParams["action"], string> = {
+  check_progress: "veja no CRM o último avanço de cada uma",
   confirm_still_active: "confirme no CRM quais seguem ativas",
   advance_prospecting: "avance no CRM as de maior valor de tabela",
   fix_missing_fields: "corrija o cadastro no CRM",
@@ -435,9 +463,12 @@ export function groupEmptyText(empty: GroupEmptyState): string {
     case "group_empty":
       return "Nenhuma oportunidade neste grupo.";
     case "start_with_group": {
+      // Focar vazio: cita só o limite que importa para o grupo indicado.
       const p = empty.params;
-      return `Nenhuma oportunidade dentro do ciclo observado (até ${p.cycle_limit_days} d). ` +
-        `Comece por ${GROUP_LABELS[p.group]}: ${START_ACTIONS[p.action]}.`;
+      const why = p.group === "acompanhar" ? `Nenhuma aberta há até ${p.won_cycle_limit_days} dias.`
+        : p.group === "revisar" ? `Todas as negociações em andamento estão abertas há mais de ${p.cycle_limit_days} dias.`
+          : "Nenhuma negociação em andamento.";
+      return `${why} Comece por ${GROUP_LABELS[p.group]}: ${START_ACTIONS[p.action]}.`;
     }
     default:
       return unreachable(empty);
@@ -503,8 +534,10 @@ const ERRORS: Record<ErrorBody["code"], (p: ErrorParams) => string> = {
     `partir de ${text(p.minimum)}.`,
   seller_not_found: (p) => `Vendedor '${text(p.seller)}' não encontrado.`,
   opportunity_not_found: (p) => `Oportunidade ${text(p.opportunity_id)} não encontrada.`,
-  evidence_unavailable: (p) => `Resultado do backtest indisponível (${text(p.file)}). Rode scripts/backtest.py ` +
-    "com os CSVs em data/raw/.",
+  evidence_unavailable: (p) => `Resultado do backtest indisponível ou de outra regra (${text(p.file)}). Rode ` +
+    "scripts/backtest.py com os CSVs em data/raw/.",
+  no_won_history: (p) => `Nenhuma venda ganha até ${text(p.as_of)}: sem ela não há como separar as negociações pelo ` +
+    "tempo das vendas ganhas.",
 };
 
 export const errorText = (error: ErrorBody): string => ERRORS[error.code](error.params);

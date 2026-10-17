@@ -31,6 +31,8 @@
 
   --status-focar: #4f5bd5;
   --status-focar-bg: #eef0fe;
+  --status-acompanhar: #6d28d9;
+  --status-acompanhar-bg: #ede9fe;
   --status-revisar: #92400e;
   --status-revisar-bg: #fef3c7;
   --status-qualificar: #0e7490;
@@ -65,6 +67,8 @@
 
   --status-focar: #a5b1fc;
   --status-focar-bg: #2d395a;
+  --status-acompanhar: #c4b5fd;
+  --status-acompanhar-bg: #3b2f5c;
   --status-revisar: #fbbf24;
   --status-revisar-bg: #414037;
   --status-qualificar: #67d4e8;
@@ -102,6 +106,8 @@
 
   --color-status-focar: var(--status-focar);
   --color-status-focar-bg: var(--status-focar-bg);
+  --color-status-acompanhar: var(--status-acompanhar);
+  --color-status-acompanhar-bg: var(--status-acompanhar-bg);
   --color-status-revisar: var(--status-revisar);
   --color-status-revisar-bg: var(--status-revisar-bg);
   --color-status-qualificar: var(--status-qualificar);

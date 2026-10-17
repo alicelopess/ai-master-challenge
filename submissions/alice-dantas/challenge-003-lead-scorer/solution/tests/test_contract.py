@@ -109,6 +109,19 @@ def test_payloads_pass_through_the_models_unchanged(raw_dir):
     assert dumped(Evidence, evidence.load()) == as_json(evidence.load())
 
 
+def test_states_and_actions_flow_from_policy():
+    """Grupos e ações do contrato saem da política: um grupo novo em policy.STATES aparece no
+    contrato (e quebra os catálogos da tela e da CLI até ganhar texto)."""
+    from typing import get_args
+    from api import schemas
+    from leadscorer import codes
+    assert get_args(schemas.StateKey) == policy.STATES
+    assert set(get_args(schemas.SimpleActionCode)) == {*policy.NEXT_ACTIONS.values(), codes.FIX_MISSING_FIELDS}
+    assert set(get_args(schemas.StartActionCode)) == set(policy.START_ACTION_CODES.values())
+    assert set(schemas.Summary.model_fields) == {"total", *policy.STATES, "without_account"}
+    assert set(schemas.SellerSummary.model_fields) == {"seller", "total", *policy.STATES, "without_account"}
+
+
 def test_a_field_without_contract_breaks_validation(raw_dir):
     payload = views.seller_pipeline(data.load(raw_dir), "Ana Alfa")
     payload["groups"][0]["items"][0]["score"] = 1

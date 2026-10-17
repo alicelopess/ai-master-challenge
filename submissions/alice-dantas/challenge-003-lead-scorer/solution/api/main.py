@@ -20,10 +20,10 @@ WEB_ORIGIN = "http://localhost:3000"
 STATUS = ((DataError, 503), (PolicyError, 422), (NotFoundError, 404))
 
 # Erros que cada rota pode devolver, todos com o mesmo corpo {"detail", "code", "params"}.
-DATA_ERROR = {503: {"model": ErrorBody, "description": "CSVs ausentes ou inválidos"}}
+DATA_ERROR = {503: {"model": ErrorBody, "description": "CSVs ausentes ou inválidos, ou sem venda ganha até o as_of"}}
 AS_OF_ERROR = {422: {"model": ErrorBody, "description": "as_of inválido"}}
 NOT_FOUND = {404: {"model": ErrorBody, "description": "Vendedor não encontrado"}}
-EVIDENCE_ERROR = {503: {"model": ErrorBody, "description": "Resultado do backtest ausente ou inválido"}}
+EVIDENCE_ERROR = {503: {"model": ErrorBody, "description": "Resultado do backtest ausente, inválido ou de outra regra"}}
 
 
 def create_app(raw_dir: Path = policy.RAW_DIR, evidence_path: Path = policy.EVIDENCE_PATH) -> FastAPI:

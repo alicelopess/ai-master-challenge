@@ -7,11 +7,11 @@ import pytest
 from leadscorer import cli_text, codes, data, policy, triage, views
 from leadscorer.__main__ import main, render_detail, render_list
 
-from conftest import PIPELINE, PRODUCTS, opp, write_raw
+from conftest import EDGE_TABLES, PIPELINE, PRODUCTS, opp, write_raw
 from test_explain import assert_verifiable, assert_vocabulary
 
-FOCAR_EMPTY_REVISAR = ("Nenhuma oportunidade dentro do ciclo observado (até 138 d). "
-                       "Comece por Revisar: confirme no CRM quais seguem ativas.")
+FOCAR_EMPTY_REVISAR = ("Todas as negociações em andamento estão abertas há mais de 138 dias. "
+                       "Comece por Confirmar: confirme no CRM quais seguem ativas.")
 
 
 def ordered(frame, as_of=None):
@@ -54,9 +54,9 @@ def test_unscorable_panel_names_the_field(unscorable_dir):  # AC-3.6
     n2 = views.opportunity_detail(dataset, "N2")["item"]
     assert n1["reasons"][0]["params"] == {"field": "engage_date"}
     assert n1["next_action"] == {"code": codes.FIX_MISSING_FIELD, "params": {"field": "engage_date"}}
-    assert cli_text.reason_text(n1["reasons"][0]) == "Não pontuável porque falta a data de engajamento."
+    assert cli_text.reason_text(n1["reasons"][0]) == "Completar porque falta a data de engajamento."
     assert cli_text.action_text(n1["next_action"]) == "Corrija a data de engajamento no CRM."
-    assert cli_text.reason_text(n2["reasons"][0]) == "Não pontuável porque falta o produto."
+    assert cli_text.reason_text(n2["reasons"][0]) == "Completar porque falta o produto."
     assert cli_text.action_text(n2["next_action"]) == "Corrija o produto no CRM."
     assert n2["sales_price"] is None and n2["value_band"] is None
 
@@ -96,8 +96,7 @@ def test_shuffled_closed_rows_and_future_win_change_nothing(raw_dir, tmp_path): 
     base = data.load(raw_dir).opportunities
 
     ctx = triage.resolve_context(shuffled, "2017-12-31")
-    assert ctx.cycle_limit_days == 138
-    assert triage.cycle_references(shuffled, ctx) == triage.cycle_references(base, triage.resolve_context(base))
+    assert (ctx.won_cycle_limit_days, ctx.cycle_limit_days) == (100, 138)  # a ganha futura não entra em L1
     assert ordered(shuffled, "2017-12-31") == ordered(base)
 
 
@@ -109,16 +108,25 @@ def test_focar_empty_points_to_next_group(raw_dir):
     payload = views.seller_pipeline(data.load(raw_dir), "Bruno Beta")  # só uma Prospecting
     empty = group(payload, "focar")["empty"]
     assert empty == {"code": codes.START_WITH_GROUP, "params": {
-        "group": "qualificar", "action": codes.ADVANCE_PROSPECTING, "cycle_limit_days": 138}}
+        "group": "qualificar", "action": codes.ADVANCE_PROSPECTING, "won_cycle_limit_days": 100,
+        "cycle_limit_days": 138}}
     assert cli_text.empty_text(empty) == (
-        "Nenhuma oportunidade dentro do ciclo observado (até 138 d). "
-        "Comece por Qualificar: avance no CRM as de maior valor de tabela.")
+        "Nenhuma negociação em andamento. Comece por Qualificar: avance no CRM as de maior valor de tabela.")
+
+
+def test_focar_empty_text_cites_only_the_limit_that_matters(tmp_path):
+    edges = data.load(write_raw(tmp_path / "edges", **EDGE_TABLES))
+    davi = group(views.seller_pipeline(edges, "Davi Delta"), "focar")["empty"]
+    assert cli_text.empty_text(davi) == (
+        "Nenhuma aberta há até 100 dias. Comece por Acompanhar: veja no CRM o último avanço de cada uma.")
+    eva = group(views.seller_pipeline(edges, "Eva Epsilon"), "focar")["empty"]
+    assert cli_text.empty_text(eva) == FOCAR_EMPTY_REVISAR
 
 
 def test_seller_without_open_deals(raw_dir, capsys):  # AC-2.5
     payload = views.seller_pipeline(data.load(raw_dir), "Carla Gama")
-    assert payload["summary"] == {"total": 0, "focar": 0, "revisar": 0, "qualificar": 0, "nao_pontuavel": 0,
-                                  "without_account": 0}
+    assert payload["summary"] == {"total": 0, "focar": 0, "acompanhar": 0, "revisar": 0, "qualificar": 0,
+                                  "nao_pontuavel": 0, "without_account": 0}
     assert payload["empty"] == {"code": codes.NO_OPEN_FOR_SELLER, "params": {}}
     assert main(["--raw", str(raw_dir), "list", "--seller", "Carla Gama"]) == 0
     assert "Nenhuma oportunidade aberta para este vendedor." in capsys.readouterr().out
@@ -144,7 +152,7 @@ def test_real_far_as_of_moves_every_engaging_to_revisar(real_dataset):  # AC-2.1
     engaging = frame[frame["deal_stage"] == "Engaging"].groupby("sales_agent").size()
     for seller in real_dataset.sellers:
         payload = views.seller_pipeline(real_dataset, seller, "2030-01-01")
-        assert payload["summary"]["focar"] == 0
+        assert payload["summary"]["focar"] == payload["summary"]["acompanhar"] == 0
         assert payload["summary"]["revisar"] == engaging.get(seller, 0)
         if payload["summary"]["revisar"]:
             assert cli_text.empty_text(group(payload, "focar")["empty"]) == FOCAR_EMPTY_REVISAR
@@ -164,7 +172,7 @@ def test_real_account_and_shuffle_invariance(real_dataset):  # AC-1.7, AC-1.10
         engage_date=pd.Timestamp("2017-01-01"), close_date=pd.Timestamp("2018-06-30"))
     shuffled = pd.concat([shuffled, future_win], ignore_index=True)
     ctx = triage.resolve_context(shuffled, "2017-12-31")
-    assert ctx.cycle_limit_days == 138
+    assert (ctx.won_cycle_limit_days, ctx.cycle_limit_days) == (106, 138)
     assert ordered(shuffled, "2017-12-31") == base
 
 

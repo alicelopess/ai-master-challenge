@@ -24,7 +24,10 @@
     ],
     "observations": 13100,
     "unique_opportunities": 5021,
-    "audited_data": true
+    "audited_data": true,
+    "served_rule": "age_p90_then_max_cycle",
+    "as_of": "2017-12-31",
+    "won_cycle_limit_days": 106
   },
   "cuts": [
     {
@@ -34,7 +37,7 @@
       "share_no_outcome": 0.263,
       "test_win_rate": 0.458,
       "cycle_limit_days": 138,
-      "won_p90_days": 114,
+      "won_cycle_limit_days": 114,
       "share_above_limit": 0.002,
       "sellers_with_k": 30
     },
@@ -45,7 +48,7 @@
       "share_no_outcome": 0.291,
       "test_win_rate": 0.444,
       "cycle_limit_days": 138,
-      "won_p90_days": 106,
+      "won_cycle_limit_days": 106,
       "share_above_limit": 0.015,
       "sellers_with_k": 30
     },
@@ -56,7 +59,7 @@
       "share_no_outcome": 0.394,
       "test_win_rate": 0.401,
       "cycle_limit_days": 138,
-      "won_p90_days": 105,
+      "won_cycle_limit_days": 105,
       "share_above_limit": 0.053,
       "sellers_with_k": 30
     },
@@ -67,7 +70,7 @@
       "share_no_outcome": 0.425,
       "test_win_rate": 0.354,
       "cycle_limit_days": 138,
-      "won_p90_days": 109,
+      "won_cycle_limit_days": 109,
       "share_above_limit": 0.088,
       "sellers_with_k": 30
     },
@@ -78,7 +81,7 @@
       "share_no_outcome": 0.495,
       "test_win_rate": 0.315,
       "cycle_limit_days": 138,
-      "won_p90_days": 107,
+      "won_cycle_limit_days": 107,
       "share_above_limit": 0.122,
       "sellers_with_k": 30
     },
@@ -89,7 +92,7 @@
       "share_no_outcome": 0.606,
       "test_win_rate": 0.244,
       "cycle_limit_days": 138,
-      "won_p90_days": 105,
+      "won_cycle_limit_days": 105,
       "share_above_limit": 0.18,
       "sellers_with_k": 30
     },
@@ -100,7 +103,7 @@
       "share_no_outcome": 0.612,
       "test_win_rate": 0.225,
       "cycle_limit_days": 138,
-      "won_p90_days": 107,
+      "won_cycle_limit_days": 107,
       "share_above_limit": 0.22,
       "sellers_with_k": 30
     }
@@ -168,8 +171,8 @@
     },
     {
       "cut": "2017-03-31",
-      "ranker": "Regra atual: até o maior ciclo → preço",
-      "code": "current_rule",
+      "ranker": "Regra anterior: só até o maior ciclo → preço",
+      "code": "age_max_cycle_only",
       "leak": false,
       "auc": 0.53,
       "ci_low": 0.5,
@@ -180,8 +183,8 @@
     },
     {
       "cut": "2017-03-31",
-      "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
-      "code": "rule_a",
+      "ranker": "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "age_p90_then_max_cycle",
       "leak": false,
       "auc": 0.539,
       "ci_low": 0.512,
@@ -264,8 +267,8 @@
     },
     {
       "cut": "2017-04-30",
-      "ranker": "Regra atual: até o maior ciclo → preço",
-      "code": "current_rule",
+      "ranker": "Regra anterior: só até o maior ciclo → preço",
+      "code": "age_max_cycle_only",
       "leak": false,
       "auc": 0.532,
       "ci_low": 0.501,
@@ -276,8 +279,8 @@
     },
     {
       "cut": "2017-04-30",
-      "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
-      "code": "rule_a",
+      "ranker": "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "age_p90_then_max_cycle",
       "leak": false,
       "auc": 0.562,
       "ci_low": 0.531,
@@ -360,8 +363,8 @@
     },
     {
       "cut": "2017-05-31",
-      "ranker": "Regra atual: até o maior ciclo → preço",
-      "code": "current_rule",
+      "ranker": "Regra anterior: só até o maior ciclo → preço",
+      "code": "age_max_cycle_only",
       "leak": false,
       "auc": 0.537,
       "ci_low": 0.511,
@@ -372,8 +375,8 @@
     },
     {
       "cut": "2017-05-31",
-      "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
-      "code": "rule_a",
+      "ranker": "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "age_p90_then_max_cycle",
       "leak": false,
       "auc": 0.55,
       "ci_low": 0.522,
@@ -456,8 +459,8 @@
     },
     {
       "cut": "2017-06-30",
-      "ranker": "Regra atual: até o maior ciclo → preço",
-      "code": "current_rule",
+      "ranker": "Regra anterior: só até o maior ciclo → preço",
+      "code": "age_max_cycle_only",
       "leak": false,
       "auc": 0.558,
       "ci_low": 0.526,
@@ -468,8 +471,8 @@
     },
     {
       "cut": "2017-06-30",
-      "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
-      "code": "rule_a",
+      "ranker": "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "age_p90_then_max_cycle",
       "leak": false,
       "auc": 0.61,
       "ci_low": 0.584,
@@ -552,8 +555,8 @@
     },
     {
       "cut": "2017-07-31",
-      "ranker": "Regra atual: até o maior ciclo → preço",
-      "code": "current_rule",
+      "ranker": "Regra anterior: só até o maior ciclo → preço",
+      "code": "age_max_cycle_only",
       "leak": false,
       "auc": 0.596,
       "ci_low": 0.572,
@@ -564,8 +567,8 @@
     },
     {
       "cut": "2017-07-31",
-      "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
-      "code": "rule_a",
+      "ranker": "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "age_p90_then_max_cycle",
       "leak": false,
       "auc": 0.638,
       "ci_low": 0.614,
@@ -648,8 +651,8 @@
     },
     {
       "cut": "2017-08-31",
-      "ranker": "Regra atual: até o maior ciclo → preço",
-      "code": "current_rule",
+      "ranker": "Regra anterior: só até o maior ciclo → preço",
+      "code": "age_max_cycle_only",
       "leak": false,
       "auc": 0.63,
       "ci_low": 0.606,
@@ -660,8 +663,8 @@
     },
     {
       "cut": "2017-08-31",
-      "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
-      "code": "rule_a",
+      "ranker": "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "age_p90_then_max_cycle",
       "leak": false,
       "auc": 0.657,
       "ci_low": 0.634,
@@ -744,8 +747,8 @@
     },
     {
       "cut": "2017-09-30",
-      "ranker": "Regra atual: até o maior ciclo → preço",
-      "code": "current_rule",
+      "ranker": "Regra anterior: só até o maior ciclo → preço",
+      "code": "age_max_cycle_only",
       "leak": false,
       "auc": 0.636,
       "ci_low": 0.614,
@@ -756,8 +759,8 @@
     },
     {
       "cut": "2017-09-30",
-      "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
-      "code": "rule_a",
+      "ranker": "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "age_p90_then_max_cycle",
       "leak": false,
       "auc": 0.672,
       "ci_low": 0.651,
@@ -793,12 +796,12 @@
       "lift_at_k": 0.945,
       "val_at_k": 0.257,
       "cuts_val_above_reference": 0,
-      "d_p_at_k": -0.052,
-      "d_p_low": -0.08,
-      "d_p_high": -0.023,
-      "d_val_at_k": -0.313,
-      "d_val_low": -0.351,
-      "d_val_high": -0.272
+      "d_p_at_k": -0.07,
+      "d_p_low": -0.101,
+      "d_p_high": -0.038,
+      "d_val_at_k": -0.327,
+      "d_val_low": -0.368,
+      "d_val_high": -0.287
     },
     {
       "ranker": "Taxa por produto",
@@ -813,12 +816,12 @@
       "lift_at_k": 0.989,
       "val_at_k": 0.14,
       "cuts_val_above_reference": 0,
-      "d_p_at_k": -0.036,
-      "d_p_low": -0.068,
-      "d_p_high": -0.005,
-      "d_val_at_k": -0.43,
-      "d_val_low": -0.494,
-      "d_val_high": -0.366
+      "d_p_at_k": -0.053,
+      "d_p_low": -0.088,
+      "d_p_high": -0.02,
+      "d_val_at_k": -0.445,
+      "d_val_low": -0.506,
+      "d_val_high": -0.382
     },
     {
       "ranker": "Aleatório",
@@ -833,12 +836,12 @@
       "lift_at_k": 1.021,
       "val_at_k": 0.232,
       "cuts_val_above_reference": 0,
-      "d_p_at_k": -0.023,
-      "d_p_low": -0.058,
-      "d_p_high": 0.009,
-      "d_val_at_k": -0.337,
-      "d_val_low": -0.403,
-      "d_val_high": -0.279
+      "d_p_at_k": -0.04,
+      "d_p_low": -0.079,
+      "d_p_high": -0.005,
+      "d_val_at_k": -0.352,
+      "d_val_low": -0.411,
+      "d_val_high": -0.297
     },
     {
       "ranker": "Só valor de tabela",
@@ -853,12 +856,12 @@
       "lift_at_k": 1.015,
       "val_at_k": 0.538,
       "cuts_val_above_reference": 0,
-      "d_p_at_k": -0.026,
-      "d_p_low": -0.037,
-      "d_p_high": -0.016,
-      "d_val_at_k": -0.031,
-      "d_val_low": -0.044,
-      "d_val_high": -0.019
+      "d_p_at_k": -0.043,
+      "d_p_low": -0.06,
+      "d_p_high": -0.027,
+      "d_val_at_k": -0.046,
+      "d_val_low": -0.068,
+      "d_val_high": -0.025
     },
     {
       "ranker": "Idade: mais nova primeiro",
@@ -873,16 +876,16 @@
       "lift_at_k": 1.097,
       "val_at_k": 0.266,
       "cuts_val_above_reference": 0,
-      "d_p_at_k": 0.006,
-      "d_p_low": -0.025,
-      "d_p_high": 0.035,
-      "d_val_at_k": -0.303,
-      "d_val_low": -0.363,
-      "d_val_high": -0.245
+      "d_p_at_k": -0.011,
+      "d_p_low": -0.04,
+      "d_p_high": 0.016,
+      "d_val_at_k": -0.318,
+      "d_val_low": -0.372,
+      "d_val_high": -0.264
     },
     {
-      "ranker": "Regra atual: até o maior ciclo → preço",
-      "code": "current_rule",
+      "ranker": "Regra anterior: só até o maior ciclo → preço",
+      "code": "age_max_cycle_only",
       "leak": false,
       "auc_mean": 0.574,
       "auc_min": 0.53,
@@ -891,11 +894,18 @@
       "cuts_ci_below_half": 0,
       "p_at_k": 0.412,
       "lift_at_k": 1.082,
-      "val_at_k": 0.569
+      "val_at_k": 0.569,
+      "cuts_val_above_reference": 1,
+      "d_p_at_k": -0.017,
+      "d_p_low": -0.026,
+      "d_p_high": -0.009,
+      "d_val_at_k": -0.015,
+      "d_val_low": -0.027,
+      "d_val_high": -0.002
     },
     {
-      "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
-      "code": "rule_a",
+      "ranker": "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "age_p90_then_max_cycle",
       "leak": false,
       "auc_mean": 0.604,
       "auc_min": 0.539,
@@ -904,14 +914,7 @@
       "cuts_ci_below_half": 0,
       "p_at_k": 0.43,
       "lift_at_k": 1.127,
-      "val_at_k": 0.584,
-      "cuts_val_above_reference": 5,
-      "d_p_at_k": 0.017,
-      "d_p_low": 0.009,
-      "d_p_high": 0.026,
-      "d_val_at_k": 0.015,
-      "d_val_low": 0.002,
-      "d_val_high": 0.027
+      "val_at_k": 0.584
     },
     {
       "ranker": "[VAZAMENTO] fechou no 3º mês do trimestre",
@@ -925,13 +928,13 @@
       "p_at_k": 0.7,
       "lift_at_k": 1.836,
       "val_at_k": 0.446,
-      "cuts_val_above_reference": 1
+      "cuts_val_above_reference": 0
     }
   ],
   "limits": [
     {
-      "ranker": "Regra atual: até o maior ciclo → preço",
-      "code": "current_rule",
+      "ranker": "Regra anterior: só até o maior ciclo → preço",
+      "code": "age_max_cycle_only",
       "leak": false,
       "auc_mean": 0.574,
       "auc_min": 0.53,
@@ -941,6 +944,13 @@
       "p_at_k": 0.412,
       "lift_at_k": 1.082,
       "val_at_k": 0.569,
+      "cuts_val_above_reference": 1,
+      "d_p_at_k": -0.017,
+      "d_p_low": -0.026,
+      "d_p_high": -0.009,
+      "d_val_at_k": -0.015,
+      "d_val_low": -0.027,
+      "d_val_high": -0.002,
       "wins_outside_first_group": 0.0
     },
     {
@@ -953,13 +963,13 @@
       "p_at_k": 0.438,
       "lift_at_k": 1.15,
       "val_at_k": 0.585,
-      "cuts_val_above_reference": 6,
-      "d_p_at_k": 0.026,
-      "d_p_low": 0.012,
-      "d_p_high": 0.04,
-      "d_val_at_k": 0.016,
-      "d_val_low": -0.002,
-      "d_val_high": 0.035,
+      "cuts_val_above_reference": 4,
+      "d_p_at_k": 0.009,
+      "d_p_low": 0.001,
+      "d_p_high": 0.017,
+      "d_val_at_k": 0.001,
+      "d_val_low": -0.012,
+      "d_val_high": 0.014,
       "wins_outside_first_group": 0.065
     },
     {
@@ -972,13 +982,13 @@
       "p_at_k": 0.438,
       "lift_at_k": 1.149,
       "val_at_k": 0.593,
-      "cuts_val_above_reference": 6,
-      "d_p_at_k": 0.025,
-      "d_p_low": 0.014,
-      "d_p_high": 0.037,
-      "d_val_at_k": 0.023,
-      "d_val_low": 0.008,
-      "d_val_high": 0.038,
+      "cuts_val_above_reference": 5,
+      "d_p_at_k": 0.008,
+      "d_p_low": 0.003,
+      "d_p_high": 0.013,
+      "d_val_at_k": 0.008,
+      "d_val_low": 0.003,
+      "d_val_high": 0.014,
       "wins_outside_first_group": 0.028
     },
     {
@@ -991,13 +1001,13 @@
       "p_at_k": 0.43,
       "lift_at_k": 1.127,
       "val_at_k": 0.584,
-      "cuts_val_above_reference": 6,
-      "d_p_at_k": 0.017,
-      "d_p_low": 0.009,
-      "d_p_high": 0.025,
-      "d_val_at_k": 0.015,
-      "d_val_low": 0.002,
-      "d_val_high": 0.026,
+      "cuts_val_above_reference": 1,
+      "d_p_at_k": 0.0,
+      "d_p_low": -0.001,
+      "d_p_high": 0.001,
+      "d_val_at_k": -0.0,
+      "d_val_low": -0.002,
+      "d_val_high": 0.001,
       "wins_outside_first_group": 0.016
     },
     {
@@ -1010,13 +1020,13 @@
       "p_at_k": 0.425,
       "lift_at_k": 1.116,
       "val_at_k": 0.58,
-      "cuts_val_above_reference": 5,
-      "d_p_at_k": 0.013,
-      "d_p_low": 0.006,
-      "d_p_high": 0.02,
-      "d_val_at_k": 0.01,
-      "d_val_low": -0.002,
-      "d_val_high": 0.021,
+      "cuts_val_above_reference": 0,
+      "d_p_at_k": -0.004,
+      "d_p_low": -0.008,
+      "d_p_high": -0.001,
+      "d_val_at_k": -0.004,
+      "d_val_low": -0.009,
+      "d_val_high": -0.0,
       "wins_outside_first_group": 0.008
     },
     {
@@ -1029,18 +1039,18 @@
       "p_at_k": 0.424,
       "lift_at_k": 1.112,
       "val_at_k": 0.581,
-      "cuts_val_above_reference": 6,
-      "d_p_at_k": 0.011,
-      "d_p_low": 0.006,
-      "d_p_high": 0.017,
-      "d_val_at_k": 0.012,
-      "d_val_low": 0.006,
-      "d_val_high": 0.019,
+      "cuts_val_above_reference": 2,
+      "d_p_at_k": -0.006,
+      "d_p_low": -0.01,
+      "d_p_high": -0.002,
+      "d_val_at_k": -0.003,
+      "d_val_low": -0.011,
+      "d_val_high": 0.006,
       "wins_outside_first_group": 0.004
     },
     {
-      "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
-      "code": "rule_a",
+      "ranker": "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "age_p90_then_max_cycle",
       "leak": false,
       "auc_mean": 0.604,
       "auc_min": 0.539,
@@ -1050,13 +1060,6 @@
       "p_at_k": 0.43,
       "lift_at_k": 1.127,
       "val_at_k": 0.584,
-      "cuts_val_above_reference": 5,
-      "d_p_at_k": 0.017,
-      "d_p_low": 0.009,
-      "d_p_high": 0.026,
-      "d_val_at_k": 0.015,
-      "d_val_low": 0.002,
-      "d_val_high": 0.027,
       "wins_outside_first_group": 0.018
     }
   ],
@@ -1066,49 +1069,49 @@
         "cut": "2017-04-30",
         "chosen": "Até 90 d → até o maior ciclo → preço",
         "val_walk_forward": 0.632,
-        "val_rule_a": 0.637,
-        "val_reference": 0.631
+        "val_served": 0.637,
+        "val_max_cycle": 0.631
       },
       {
         "cut": "2017-05-31",
         "chosen": "Até 90 d → até o maior ciclo → preço",
         "val_walk_forward": 0.542,
-        "val_rule_a": 0.598,
-        "val_reference": 0.605
+        "val_served": 0.598,
+        "val_max_cycle": 0.605
       },
       {
         "cut": "2017-06-30",
         "chosen": "Até 120 d → até o maior ciclo → preço",
         "val_walk_forward": 0.615,
-        "val_rule_a": 0.618,
-        "val_reference": 0.601
+        "val_served": 0.618,
+        "val_max_cycle": 0.601
       },
       {
         "cut": "2017-07-31",
         "chosen": "Até 120 d → até o maior ciclo → preço",
         "val_walk_forward": 0.548,
-        "val_rule_a": 0.559,
-        "val_reference": 0.532
+        "val_served": 0.559,
+        "val_max_cycle": 0.532
       },
       {
         "cut": "2017-08-31",
         "chosen": "Até 100 d → até o maior ciclo → preço",
         "val_walk_forward": 0.514,
-        "val_rule_a": 0.485,
-        "val_reference": 0.466
+        "val_served": 0.485,
+        "val_max_cycle": 0.466
       },
       {
         "cut": "2017-09-30",
         "chosen": "Até 100 d → até o maior ciclo → preço",
         "val_walk_forward": 0.5,
-        "val_rule_a": 0.482,
-        "val_reference": 0.43
+        "val_served": 0.482,
+        "val_max_cycle": 0.43
       }
     ],
     "mean": {
       "val_walk_forward": 0.558,
-      "val_rule_a": 0.563,
-      "val_reference": 0.544
+      "val_served": 0.563,
+      "val_max_cycle": 0.544
     }
   },
   "without_no_outcome": [
@@ -1122,42 +1125,42 @@
       "p_at_k": 0.648,
       "lift_at_k": 1.033,
       "val_at_k": 0.791,
-      "cuts_val_above_reference": 0,
-      "d_p_at_k": 0.0,
+      "cuts_val_above_reference": 3,
+      "d_p_at_k": 0.002,
       "d_p_low": 0.0,
-      "d_p_high": 0.0,
-      "d_val_at_k": 0.0,
-      "d_val_low": 0.0,
-      "d_val_high": 0.0
+      "d_p_high": 0.005,
+      "d_val_at_k": 0.01,
+      "d_val_low": 0.003,
+      "d_val_high": 0.019
     },
     {
-      "ranker": "Regra atual: até o maior ciclo → preço",
-      "code": "current_rule",
+      "ranker": "Regra anterior: só até o maior ciclo → preço",
+      "code": "age_max_cycle_only",
       "leak": false,
       "auc_mean": 0.51,
       "auc_min": 0.485,
       "auc_max": 0.539,
       "p_at_k": 0.648,
       "lift_at_k": 1.033,
-      "val_at_k": 0.791
+      "val_at_k": 0.791,
+      "cuts_val_above_reference": 3,
+      "d_p_at_k": 0.002,
+      "d_p_low": 0.0,
+      "d_p_high": 0.005,
+      "d_val_at_k": 0.01,
+      "d_val_low": 0.003,
+      "d_val_high": 0.019
     },
     {
-      "ranker": "Regra A: até o P90 das ganhas → até o maior ciclo → preço",
-      "code": "rule_a",
+      "ranker": "Regra servida (A): até o P90 das ganhas → até o maior ciclo → preço",
+      "code": "age_p90_then_max_cycle",
       "leak": false,
       "auc_mean": 0.505,
       "auc_min": 0.472,
       "auc_max": 0.539,
       "p_at_k": 0.645,
       "lift_at_k": 1.03,
-      "val_at_k": 0.781,
-      "cuts_val_above_reference": 0,
-      "d_p_at_k": -0.002,
-      "d_p_low": -0.005,
-      "d_p_high": 0.0,
-      "d_val_at_k": -0.01,
-      "d_val_low": -0.019,
-      "d_val_high": -0.003
+      "val_at_k": 0.781
     }
   ]
 }

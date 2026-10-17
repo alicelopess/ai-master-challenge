@@ -20,14 +20,12 @@ def _optional(value: Any) -> Any:
 
 
 def meta(dataset: Dataset, ctx: triage.Context) -> Dict[str, Any]:
-    frame = dataset.opportunities
+    """Data de referência e os dois limites que decidem o grupo das Engaging (regra A)."""
     return {
         "as_of": ctx.as_of.date().isoformat(),
+        "won_cycle_limit_days": ctx.won_cycle_limit_days,
         "cycle_limit_days": ctx.cycle_limit_days,
         "cycle_percentile": policy.CYCLE_PERCENTILE,
-        "min_cases": policy.MIN_CASES,
-        "cycle_references": triage.cycle_references(frame, ctx),
-        "base_rate": triage.base_rate(frame, ctx),
         "audited": dataset.audited,
         "contract_version": codes.CONTRACT_VERSION,
     }
@@ -75,8 +73,8 @@ def empty_state(state: str, counts: Dict[str, int], ctx: triage.Context) -> Opti
     if state == policy.FOCAR:
         start = next((s for s in policy.STATES[1:] if counts[s]), None)
         if start:
-            return _code(codes.START_WITH_GROUP, group=start,
-                         action=policy.START_ACTION_CODES[start], cycle_limit_days=ctx.cycle_limit_days)
+            return _code(codes.START_WITH_GROUP, group=start, action=policy.START_ACTION_CODES[start],
+                         won_cycle_limit_days=ctx.won_cycle_limit_days, cycle_limit_days=ctx.cycle_limit_days)
     return _code(codes.GROUP_EMPTY)
 
 

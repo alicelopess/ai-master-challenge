@@ -3,64 +3,24 @@
 import * as z from 'zod';
 
 /**
- * AgeParams
+ * BetweenLimitsParams
  */
-export const zAgeParams = z.object({
+export const zBetweenLimitsParams = z.object({
     age_days: z.int(),
-    cycle_limit_days: z.int()
+    won_cycle_limit_days: z.int(),
+    cycle_limit_days: z.int(),
+    percentile: z.int()
 });
 
 /**
- * AgeAboveCycleLimit
+ * AgeAboveWonCycle
  *
- * Engaging com idade acima do maior ciclo fechado: grupo revisar.
+ * Engaging com idade acima de L1 e até L2: grupo acompanhar.
  */
-export const zAgeAboveCycleLimit = z.object({
-    code: z.literal('age_above_cycle_limit'),
+export const zAgeAboveWonCycle = z.object({
+    code: z.literal('age_above_won_cycle'),
     role: z.literal('group'),
-    params: zAgeParams
-});
-
-/**
- * AgeWithinCycleLimit
- *
- * Engaging com idade até o maior ciclo fechado: grupo focar.
- */
-export const zAgeWithinCycleLimit = z.object({
-    code: z.literal('age_within_cycle_limit'),
-    role: z.literal('group'),
-    params: zAgeParams
-});
-
-/**
- * BaseRate
- */
-export const zBaseRate = z.object({
-    won: z.int(),
-    closed: z.int(),
-    open: z.int(),
-    pct: z.int(),
-    low_pct: z.int(),
-    high_pct: z.int()
-});
-
-/**
- * ClosedBaseRate
- *
- * Taxa de ganho das fechadas: igual para todas as oportunidades, só contexto.
- */
-export const zClosedBaseRate = z.object({
-    code: z.literal('closed_base_rate'),
-    role: z.literal('context'),
-    params: zBaseRate
-});
-
-/**
- * CycleReference
- */
-export const zCycleReference = z.object({
-    p90_days: z.int().nullable(),
-    won_n: z.int()
+    params: zBetweenLimitsParams
 });
 
 /**
@@ -90,7 +50,8 @@ export const zErrorBody = z.object({
         'as_of_before_last_close',
         'seller_not_found',
         'opportunity_not_found',
-        'evidence_unavailable'
+        'evidence_unavailable',
+        'no_won_history'
     ]),
     params: z.record(z.string(), z.union([
         z.int(),
@@ -110,6 +71,29 @@ export const zEvidenceDesign = z.object({
     unique_opportunities: z.int(),
     n_boot_sellers: z.int(),
     audited_data: z.boolean()
+});
+
+/**
+ * EvidenceVerdict
+ *
+ * Como fica a regra servida contra as alternativas, pelo IC95% de cada diferença.
+ */
+export const zEvidenceVerdict = z.object({
+    code: z.enum([
+        'reference_behind',
+        'inconclusive',
+        'reference_ahead'
+    ]),
+    ranker: z.enum([
+        'global_rate',
+        'product_rate',
+        'random',
+        'list_price_only',
+        'age_newest_first',
+        'age_max_cycle_only',
+        'age_p90_then_max_cycle'
+    ]).nullable(),
+    delta: zDelta.nullable()
 });
 
 /**
@@ -156,17 +140,34 @@ export const zListPrice = z.object({
 });
 
 /**
+ * LongestCycleParams
+ */
+export const zLongestCycleParams = z.object({
+    age_days: z.int(),
+    cycle_limit_days: z.int()
+});
+
+/**
+ * AgeAboveCycleLimit
+ *
+ * Engaging com idade acima de L2: grupo revisar.
+ */
+export const zAgeAboveCycleLimit = z.object({
+    code: z.literal('age_above_cycle_limit'),
+    role: z.literal('group'),
+    params: zLongestCycleParams
+});
+
+/**
  * Meta
  */
 export const zMeta = z.object({
     as_of: z.iso.date(),
+    won_cycle_limit_days: z.int(),
     cycle_limit_days: z.int(),
     cycle_percentile: z.int(),
-    min_cases: z.int(),
-    cycle_references: z.record(z.string(), zCycleReference),
-    base_rate: zBaseRate,
     audited: z.boolean(),
-    contract_version: z.literal(4)
+    contract_version: z.literal(5)
 });
 
 /**
@@ -178,30 +179,6 @@ export const zMissingFieldReason = z.object({
     code: z.literal('missing_field'),
     role: z.literal('group'),
     params: zFieldParams
-});
-
-/**
- * NoCycleParams
- */
-export const zNoCycleParams = z.object({
-    cause: z.enum([
-        'no_product',
-        'no_age',
-        'no_wins'
-    ]),
-    product: z.string().nullish(),
-    as_of: z.iso.date().nullish()
-});
-
-/**
- * NoCycleReference
- *
- * Não há referência de ciclo (sem produto, sem idade ou sem ganhas até o as_of).
- */
-export const zNoCycleReference = z.object({
-    code: z.literal('no_cycle_reference'),
-    role: z.literal('context'),
-    params: zNoCycleParams
 });
 
 /**
@@ -238,6 +215,7 @@ export const zNoProduct = z.object({
 export const zOrdering = z.object({
     group_order: z.array(z.enum([
         'focar',
+        'acompanhar',
         'revisar',
         'qualificar',
         'nao_pontuavel'
@@ -304,8 +282,8 @@ export const zRankerResult = z.object({
         'random',
         'list_price_only',
         'age_newest_first',
-        'current_rule',
-        'rule_a'
+        'age_max_cycle_only',
+        'age_p90_then_max_cycle'
     ]),
     auc_mean: z.number(),
     auc_min: z.number(),
@@ -323,9 +301,18 @@ export const zRankerResult = z.object({
  */
 export const zEvidence = z.object({
     design: zEvidenceDesign,
-    reference: z.literal('current_rule'),
+    reference: z.enum([
+        'global_rate',
+        'product_rate',
+        'random',
+        'list_price_only',
+        'age_newest_first',
+        'age_max_cycle_only',
+        'age_p90_then_max_cycle'
+    ]),
     rankers: z.array(zRankerResult),
-    without_no_outcome: z.array(zRankerResult)
+    without_no_outcome: z.array(zRankerResult),
+    without_no_outcome_verdict: zEvidenceVerdict
 });
 
 /**
@@ -353,6 +340,7 @@ export const zSellerSummary = z.object({
     seller: z.string(),
     total: z.int(),
     focar: z.int(),
+    acompanhar: z.int(),
     revisar: z.int(),
     qualificar: z.int(),
     nao_pontuavel: z.int(),
@@ -365,6 +353,7 @@ export const zSellerSummary = z.object({
 export const zSimpleAction = z.object({
     code: z.enum([
         'work_highest_list_price_first',
+        'check_progress',
         'confirm_still_active',
         'advance_prospecting',
         'fix_missing_fields'
@@ -378,15 +367,18 @@ export const zSimpleAction = z.object({
 export const zStartWithParams = z.object({
     group: z.enum([
         'focar',
+        'acompanhar',
         'revisar',
         'qualificar',
         'nao_pontuavel'
     ]),
     action: z.enum([
+        'check_progress',
         'confirm_still_active',
         'advance_prospecting',
         'fix_missing_fields'
     ]),
+    won_cycle_limit_days: z.int(),
     cycle_limit_days: z.int()
 });
 
@@ -406,6 +398,7 @@ export const zStartWithGroup = z.object({
 export const zSummary = z.object({
     total: z.int(),
     focar: z.int(),
+    acompanhar: z.int(),
     revisar: z.int(),
     qualificar: z.int(),
     nao_pontuavel: z.int(),
@@ -448,23 +441,19 @@ export const zRules = z.object({
  * WonCycleParams
  */
 export const zWonCycleParams = z.object({
-    product: z.string(),
-    percentile: z.int(),
-    p90_days: z.int(),
-    won_n: z.int(),
-    few_cases: z.boolean(),
     age_days: z.int(),
-    cycle_limit_days: z.int()
+    won_cycle_limit_days: z.int(),
+    percentile: z.int()
 });
 
 /**
- * WonCycleReference
+ * AgeWithinWonCycle
  *
- * Referência de ciclo das ganhas do produto: só contexto.
+ * Engaging com idade até L1: grupo focar.
  */
-export const zWonCycleReference = z.object({
-    code: z.literal('won_cycle_reference'),
-    role: z.literal('context'),
+export const zAgeWithinWonCycle = z.object({
+    code: z.literal('age_within_won_cycle'),
+    role: z.literal('group'),
     params: zWonCycleParams
 });
 
@@ -486,6 +475,7 @@ export const zItem = z.object({
     age_days: z.int().nullable(),
     group: z.enum([
         'focar',
+        'acompanhar',
         'revisar',
         'qualificar',
         'nao_pontuavel'
@@ -499,8 +489,11 @@ export const zItem = z.object({
     tie_size: z.int(),
     reasons: z.array(z.union([
         z.object({
-            code: z.literal('age_within_cycle_limit')
-        }).and(zAgeWithinCycleLimit),
+            code: z.literal('age_within_won_cycle')
+        }).and(zAgeWithinWonCycle),
+        z.object({
+            code: z.literal('age_above_won_cycle')
+        }).and(zAgeAboveWonCycle),
         z.object({
             code: z.literal('age_above_cycle_limit')
         }).and(zAgeAboveCycleLimit),
@@ -518,21 +511,13 @@ export const zItem = z.object({
         }).and(zNoProduct),
         z.object({
             code: z.literal('no_list_price')
-        }).and(zNoListPrice),
-        z.object({
-            code: z.literal('won_cycle_reference')
-        }).and(zWonCycleReference),
-        z.object({
-            code: z.literal('no_cycle_reference')
-        }).and(zNoCycleReference),
-        z.object({
-            code: z.literal('closed_base_rate')
-        }).and(zClosedBaseRate)
+        }).and(zNoListPrice)
     ])),
     next_action: z.union([
         z.object({
             code: z.union([
                 z.literal('advance_prospecting'),
+                z.literal('check_progress'),
                 z.literal('confirm_still_active'),
                 z.literal('fix_missing_fields'),
                 z.literal('work_highest_list_price_first')
@@ -550,6 +535,7 @@ export const zItem = z.object({
 export const zGroup = z.object({
     state: z.enum([
         'focar',
+        'acompanhar',
         'revisar',
         'qualificar',
         'nao_pontuavel'
@@ -567,6 +553,7 @@ export const zGroup = z.object({
         z.object({
             code: z.union([
                 z.literal('advance_prospecting'),
+                z.literal('check_progress'),
                 z.literal('confirm_still_active'),
                 z.literal('fix_missing_fields'),
                 z.literal('work_highest_list_price_first')

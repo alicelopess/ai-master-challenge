@@ -5,41 +5,16 @@
   },
   "meta": {
     "as_of": "2017-12-31",
+    "won_cycle_limit_days": 100,
     "cycle_limit_days": 138,
     "cycle_percentile": 90,
-    "min_cases": 30,
-    "cycle_references": {
-      "GTX Basic": {
-        "p90_days": 138,
-        "won_n": 1
-      },
-      "GTX Plus Pro": {
-        "p90_days": null,
-        "won_n": 0
-      },
-      "GTX Pro": {
-        "p90_days": 59,
-        "won_n": 1
-      },
-      "MG Special": {
-        "p90_days": null,
-        "won_n": 0
-      }
-    },
-    "base_rate": {
-      "won": 2,
-      "closed": 3,
-      "open": 7,
-      "pct": 67,
-      "low_pct": 20,
-      "high_pct": 90
-    },
     "audited": false,
-    "contract_version": 4
+    "contract_version": 5
   },
   "ordering": {
     "group_order": [
       "focar",
+      "acompanhar",
       "revisar",
       "qualificar",
       "nao_pontuavel"
@@ -52,12 +27,13 @@
     "age_affects_order": false
   },
   "summary": {
-    "total": 7,
+    "total": 9,
     "focar": 5,
+    "acompanhar": 2,
     "revisar": 1,
     "qualificar": 1,
     "nao_pontuavel": 0,
-    "without_account": 5
+    "without_account": 6
   },
   "empty": null,
   "groups": [
@@ -85,11 +61,12 @@
           "tie_size": 1,
           "reasons": [
             {
-              "code": "age_within_cycle_limit",
+              "code": "age_within_won_cycle",
               "role": "group",
               "params": {
                 "age_days": 10,
-                "cycle_limit_days": 138
+                "won_cycle_limit_days": 100,
+                "percentile": 90
               }
             },
             {
@@ -99,27 +76,6 @@
                 "product": "GTX Plus Pro",
                 "sales_price": 5482,
                 "value_band": "alto"
-              }
-            },
-            {
-              "code": "no_cycle_reference",
-              "role": "context",
-              "params": {
-                "cause": "no_wins",
-                "product": "GTX Plus Pro",
-                "as_of": "2017-12-31"
-              }
-            },
-            {
-              "code": "closed_base_rate",
-              "role": "context",
-              "params": {
-                "won": 2,
-                "closed": 3,
-                "open": 7,
-                "pct": 67,
-                "low_pct": 20,
-                "high_pct": 90
               }
             }
           ],
@@ -143,11 +99,12 @@
           "tie_size": 1,
           "reasons": [
             {
-              "code": "age_within_cycle_limit",
+              "code": "age_within_won_cycle",
               "role": "group",
               "params": {
                 "age_days": 30,
-                "cycle_limit_days": 138
+                "won_cycle_limit_days": 100,
+                "percentile": 90
               }
             },
             {
@@ -157,31 +114,6 @@
                 "product": "GTX Pro",
                 "sales_price": 4821,
                 "value_band": "alto"
-              }
-            },
-            {
-              "code": "won_cycle_reference",
-              "role": "context",
-              "params": {
-                "product": "GTX Pro",
-                "percentile": 90,
-                "p90_days": 59,
-                "won_n": 1,
-                "few_cases": true,
-                "age_days": 30,
-                "cycle_limit_days": 138
-              }
-            },
-            {
-              "code": "closed_base_rate",
-              "role": "context",
-              "params": {
-                "won": 2,
-                "closed": 3,
-                "open": 7,
-                "pct": 67,
-                "low_pct": 20,
-                "high_pct": 90
               }
             }
           ],
@@ -205,11 +137,12 @@
           "tie_size": 2,
           "reasons": [
             {
-              "code": "age_within_cycle_limit",
+              "code": "age_within_won_cycle",
               "role": "group",
               "params": {
                 "age_days": 50,
-                "cycle_limit_days": 138
+                "won_cycle_limit_days": 100,
+                "percentile": 90
               }
             },
             {
@@ -219,31 +152,6 @@
                 "product": "GTX Basic",
                 "sales_price": 550,
                 "value_band": "médio"
-              }
-            },
-            {
-              "code": "won_cycle_reference",
-              "role": "context",
-              "params": {
-                "product": "GTX Basic",
-                "percentile": 90,
-                "p90_days": 138,
-                "won_n": 1,
-                "few_cases": true,
-                "age_days": 50,
-                "cycle_limit_days": 138
-              }
-            },
-            {
-              "code": "closed_base_rate",
-              "role": "context",
-              "params": {
-                "won": 2,
-                "closed": 3,
-                "open": 7,
-                "pct": 67,
-                "low_pct": 20,
-                "high_pct": 90
               }
             }
           ],
@@ -253,25 +161,26 @@
           }
         },
         {
-          "opportunity_id": "E138",
+          "opportunity_id": "E100",
           "sales_agent": "Ana Alfa",
           "product": "GTX Basic",
           "account": null,
           "sales_price": 550,
           "value_band": "médio",
-          "engage_date": "2017-08-15",
-          "age_days": 138,
+          "engage_date": "2017-09-22",
+          "age_days": 100,
           "group": "focar",
           "deal_stage": "Engaging",
           "missing_field": null,
           "tie_size": 2,
           "reasons": [
             {
-              "code": "age_within_cycle_limit",
+              "code": "age_within_won_cycle",
               "role": "group",
               "params": {
-                "age_days": 138,
-                "cycle_limit_days": 138
+                "age_days": 100,
+                "won_cycle_limit_days": 100,
+                "percentile": 90
               }
             },
             {
@@ -281,31 +190,6 @@
                 "product": "GTX Basic",
                 "sales_price": 550,
                 "value_band": "médio"
-              }
-            },
-            {
-              "code": "won_cycle_reference",
-              "role": "context",
-              "params": {
-                "product": "GTX Basic",
-                "percentile": 90,
-                "p90_days": 138,
-                "won_n": 1,
-                "few_cases": true,
-                "age_days": 138,
-                "cycle_limit_days": 138
-              }
-            },
-            {
-              "code": "closed_base_rate",
-              "role": "context",
-              "params": {
-                "won": 2,
-                "closed": 3,
-                "open": 7,
-                "pct": 67,
-                "low_pct": 20,
-                "high_pct": 90
               }
             }
           ],
@@ -329,11 +213,12 @@
           "tie_size": 1,
           "reasons": [
             {
-              "code": "age_within_cycle_limit",
+              "code": "age_within_won_cycle",
               "role": "group",
               "params": {
                 "age_days": 20,
-                "cycle_limit_days": 138
+                "won_cycle_limit_days": 100,
+                "percentile": 90
               }
             },
             {
@@ -344,31 +229,99 @@
                 "sales_price": 55,
                 "value_band": "baixo"
               }
-            },
-            {
-              "code": "no_cycle_reference",
-              "role": "context",
-              "params": {
-                "cause": "no_wins",
-                "product": "MG Special",
-                "as_of": "2017-12-31"
-              }
-            },
-            {
-              "code": "closed_base_rate",
-              "role": "context",
-              "params": {
-                "won": 2,
-                "closed": 3,
-                "open": 7,
-                "pct": 67,
-                "low_pct": 20,
-                "high_pct": 90
-              }
             }
           ],
           "next_action": {
             "code": "work_highest_list_price_first",
+            "params": {}
+          }
+        }
+      ]
+    },
+    {
+      "state": "acompanhar",
+      "count": 2,
+      "empty": null,
+      "next_action": {
+        "code": "check_progress",
+        "params": {}
+      },
+      "items": [
+        {
+          "opportunity_id": "E101",
+          "sales_agent": "Ana Alfa",
+          "product": "GTX Basic",
+          "account": "Beta Corp",
+          "sales_price": 550,
+          "value_band": "médio",
+          "engage_date": "2017-09-21",
+          "age_days": 101,
+          "group": "acompanhar",
+          "deal_stage": "Engaging",
+          "missing_field": null,
+          "tie_size": 2,
+          "reasons": [
+            {
+              "code": "age_above_won_cycle",
+              "role": "group",
+              "params": {
+                "age_days": 101,
+                "won_cycle_limit_days": 100,
+                "cycle_limit_days": 138,
+                "percentile": 90
+              }
+            },
+            {
+              "code": "list_price",
+              "role": "order",
+              "params": {
+                "product": "GTX Basic",
+                "sales_price": 550,
+                "value_band": "médio"
+              }
+            }
+          ],
+          "next_action": {
+            "code": "check_progress",
+            "params": {}
+          }
+        },
+        {
+          "opportunity_id": "E138",
+          "sales_agent": "Ana Alfa",
+          "product": "GTX Basic",
+          "account": null,
+          "sales_price": 550,
+          "value_band": "médio",
+          "engage_date": "2017-08-15",
+          "age_days": 138,
+          "group": "acompanhar",
+          "deal_stage": "Engaging",
+          "missing_field": null,
+          "tie_size": 2,
+          "reasons": [
+            {
+              "code": "age_above_won_cycle",
+              "role": "group",
+              "params": {
+                "age_days": 138,
+                "won_cycle_limit_days": 100,
+                "cycle_limit_days": 138,
+                "percentile": 90
+              }
+            },
+            {
+              "code": "list_price",
+              "role": "order",
+              "params": {
+                "product": "GTX Basic",
+                "sales_price": 550,
+                "value_band": "médio"
+              }
+            }
+          ],
+          "next_action": {
+            "code": "check_progress",
             "params": {}
           }
         }
@@ -412,31 +365,6 @@
                 "product": "GTX Basic",
                 "sales_price": 550,
                 "value_band": "médio"
-              }
-            },
-            {
-              "code": "won_cycle_reference",
-              "role": "context",
-              "params": {
-                "product": "GTX Basic",
-                "percentile": 90,
-                "p90_days": 138,
-                "won_n": 1,
-                "few_cases": true,
-                "age_days": 139,
-                "cycle_limit_days": 138
-              }
-            },
-            {
-              "code": "closed_base_rate",
-              "role": "context",
-              "params": {
-                "won": 2,
-                "closed": 3,
-                "open": 7,
-                "pct": 67,
-                "low_pct": 20,
-                "high_pct": 90
               }
             }
           ],
@@ -485,26 +413,6 @@
                 "sales_price": 4821,
                 "value_band": "alto"
               }
-            },
-            {
-              "code": "no_cycle_reference",
-              "role": "context",
-              "params": {
-                "cause": "no_age",
-                "product": "GTX Pro"
-              }
-            },
-            {
-              "code": "closed_base_rate",
-              "role": "context",
-              "params": {
-                "won": 2,
-                "closed": 3,
-                "open": 7,
-                "pct": 67,
-                "low_pct": 20,
-                "high_pct": 90
-              }
             }
           ],
           "next_action": {
@@ -528,17 +436,19 @@
   "by_seller": [
     {
       "seller": "Ana Alfa",
-      "total": 6,
+      "total": 8,
       "focar": 5,
+      "acompanhar": 2,
       "revisar": 1,
       "qualificar": 0,
       "nao_pontuavel": 0,
-      "without_account": 4
+      "without_account": 5
     },
     {
       "seller": "Bruno Beta",
       "total": 1,
       "focar": 0,
+      "acompanhar": 0,
       "revisar": 0,
       "qualificar": 1,
       "nao_pontuavel": 0,
@@ -548,6 +458,7 @@
       "seller": "Carla Gama",
       "total": 0,
       "focar": 0,
+      "acompanhar": 0,
       "revisar": 0,
       "qualificar": 0,
       "nao_pontuavel": 0,

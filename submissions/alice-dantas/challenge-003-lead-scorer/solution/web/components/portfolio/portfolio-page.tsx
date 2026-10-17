@@ -127,7 +127,7 @@ export function PortfolioPage() {
                 onTab={(state) => setQuery({ grupo: state })}
                 selected={selected}
                 onSelect={setSelected}
-                cycleLimitDays={payload.meta.cycle_limit_days}
+                limits={payload.meta}
                 actionShownFor={startGroup(payload)?.state}
               />
             </>

@@ -10,7 +10,6 @@ import {
   GROUP_LABELS, PAGES, RULES, UI, bandRange, bandTitle, dataLabel, groupDescription, legendText,
 } from "@/copy/pt-BR";
 import { api } from "@/lib/api";
-import { formatInt } from "@/lib/format";
 import { useApi } from "@/lib/use-api";
 
 /** Como a lista é montada: a política que veio de /api/rules, em linguagem de vendedor. */
@@ -32,11 +31,11 @@ export function RulesPage() {
               <CardDescription>{RULES.groupsHelp}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 {data.ordering.group_order.map((state) => (
                   <li key={state} className="flex flex-col gap-2 rounded-lg border p-4">
                     <Badge variant={state}>{GROUP_LABELS[state]}</Badge>
-                    <p className="text-sm text-muted-foreground">{groupDescription(state, meta.cycle_limit_days)}</p>
+                    <p className="text-sm text-muted-foreground">{groupDescription(state, meta)}</p>
                   </li>
                 ))}
               </ol>
@@ -69,45 +68,21 @@ export function RulesPage() {
               </CardContent>
             </Card>
 
-            <Card className="gap-4 pb-0">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">{RULES.cycleTitle}</CardTitle>
-                <CardDescription>{RULES.cycleHelp(meta.min_cases)}</CardDescription>
+                <CardTitle className="text-lg font-semibold">{RULES.ageTitle}</CardTitle>
+                <CardDescription>{RULES.ageHelp}</CardDescription>
               </CardHeader>
-              <CardContent className="px-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="pl-6">{RULES.cycleColumns.product}</TableHead>
-                      <TableHead className="text-right">{RULES.cycleColumns.cycle(meta.cycle_percentile)}</TableHead>
-                      <TableHead className="pr-6 text-right">{RULES.cycleColumns.won}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {Object.entries(meta.cycle_references).map(([product, reference]) => (
-                      <TableRow key={product}>
-                        <TableCell className="pl-6">{product}</TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {reference.p90_days === null ? UI.empty : RULES.days(reference.p90_days)}
-                        </TableCell>
-                        <TableCell className="pr-6 text-right tabular-nums">{formatInt(reference.won_n)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent>
+                <ul className="flex list-disc flex-col gap-2 pl-4 text-sm">
+                  <li>{RULES.wonLimit(meta.won_cycle_limit_days, meta.cycle_percentile)}</li>
+                  <li>{RULES.longestLimit(meta.cycle_limit_days)}</li>
+                </ul>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">{RULES.chanceTitle}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{RULES.chance(meta.base_rate)}</p>
-              </CardContent>
-            </Card>
+          <div className="grid gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">{RULES.limitsTitle}</CardTitle>

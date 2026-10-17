@@ -132,7 +132,7 @@ function Row({ item, tied, showSeller, active, onSelect }: RowProps) {
       <TableCell>
         <span className="inline-flex items-center gap-2">
           {item.product || UI.empty}
-          {item.missing_field && <Badge variant="nao_pontuavel">{missingShort(item.missing_field)}</Badge>}
+          {item.missing_field && <Badge variant="missing">{missingShort(item.missing_field)}</Badge>}
         </span>
       </TableCell>
       <TableCell className={item.account ? undefined : "text-muted-foreground"}>{clientText(item)}</TableCell>

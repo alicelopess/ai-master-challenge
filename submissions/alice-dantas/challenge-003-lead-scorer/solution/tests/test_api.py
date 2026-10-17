@@ -72,12 +72,33 @@ def test_missing_csv_is_503_with_cli_message_and_recovers(tmp_path):  # AC-1.2
 
 def test_filters_never_fail(client):  # AC-2.10
     by_manager = client.get("/api/pipeline?manager=Mara%20Um").json()
-    assert by_manager["summary"]["total"] == 7 and by_manager["empty"] is None
+    assert by_manager["summary"]["total"] == 9 and by_manager["empty"] is None
     for query in ("manager=Ninguem", "manager=Mara%20Um&office=East", "office=Marte"):
         response = client.get(f"/api/pipeline?{query}")
         assert response.status_code == 200
         body = response.json()
         assert body["summary"]["total"] == 0 and body["empty"] == {"code": codes.NO_OPEN_FOR_FILTER, "params": {}}
+
+
+@pytest.mark.parametrize("url, core", [
+    ("/api/meta", lambda d: views.meta(d, views.context(d, None))),
+    ("/api/rules", lambda d: views.rules(d)),
+    ("/api/pipeline", lambda d: views.team_pipeline(d)),
+    ("/api/pipeline?manager=Mara%20Um", lambda d: views.team_pipeline(d, manager="Mara Um")),
+    ("/api/pipeline?office=Central", lambda d: views.team_pipeline(d, office="Central")),
+    (pipeline_url("Ana Alfa", as_of="2018-03-31"), lambda d: views.seller_pipeline(d, "Ana Alfa", "2018-03-31")),
+])
+def test_endpoints_are_the_core_payload(client, raw_dir, url, core):  # mesma política em todas as rotas
+    assert client.get(url).json() == roundtrip(core(data.load(raw_dir)))
+
+
+def test_cli_explain_json_is_the_list_item(raw_dir, capsys):
+    assert main(["--raw", str(raw_dir), "explain", "--id", "E101", "--json"]) == 0
+    detail = json.loads(capsys.readouterr().out)
+    listed = views.seller_pipeline(data.load(raw_dir), "Ana Alfa")
+    item = next(e for g in listed["groups"] for e in g["items"] if e["opportunity_id"] == "E101")
+    assert detail == roundtrip({"meta": listed["meta"], "seller": "Ana Alfa", "item": item})
+    assert item["group"] == "acompanhar"
 
 
 def test_meta_follows_as_of(client):

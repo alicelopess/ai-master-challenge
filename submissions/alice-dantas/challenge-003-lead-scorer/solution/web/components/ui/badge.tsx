@@ -20,9 +20,13 @@ const badgeVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         // Rankio: status dos grupos (tokens em app/globals.css; o texto do grupo sempre acompanha a cor).
         focar: "bg-status-focar-bg text-status-focar",
+        acompanhar: "bg-status-acompanhar-bg text-status-acompanhar",
         revisar: "bg-status-revisar-bg text-status-revisar",
         qualificar: "bg-status-qualificar-bg text-status-qualificar",
         nao_pontuavel: "bg-status-nao-pontuavel-bg text-status-nao-pontuavel",
+        // Usos que não são grupo: a referência da evidência e o campo ausente.
+        reference: "bg-status-focar-bg text-status-focar",
+        missing: "bg-status-nao-pontuavel-bg text-status-nao-pontuavel",
       },
     },
     defaultVariants: {

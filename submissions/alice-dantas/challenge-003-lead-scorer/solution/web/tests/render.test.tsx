@@ -75,7 +75,7 @@ describe("carteira", () => {
     expect(screen.getAllByText(actionText(payload.groups[0].next_action!)).length).toBeGreaterThan(0);
     expect((await tab(GROUP_LABELS.focar)).getAttribute("aria-selected")).toBe("true");
     for (const group of payload.groups) expect(await tab(GROUP_LABELS[group.state])).toBeTruthy();
-    expect(screen.getByText(groupDescription("focar", payload.meta.cycle_limit_days))).toBeTruthy();
+    expect(screen.getByText(groupDescription("focar", payload.meta))).toBeTruthy();
     expect(window.localStorage.getItem("rankio.vendedor")).toBe("Ana Alfa");
   });
 
@@ -115,7 +115,7 @@ describe("carteira", () => {
     const tie = UI.startWithTie(tieText(2, "GTX Basic", 550));
     const card = (await screen.findByText(tie)).closest("[data-slot=card]") as HTMLElement;
     expect(within(card).getByRole("button", { name: /^E050/ })).toBeTruthy();
-    expect(within(card).getByRole("button", { name: /^E138/ })).toBeTruthy();
+    expect(within(card).getByRole("button", { name: /^E100/ })).toBeTruthy();
     expect(within(card).queryByRole("button", { name: /^EPP/ })).toBeNull();
   });
 
@@ -130,6 +130,8 @@ describe("carteira", () => {
     for (const role of new Set(first.reasons.map((r) => r.role))) expect(within(sheet).getByText(ROLE_LABELS[role])).toBeTruthy();
     for (const reason of first.reasons) expect(within(sheet).getByText(reasonText(reason))).toBeTruthy();
     expect(within(sheet).getByText(actionText(first.next_action))).toBeTruthy();
+    expect(first.reasons).toHaveLength(2);  // só o que decidiu: grupo e ordem
+    expect(within(sheet).getByText(UI.limitsNote)).toBeTruthy();
     expect(within(sheet).getByText(UI.position(1, 5))).toBeTruthy();
 
     fireEvent.click(within(sheet).getByRole("button", { name: UI.next }));
@@ -164,7 +166,7 @@ describe("equipe", () => {
     render(<TeamPage />);
     const payload = teamPipeline("team-all");
     const summary = await screen.findByRole("region", { name: UI.teamSummaryLabel });
-    expect(within(summary).getAllByText(UI.ofTotal(payload.summary.total)).length).toBe(4);
+    expect(within(summary).getAllByText(UI.ofTotal(payload.summary.total)).length).toBe(payload.groups.length);
     expect(fetch.mock.calls.some(([url]) => String(url).endsWith("/api/pipeline?manager=Mara+Um"))).toBe(true);
 
     // Abaixo dos números, uma aba por análise, com a contagem; abre em "Por vendedor".
@@ -175,6 +177,11 @@ describe("equipe", () => {
     expect(sellersTab.textContent).toContain(String(payload.by_seller.length));
     expect(itemsTab.textContent).toContain(String(payload.summary.total));
     expect(screen.queryByRole("tablist", { name: UI.groupsLabel })).toBeNull();
+    // As colunas por vendedor seguem a ordem de grupos da API.
+    const bySeller = screen.getByText(TEAM.bySellerHelp).closest("[data-slot=card]") as HTMLElement;
+    const headers = within(bySeller).getAllByRole("columnheader").map((cell) => cell.textContent);
+    expect(headers.filter((h) => Object.values(GROUP_LABELS).includes(h ?? ""))).toEqual(
+      payload.ordering.group_order.map((state) => GROUP_LABELS[state]));
 
     // A escolha vai para a URL e só a análise aberta fica na tela (sem rolagem longa).
     fireEvent.mouseDown(itemsTab);
@@ -200,7 +207,7 @@ describe("equipe", () => {
       .map((button) => button.textContent);
     const view = (selected: string | null) => (
       <GroupTabs groups={groups} tab="focar" onTab={() => {}} selected={selected} onSelect={() => {}}
-                 cycleLimitDays={meta.cycle_limit_days} pageSize={2} />);
+                 limits={meta} pageSize={2} />);
     const { rerender } = render(view(null));
     const all = groups[0].items.map((item) => item.opportunity_id);
     expect(ids()).toEqual(all.slice(0, 2));
@@ -271,6 +278,8 @@ describe("evidência", () => {
     // A fixture sintética não vem dos CSVs auditados: o aviso aparece.
     expect(design.audited_data).toBe(false);
     expect(screen.getByText(EVIDENCE.notAudited)).toBeTruthy();
+    // A limitação principal: o veredito do back, dito em linguagem de negócio.
+    expect(screen.getByText(text.verdict(evidence().without_no_outcome_verdict))).toBeTruthy();
   });
 
   test("linguagem técnica: métricas completas, com a escolha na URL", async () => {
@@ -301,19 +310,18 @@ describe("evidência", () => {
 });
 
 describe("como funciona", () => {
-  test("grupos, faixas e referência de ciclo vindos de /api/rules", async () => {
+  test("grupos, faixas e os dois limites vindos de /api/rules", async () => {
     stubApi(() => ok(load("rules")));
     render(<RulesPage />);
     const rules = load("rules") as Rules;
     for (const state of rules.ordering.group_order) {
-      expect(await screen.findByText(groupDescription(state, rules.meta.cycle_limit_days))).toBeTruthy();
+      expect(await screen.findByText(groupDescription(state, rules.meta))).toBeTruthy();
     }
     for (const band of rules.value_bands) {
       const row = screen.getByText(bandTitle(band.band)).closest("tr") as HTMLElement;
       expect(within(row).getByText(bandRange(band))).toBeTruthy();
     }
-    for (const product of Object.keys(rules.meta.cycle_references)) expect(screen.getByText(product)).toBeTruthy();
-    expect(screen.getByText(RULES.cycleHelp(rules.meta.min_cases))).toBeTruthy();
-    expect(screen.getByText(RULES.chance(rules.meta.base_rate))).toBeTruthy();
+    expect(screen.getByText(RULES.wonLimit(rules.meta.won_cycle_limit_days, rules.meta.cycle_percentile))).toBeTruthy();
+    expect(screen.getByText(RULES.longestLimit(rules.meta.cycle_limit_days))).toBeTruthy();
   });
 });

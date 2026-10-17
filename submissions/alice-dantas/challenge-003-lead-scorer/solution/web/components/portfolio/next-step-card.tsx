@@ -20,8 +20,8 @@ type Props = {
 export function NextStepCard({ payload, onSelect, onShowGroup }: Props) {
   const group = startGroup(payload);
   if (!group || !group.next_action) return null;
-  const focar = payload.groups[0];
-  const headline = !focar.items.length && focar.empty ? groupEmptyText(focar.empty) : actionText(group.next_action);
+  const head = payload.groups[0];
+  const headline = !head.items.length && head.empty ? groupEmptyText(head.empty) : actionText(group.next_action);
   const block = firstBlock(group);
   const first = block[0];
   const shown = block.slice(0, SHOWN);

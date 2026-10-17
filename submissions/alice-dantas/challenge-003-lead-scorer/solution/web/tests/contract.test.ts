@@ -18,7 +18,7 @@ describe("respostas da API passam na validação do contrato", () => {
     expect(() => teamPipeline(name)).not.toThrow();
   });
   test("meta, vendedores e erros", () => {
-    expect(meta().contract_version).toBe(4);
+    expect(meta().contract_version).toBe(5);
     expect(sellers().sellers.length).toBeGreaterThan(0);
     expect(Object.keys(errors())).toEqual(["404", "422", "503"]);
   });

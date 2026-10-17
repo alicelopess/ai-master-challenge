@@ -23,19 +23,11 @@ sys.path.insert(0, str(SOLUTION_DIR / "tests"))
 from fastapi.testclient import TestClient  # noqa: E402
 
 from api.main import create_app  # noqa: E402
-from conftest import PIPELINE, PRODUCTS, opp, write_evidence, write_raw  # noqa: E402
+from conftest import EDGE_TABLES, write_evidence, write_raw  # noqa: E402
+from leadscorer import policy  # noqa: E402
 
 FIXTURES_DIR = SOLUTION_DIR / "web" / "tests" / "fixtures"
 MISSING_DATA_DIR = SOLUTION_DIR / "tests" / "missing-data"  # não existe: gera o 503
-
-# Casos de borda: sem data, sem produto, Prospecting com data e produto sem preço.
-EDGE_PRODUCTS = PRODUCTS + [{"product": "GTX Ultra", "series": "GTX", "sales_price": ""}]
-EDGE_PIPELINE = PIPELINE + [
-    opp("N1", "Bruno Beta", "GTX Basic", "Engaging"),
-    opp("N2", "Bruno Beta", "", "Prospecting"),
-    opp("U1", "Bruno Beta", "GTX Ultra", "Engaging", engaged=20),
-    opp("PE", "Ana Alfa", "GTX Basic", "Prospecting", engaged=40),
-]
 
 
 def pipeline(seller: str) -> str:
@@ -52,8 +44,7 @@ def fixtures() -> Dict[str, Any]:
     with tempfile.TemporaryDirectory() as tmp:
         evidence = write_evidence(Path(tmp) / "processed" / "backtest_results.json")
         base = TestClient(create_app(write_raw(Path(tmp) / "base"), evidence))
-        edges = TestClient(create_app(write_raw(Path(tmp) / "edges", sales_pipeline=EDGE_PIPELINE,
-                                                products=EDGE_PRODUCTS)))
+        edges = TestClient(create_app(write_raw(Path(tmp) / "edges", **EDGE_TABLES)))
         return {
             "sellers": body(base, "/api/sellers"),
             "meta": body(base, "/api/meta"),
@@ -62,11 +53,16 @@ def fixtures() -> Dict[str, Any]:
             "pipeline-carla-gama": body(base, pipeline("Carla Gama")),
             "pipeline-edges-ana-alfa": body(edges, pipeline("Ana Alfa")),
             "pipeline-edges-bruno-beta": body(edges, pipeline("Bruno Beta")),
+            # Focar vazio: um começa por Acompanhar, o outro por Revisar.
+            "pipeline-edges-davi-delta": body(edges, pipeline("Davi Delta")),
+            "pipeline-edges-eva-epsilon": body(edges, pipeline("Eva Epsilon")),
             "team-all": body(base, "/api/pipeline"),
             "team-empty": body(base, "/api/pipeline?manager=Ninguem"),
             "team-east": body(base, "/api/pipeline?office=East"),
             "rules": body(base, "/api/rules"),
             "evidence": body(base, "/api/evidence"),
+            # A lista de termos proibidos é uma só: a tela a lê daqui (início de palavra).
+            "vocabulary": {"forbidden_terms": list(policy.FORBIDDEN_TERMS), "match": "word_start"},
             "errors": {
                 "404": body(base, pipeline("Fulano"), 404),
                 "422": body(base, "/api/meta?as_of=31/12/2017", 422),

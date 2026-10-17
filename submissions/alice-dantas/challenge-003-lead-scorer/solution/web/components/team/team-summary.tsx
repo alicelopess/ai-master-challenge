@@ -4,12 +4,12 @@ import { GROUP_LABELS, UI, groupDescription } from "@/copy/pt-BR";
 import type { TeamPipeline } from "@/lib/contract";
 import { formatInt } from "@/lib/format";
 
-/** Os quatro números da carteira da equipe, cada um com o que o grupo quer dizer. Sem percentuais: o front
- * não calcula valor de negócio. */
+/** Os números da carteira da equipe, um por grupo, cada um com o que o grupo quer dizer. Sem percentuais:
+ * o front não calcula valor de negócio. */
 export function TeamSummary({ payload }: { payload: Pick<TeamPipeline, "groups" | "summary" | "meta"> }) {
   const { summary } = payload;
   return (
-    <section aria-label={UI.teamSummaryLabel} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <section aria-label={UI.teamSummaryLabel} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
       {payload.groups.map((group) => (
         <Card key={group.state} size="sm">
           <CardHeader>
@@ -21,7 +21,7 @@ export function TeamSummary({ payload }: { payload: Pick<TeamPipeline, "groups" 
               <span className="text-sm text-muted-foreground">{UI.ofTotal(summary.total)}</span>
             </p>
             <CardDescription className="text-xs">
-              {groupDescription(group.state, payload.meta.cycle_limit_days)}
+              {groupDescription(group.state, payload.meta)}
             </CardDescription>
           </CardContent>
         </Card>

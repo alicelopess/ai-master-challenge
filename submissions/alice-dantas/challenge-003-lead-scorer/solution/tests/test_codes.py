@@ -16,7 +16,7 @@ from api.main import create_app
 from leadscorer import codes, data, explain, policy, views
 from leadscorer.errors import DataError
 
-from conftest import PIPELINE, PRODUCTS, opp, write_raw
+from conftest import EDGE_TABLES, PIPELINE, PRODUCTS, opp, write_raw
 
 OUTCOME_FIELDS = {"close_date", "close_value", "won", "won_value"}
 BAND_RANK = {label: i for i, (label, _) in enumerate(policy.VALUE_BANDS)}
@@ -34,19 +34,45 @@ def by_role(entry, role):
     return [r for r in entry["reasons"] if r["role"] == role]
 
 
+def group_from_reason(reason):
+    """Oráculo: o grupo recalculado só com o código e os params do motivo de grupo (regra A)."""
+    p = reason["params"]
+    if reason["code"] == codes.MISSING_FIELD:
+        return "nao_pontuavel"
+    if reason["code"] == codes.PROSPECTING_STAGE:
+        return "qualificar"
+    if reason["code"] == codes.AGE_WITHIN_WON_CYCLE:
+        assert p["age_days"] <= p["won_cycle_limit_days"]
+        return "focar"
+    if reason["code"] == codes.AGE_ABOVE_WON_CYCLE:
+        assert p["won_cycle_limit_days"] < p["age_days"] <= p["cycle_limit_days"]
+        return "acompanhar"
+    assert reason["code"] == codes.AGE_ABOVE_CYCLE_LIMIT and p["age_days"] > p["cycle_limit_days"]
+    return "revisar"
+
+
+def order_key_from_reason(reason):
+    """Oráculo: a chave de ordem dentro do grupo só com o motivo de ordem (o ID desempata)."""
+    if reason["code"] == codes.LIST_PRICE:
+        return BAND_RANK[reason["params"]["value_band"]], -reason["params"]["sales_price"]
+    return len(BAND_RANK), 0
+
+
 def assert_reasons_match_decision(entry, meta):
-    """Um motivo de grupo e um de ordem, com os valores que a regra usou."""
-    (reason,), (price,) = by_role(entry, codes.ROLE_GROUP), by_role(entry, codes.ROLE_ORDER)
-    if entry["group"] in ("focar", "revisar"):
-        assert reason["params"] == {"age_days": entry["age_days"], "cycle_limit_days": meta["cycle_limit_days"]}
-        within = entry["age_days"] <= meta["cycle_limit_days"]
-        assert reason["code"] == (codes.AGE_WITHIN_CYCLE_LIMIT if within else codes.AGE_ABOVE_CYCLE_LIMIT)
-        assert entry["group"] == ("focar" if within else "revisar") and entry["deal_stage"] == "Engaging"
+    """Exatamente um motivo de grupo e um de ordem; só eles reconstroem o grupo e a ordem,
+    e os limites citados são os do `meta`."""
+    assert [r["role"] for r in entry["reasons"]] == [codes.ROLE_GROUP, codes.ROLE_ORDER]
+    reason, price = entry["reasons"]
+    assert group_from_reason(reason) == entry["group"]
+    for key in ("won_cycle_limit_days", "cycle_limit_days", "percentile"):
+        if key in reason["params"]:
+            assert reason["params"][key] == meta["cycle_percentile" if key == "percentile" else key]
+    if entry["group"] in ("focar", "acompanhar", "revisar"):
+        assert reason["params"]["age_days"] == entry["age_days"] and entry["deal_stage"] == "Engaging"
     elif entry["group"] == "qualificar":
-        assert entry["deal_stage"] == "Prospecting"
-        assert (reason["code"], reason["params"]) == (codes.PROSPECTING_STAGE, {"deal_stage": "Prospecting"})
+        assert entry["deal_stage"] == "Prospecting" and reason["params"] == {"deal_stage": "Prospecting"}
     else:
-        assert (reason["code"], reason["params"]) == (codes.MISSING_FIELD, {"field": entry["missing_field"]})
+        assert reason["params"] == {"field": entry["missing_field"]}
     if entry["product"] is None:
         assert (price["code"], price["params"]) == (codes.NO_PRODUCT, {})
     elif entry["sales_price"] is None:
@@ -54,8 +80,13 @@ def assert_reasons_match_decision(entry, meta):
     else:
         assert price["code"] == codes.LIST_PRICE
         assert price["params"] == {k: entry[k] for k in ("product", "sales_price", "value_band")}
-    assert [r["role"] for r in entry["reasons"]] == [codes.ROLE_GROUP, codes.ROLE_ORDER,
-                                                     codes.ROLE_CONTEXT, codes.ROLE_CONTEXT]
+
+
+def assert_order_rebuilt_from_reasons(payload):
+    """A ordem dentro de cada grupo sai só dos motivos de ordem e do ID."""
+    for g in payload["groups"]:
+        keys = [(*order_key_from_reason(e["reasons"][1]), e["opportunity_id"]) for e in g["items"]]
+        assert keys == sorted(keys), g["state"]
 
 
 def assert_actions(payload):
@@ -84,8 +115,7 @@ def assert_ordering(payload):
 
 
 def assert_no_outcome(payload):
-    """O que decide (grupo, ordem, ação) não cita o desfecho da oportunidade. Os motivos
-    de contexto citam o histórico agregado (ex.: ganhas entre as fechadas), por definição."""
+    """O que decide (grupo, ordem, ação) não cita o desfecho da oportunidade."""
     for entry in items(payload):
         deciding = by_role(entry, codes.ROLE_GROUP) + by_role(entry, codes.ROLE_ORDER) + [entry["next_action"]]
         for coded in deciding:
@@ -95,10 +125,11 @@ def assert_no_outcome(payload):
 
 def check_payload(payload):
     meta = payload["meta"]
-    assert meta["contract_version"] == codes.CONTRACT_VERSION == 4
+    assert meta["contract_version"] == codes.CONTRACT_VERSION
     for entry in items(payload):
         assert entry["group"] in policy.STATES
         assert_reasons_match_decision(entry, meta)
+    assert_order_rebuilt_from_reasons(payload)
     assert_actions(payload)
     assert_ordering(payload)
     assert_no_outcome(payload)
@@ -135,18 +166,11 @@ def test_prospecting_with_engage_date_stays_qualificar_and_the_reason_holds(tmp_
     assert entry["reasons"][0]["code"] == codes.PROSPECTING_STAGE
 
 
-def test_cycle_context_without_wins(tmp_path):
-    rows = PIPELINE + [opp("NW", "Ana Alfa", "GTX Plus Pro", "Engaging", engaged=5)]
-    payload = views.seller_pipeline(data.load(write_raw(tmp_path / "raw", sales_pipeline=rows)), "Ana Alfa")
-    entry = next(e for e in items(payload) if e["opportunity_id"] == "NW")
-    assert entry["reasons"][2]["params"] == {"cause": codes.CAUSE_NO_WINS, "product": "GTX Plus Pro",
-                                             "as_of": "2017-12-31"}
-
-
 def test_empty_states_are_codes(dataset):
     bruno = views.seller_pipeline(dataset, "Bruno Beta")  # só uma Prospecting
     assert group(bruno, "focar")["empty"] == {"code": codes.START_WITH_GROUP, "params": {
-        "group": "qualificar", "action": codes.ADVANCE_PROSPECTING, "cycle_limit_days": 138}}
+        "group": "qualificar", "action": codes.ADVANCE_PROSPECTING, "won_cycle_limit_days": 100,
+        "cycle_limit_days": 138}}
     carla = views.seller_pipeline(dataset, "Carla Gama")  # sem abertas
     assert carla["empty"] == {"code": codes.NO_OPEN_FOR_SELLER, "params": {}}
     assert all(g["empty"] == {"code": codes.GROUP_EMPTY, "params": {}} for g in carla["groups"])
@@ -159,6 +183,16 @@ def literals(annotation, field="code"):
     """Valores de `field` em cada modelo de uma união discriminada."""
     union = get_args(annotation)[0]
     return {value for model in get_args(union) for value in get_args(model.model_fields[field].annotation)}
+
+
+def test_focar_empty_points_to_acompanhar_or_revisar(tmp_path):
+    edges = data.load(write_raw(tmp_path / "edges", **EDGE_TABLES))
+    for seller, start, action in (("Davi Delta", "acompanhar", codes.CHECK_PROGRESS),
+                                  ("Eva Epsilon", "revisar", codes.CONFIRM_STILL_ACTIVE)):
+        payload = views.seller_pipeline(edges, seller)
+        check_payload(payload)
+        assert group(payload, "focar")["empty"]["params"] == {
+            "group": start, "action": action, "won_cycle_limit_days": 100, "cycle_limit_days": 138}
 
 
 def test_codes_and_schema_list_the_same_values():
@@ -222,6 +256,11 @@ def test_real_every_item_cites_what_decided(real_dataset):
 def test_real_empty_states(real_dataset):
     darcel = views.seller_pipeline(real_dataset, "Darcel Schlecht")
     assert group(darcel, "focar")["empty"] == {"code": codes.START_WITH_GROUP, "params": {
-        "group": "revisar", "action": codes.CONFIRM_STILL_ACTIVE, "cycle_limit_days": 138}}
+        "group": "revisar", "action": codes.CONFIRM_STILL_ACTIVE, "won_cycle_limit_days": 106,
+        "cycle_limit_days": 138}}
+    sellers = [views.seller_pipeline(real_dataset, s) for s in real_dataset.sellers]
+    starts = [group(p, "focar")["empty"]["params"]["group"] for p in sellers
+              if group(p, "focar")["empty"] and group(p, "focar")["empty"]["code"] == codes.START_WITH_GROUP]
+    assert sorted(starts) == ["acompanhar"] * 4 + ["revisar"] * 6  # 10 sem Focar entre os 27 com Engaging
     assert views.seller_pipeline(real_dataset, "Carl Lin")["empty"]["code"] == codes.NO_OPEN_FOR_SELLER
     assert views.seller_pipeline(real_dataset, "Zane Levy")["summary"]["without_account"] == 59

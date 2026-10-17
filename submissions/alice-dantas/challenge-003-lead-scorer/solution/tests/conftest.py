@@ -46,11 +46,13 @@ def opp(oid: str, agent: str, product: str, stage: str, engaged: Optional[int] =
     }
 
 
-# Fechadas: maior ciclo = 138 d (W2); Lost em 2017-12-31 fixa o as_of padrão.
+# Fechadas (regra A, ADR-006): as ganhas têm ciclos 10 e 110 d, P90 linear = 100 d exato (L1); o
+# maior ciclo fechado é 138 d, de uma perdida (L2). Se L1 usasse todas as fechadas, daria 132.
+# L1 (Lost) em 2017-12-31 fixa o as_of padrão.
 PIPELINE = [
-    opp("W1", "Ana Alfa", "GTXPro", "Won", engaged=300, closed=241, account="Acme"),
-    opp("W2", "Bruno Beta", "GTX Basic", "Won", engaged=200, closed=62, account="Beta Corp"),
-    opp("L1", "Bruno Beta", "MG Special", "Lost", engaged=11, closed=0, account="Acme"),
+    opp("W1", "Ana Alfa", "GTXPro", "Won", engaged=300, closed=290, account="Acme"),
+    opp("W2", "Bruno Beta", "GTX Basic", "Won", engaged=200, closed=90, account="Beta Corp"),
+    opp("L1", "Bruno Beta", "MG Special", "Lost", engaged=138, closed=0, account="Acme"),
     opp("E138", "Ana Alfa", "GTX Basic", "Engaging", engaged=138),
     opp("E139", "Ana Alfa", "GTX Basic", "Engaging", engaged=139, account="Acme"),
     opp("E050", "Ana Alfa", "GTX Basic", "Engaging", engaged=50),
@@ -58,7 +60,27 @@ PIPELINE = [
     opp("EGP", "Ana Alfa", "GTXPro", "Engaging", engaged=30, account="Beta Corp"),
     opp("EMG", "Ana Alfa", "MG Special", "Engaging", engaged=20),
     opp("P1", "Bruno Beta", "GTXPro", "Prospecting"),
+    opp("E100", "Ana Alfa", "GTX Basic", "Engaging", engaged=100),
+    opp("E101", "Ana Alfa", "GTX Basic", "Engaging", engaged=101, account="Beta Corp"),
 ]
+L1_DAYS, L2_DAYS = 100, 138
+
+# Casos de borda: sem data, sem produto, produto sem preço, Prospecting com data e dois vendedores
+# com Focar vazio: um começa por Acompanhar (120 d) e outro por Revisar (200 d).
+EDGE_PRODUCTS = PRODUCTS + [{"product": "GTX Ultra", "series": "GTX", "sales_price": ""}]
+EDGE_TEAMS = SALES_TEAMS + [
+    {"sales_agent": "Davi Delta", "manager": "Nina Dois", "regional_office": "East"},
+    {"sales_agent": "Eva Epsilon", "manager": "Nina Dois", "regional_office": "East"},
+]
+EDGE_PIPELINE = PIPELINE + [
+    opp("N1", "Bruno Beta", "GTX Basic", "Engaging"),
+    opp("N2", "Bruno Beta", "", "Prospecting"),
+    opp("U1", "Bruno Beta", "GTX Ultra", "Engaging", engaged=20),
+    opp("PE", "Ana Alfa", "GTX Basic", "Prospecting", engaged=40),
+    opp("A120", "Davi Delta", "GTX Basic", "Engaging", engaged=120),
+    opp("R200", "Eva Epsilon", "GTXPro", "Engaging", engaged=200),
+]
+EDGE_TABLES = {"sales_pipeline": EDGE_PIPELINE, "products": EDGE_PRODUCTS, "sales_teams": EDGE_TEAMS}
 
 TABLE_ROWS = {
     "sales_pipeline": PIPELINE, "products": PRODUCTS,
@@ -86,37 +108,41 @@ def raw_dir(tmp_path: Path) -> Path:
 
 # Resultado sintético de scripts/backtest.py: todas as estratégias, a armadilha e o recorte
 # sem as que nunca fecham, com números distintos por código (a tela tem de citar os do payload).
-REFERENCE_VAL = 0.57
+# Como no real, sem as que nunca fecham a regra servida fica atrás de "só preço" (veredito reference_behind).
+REFERENCE_VAL = 0.58
 EVIDENCE_VALUES = {codes.RANKER_GLOBAL_RATE: 0.25, codes.RANKER_PRODUCT_RATE: 0.14, codes.RANKER_RANDOM: 0.23,
                    codes.RANKER_LIST_PRICE_ONLY: 0.54, codes.RANKER_AGE_NEWEST_FIRST: 0.27,
-                   codes.RANKER_CURRENT_RULE: REFERENCE_VAL, codes.RANKER_RULE_A: 0.58,
+                   codes.RANKER_AGE_MAX_CYCLE_ONLY: 0.57, codes.RANKER_AGE_P90_THEN_MAX_CYCLE: REFERENCE_VAL,
                    codes.RANKER_LEAK_QUARTER_END: 0.45}
+WITHOUT_VALUES = {codes.RANKER_LIST_PRICE_ONLY: 0.79, codes.RANKER_AGE_MAX_CYCLE_ONLY: 0.79,
+                  codes.RANKER_AGE_P90_THEN_MAX_CYCLE: 0.78}
 
 
-def evidence_entry(code: str, val_at_k: float, with_ci: bool = True) -> Dict[str, object]:
+def evidence_entry(code: str, val_at_k: float, with_ci: bool = True, reference: float = REFERENCE_VAL,
+                   spread: float = 0.01) -> Dict[str, object]:
     leak = code == codes.RANKER_LEAK_QUARTER_END
     entry: Dict[str, object] = {"ranker": f"nome de {code}", "code": code, "leak": leak,
                                 "auc_mean": round(0.5 + val_at_k / 10, 3), "auc_min": 0.5, "auc_max": 0.6}
     if with_ci:
         entry.update(cuts_ci_above_half=2 if leak else 1, cuts_ci_below_half=0)
     entry.update(p_at_k=0.4, lift_at_k=1.05, val_at_k=val_at_k)
-    if code != codes.RANKER_CURRENT_RULE:
-        entry["cuts_val_above_reference"] = int(val_at_k > REFERENCE_VAL)
+    if code != codes.SERVED_RANKER:
+        entry["cuts_val_above_reference"] = int(val_at_k > reference)
         if not leak:
-            delta = round(val_at_k - REFERENCE_VAL, 3)
+            delta = round(val_at_k - reference, 3)
             entry.update(d_p_at_k=0.01, d_p_low=0.0, d_p_high=0.02, d_val_at_k=delta,
-                         d_val_low=round(delta - 0.01, 3), d_val_high=round(delta + 0.01, 3))
+                         d_val_low=round(delta - spread, 3), d_val_high=round(delta + spread, 3))
     return entry
 
 
 EVIDENCE_RESULTS = {
     "design": {"cuts": ["2017-03-31", "2017-04-30"], "horizon_days": 90, "top_k": 10, "seed": 1, "smooth_m": 20,
                "n_boot": 10, "n_boot_sellers": 20, "fixed_limits": [90], "observations": 30,
-               "unique_opportunities": 20, "audited_data": False},
+               "unique_opportunities": 20, "audited_data": False, "served_rule": codes.SERVED_RANKER},
     "cuts": [], "rows": [], "limits": [], "walk_forward": {"steps": [], "mean": {}},
     "summary": [evidence_entry(code, value) for code, value in EVIDENCE_VALUES.items()],
-    "without_no_outcome": [evidence_entry(code, 0.79 if code != codes.RANKER_RULE_A else 0.78, with_ci=False)
-                           for code in (codes.RANKER_LIST_PRICE_ONLY, codes.RANKER_CURRENT_RULE, codes.RANKER_RULE_A)],
+    "without_no_outcome": [evidence_entry(code, value, with_ci=False, reference=0.78, spread=0.005)
+                           for code, value in WITHOUT_VALUES.items()],
 }
 
 

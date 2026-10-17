@@ -25,8 +25,9 @@ import { cn } from "@/lib/utils";
 
 import { EvidenceChart } from "./evidence-chart";
 
-// As três que respondem à Head de RevOps: a regra, a alternativa óbvia (só preço) e o acaso.
-const HEADLINE: RankerCode[] = ["current_rule", "list_price_only", "random"];
+// As três que respondem à Head de RevOps: a regra servida (a referência que veio da API), a alternativa
+// óbvia (só preço) e o acaso.
+const headline = (reference: RankerCode): RankerCode[] => [reference, "list_price_only", "random"];
 const LANGUAGES = Object.keys(EVIDENCE_LANGUAGES) as EvidenceLanguage[];
 
 function RankerName({ code, reference, description }: { code: RankerCode; reference: string; description?: string }) {
@@ -34,7 +35,7 @@ function RankerName({ code, reference, description }: { code: RankerCode; refere
     <span className="flex flex-col gap-0.5 whitespace-normal">
       <span className="flex items-center gap-2 font-medium">
         {RANKER_LABELS[code]}
-        {code === reference && <Badge variant="focar">{EVIDENCE.reference}</Badge>}
+        {code === reference && <Badge variant="reference">{EVIDENCE.reference}</Badge>}
       </span>
       {description && <span className="text-xs text-muted-foreground">{description}</span>}
     </span>
@@ -187,7 +188,7 @@ export function EvidencePage() {
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
               <dl className="flex flex-col gap-3">
-                {HEADLINE.map((code) => byCode.get(code)).filter((r): r is RankerResult => Boolean(r)).map((ranker) => (
+                {headline(data.reference).map((code) => byCode.get(code)).filter((r): r is RankerResult => Boolean(r)).map((ranker) => (
                   <div key={ranker.code} className={cn("flex flex-col gap-1 rounded-lg border p-4",
                     ranker.code === data.reference && "border-primary/50 bg-accent")}>
                     <dt className="text-sm text-muted-foreground">{RANKER_LABELS[ranker.code]}</dt>
@@ -215,37 +216,42 @@ export function EvidencePage() {
             </CardContent>
           </Card>
 
+          {/* A limitação principal da evidência: em largura cheia, logo depois da comparação. */}
+          <Card className="gap-4 pb-0">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">{text.withoutTitle}</CardTitle>
+              <CardDescription>{text.withoutHelp}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 px-0">
+              <Alert variant={data.without_no_outcome_verdict.code === "reference_behind" ? "warning" : "default"}
+                     className="mx-4 w-auto sm:mx-6">
+                <TriangleAlert aria-hidden />
+                <AlertDescription>{text.verdict(data.without_no_outcome_verdict)}</AlertDescription>
+              </Alert>
+              <RankerTable rankers={data.without_no_outcome} reference={data.reference} design={design}
+                           language={language} full={false} />
+            </CardContent>
+          </Card>
+
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="gap-4 pb-0">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">{text.withoutTitle}</CardTitle>
-                <CardDescription>{text.withoutHelp}</CardDescription>
+                <CardTitle className="text-lg font-semibold">{text.howTitle}</CardTitle>
               </CardHeader>
-              <CardContent className="px-0">
-                <RankerTable rankers={data.without_no_outcome} reference={data.reference} design={design}
-                             language={language} full={false} />
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{text.how(design)}</p>
               </CardContent>
             </Card>
-            <div className="flex flex-col gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold">{text.howTitle}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{text.how(design)}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold">{text.limitsTitle}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="flex list-disc flex-col gap-2 pl-4 text-sm text-muted-foreground">
-                    {text.limits.map((limit) => <li key={limit}>{limit}</li>)}
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">{text.limitsTitle}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="flex list-disc flex-col gap-2 pl-4 text-sm text-muted-foreground">
+                  {text.limits.map((limit) => <li key={limit}>{limit}</li>)}
+                </ul>
+              </CardContent>
+            </Card>
           </div>
         </>
       )}

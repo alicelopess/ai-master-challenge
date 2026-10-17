@@ -12,8 +12,8 @@ import {
 import { GROUP_LABELS, ROLE_LABELS, UI, actionText, clientText, reasonText, type ReasonRole } from "@/copy/pt-BR";
 import type { Item } from "@/lib/contract";
 
-// Ordem das seções: o que decidiu o grupo, o que decidiu a posição e o que é só contexto.
-const ROLES: ReasonRole[] = ["group", "order", "context"];
+// Ordem das seções: o que decidiu o grupo e o que decidiu a posição. Só entra motivo que decide.
+const ROLES: ReasonRole[] = ["group", "order"];
 
 type Props = {
   /** Os itens do grupo da oportunidade aberta, na ordem da API (para Anterior e Próxima). */
@@ -73,6 +73,7 @@ export function ReasonSheet({ items, selected, onSelect }: Props) {
                   </section>
                 );
               })}
+              <p className="text-xs leading-relaxed text-muted-foreground">{UI.limitsNote}</p>
               <Separator />
               <section className="flex flex-col gap-1 rounded-lg bg-accent p-3 text-accent-foreground">
                 <h3 className="text-sm font-semibold">{UI.nextStep}</h3>
