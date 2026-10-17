@@ -60,55 +60,62 @@ CLI, API e tela consomem **o mesmo payload**, então a lista é idêntica nas tr
 - **O back entrega dados e decisões da regra:** o grupo de cada oportunidade, a ordem, os motivos como código com os valores que decidiram (`reasons: [{code, role, params}]`), a ação sugerida (`next_action`) e os números.
 - **O front decide como dizer:** nomes, frases, formatação e layout.
 - **O mesmo contrato serve aos dois lados:** o schema fica em `web/contract/openapi.json`; o front gera dele os tipos e a validação, e testa contra respostas sintéticas exportadas pelo back.
-- **Versão 4 do contrato:** acrescenta a evidência, as regras e o resumo por vendedor. A tela não calcula nenhum número de negócio; o máximo que faz é formatar (fração em %, diferença em pontos).
+- **Versão 5 do contrato:** a regra A ([ADR-006](./docs/architecture.md#adr-006)), com o grupo Acompanhar, os dois limites de idade e só os motivos que decidem. A versão 4 trouxe a evidência, as regras e o resumo por vendedor. A tela não calcula nenhum número de negócio; o máximo que faz é formatar (fração em %, diferença em pontos).
 
 **As quatro páginas:**
 
 | Página | Para quem | Pergunta que responde | O que mostra |
 | --- | --- | --- | --- |
-| Carteira | Vendedor | Qual é o meu próximo passo? | Cartão "Seu próximo passo" com a ação e o primeiro bloco da ordem (o empate inteiro, sem eleger um ID). Uma aba por grupo, com contagem e definição. Painel "Por que está aqui" com os motivos separados por papel: decidiu o grupo, decidiu a posição ou é só contexto. Anterior e Próxima percorrem a lista; "Copiar ID" leva ao CRM. O vendedor fica na URL, e o último escolhido volta na próxima visita |
-| Equipe | Gestor e Head de RevOps | Onde está a carteira da equipe? | Filtros de gerente e escritório, cada um restringindo o outro. Os quatro números da carteira e, abaixo deles, duas abas: "Por vendedor" (em ordem alfabética, sem ordenação por resultado) e "Por oportunidade" (a lista com a coluna Vendedor). Tabelas paginadas |
-| Evidência | Head de RevOps | A lista ajuda a escolher onde investir? | Do valor vendido em 90 dias, quanto estava nas 10 primeiras de cada vendedor: regra atual, "só valor de tabela" e o acaso, com a diferença e a margem de erro. Também o recorte sem as negociações que nunca fecham e o que a evidência não mostra. Em **linguagem de negócio** (padrão) ou **técnica** (Val@10, P@10, Lift@10, AUC e IC95%) |
-| Como funciona | Todos | Como a lista é montada? | Os quatro grupos, a ordem, as faixas de valor de tabela, a referência de ciclo por produto, a taxa-base e o que a ferramenta não faz |
+| Carteira | Vendedor | Qual é o meu próximo passo? | Cartão "Seu próximo passo" com a ação e o primeiro bloco da ordem (o empate inteiro, sem eleger um ID). Uma aba por grupo, com contagem e definição. Painel "Por que está aqui" com os dois motivos que decidiram (o grupo e a posição) e o que o sistema não vê. Anterior e Próxima percorrem a lista; "Copiar ID" leva ao CRM. O vendedor fica na URL, e o último escolhido volta na próxima visita |
+| Equipe | Gestor e Head de RevOps | Onde está a carteira da equipe? | Filtros de gerente e escritório, cada um restringindo o outro. Os números da carteira, um por grupo, e, abaixo deles, duas abas: "Por vendedor" (em ordem alfabética, sem ordenação por resultado) e "Por oportunidade" (a lista com a coluna Vendedor). Tabelas paginadas |
+| Evidência | Head de RevOps | A lista ajuda a escolher onde investir? | Do valor vendido em 90 dias, quanto estava nas 10 primeiras de cada vendedor: regra atual, "só valor de tabela" e o acaso, com a diferença e a margem de erro. Também o recorte sem as negociações que nunca fecham, com a conclusão dele (sem elas, "só valor de tabela" fica à frente), e o que a evidência não mostra. Em **linguagem de negócio** (padrão) ou **técnica** (Val@10, P@10, Lift@10, AUC e IC95%) |
+| Como funciona | Todos | Como a lista é montada? | Os cinco grupos, os dois limites de idade, a ordem, as faixas de valor de tabela e o que a ferramenta não faz |
 
 **Jornada do vendedor (2 minutos):**
 1. Abra `localhost:3000` e escolha Zane Levy.
-2. O cartão "Seu próximo passo" mostra a ação de Focar e as 3 GTX Plus Pro de 5.482 empatadas no topo: `01XZ9CRY`, `FZWU2I30` e `J0G6ZLYZ`.
-3. Abaixo, "88 abertas = 31 Focar + 57 Revisar + 0 Qualificar + 0 Não pontuável" e as abas.
-4. Abra `01XZ9CRY` para ler o motivo e use "Próxima" para seguir na ordem.
-5. Troque para Darcel Schlecht: ele abre direto em Revisar, com a indicação de começar por lá, porque não tem nada em Focar.
+2. O cartão "Seu próximo passo" mostra a ação de Focar e as 2 GTX Plus Pro de 5.482 empatadas no topo: `01XZ9CRY` e `FZWU2I30`.
+3. Abaixo, "88 abertas = 13 Focar + 18 Acompanhar + 57 Confirmar + 0 Qualificar + 0 Completar" e as abas.
+4. Abra `01XZ9CRY` para ler os dois motivos ("aberta há 104 dias; 90% das vendas ganhas fecharam em até 106 dias") e use "Próxima" para seguir na ordem.
+5. Troque para Darcel Schlecht: as 83 em andamento passaram de 138 dias, então ele abre direto em Confirmar, com a indicação de começar por lá.
 
 **Jornada da Head de RevOps:**
-1. Em **Equipe**, veja 2.089 abertas: 298 em Focar (dentro do maior ciclo já fechado: não deixar esfriar) e 1.291 em Revisar (acima dele: confirmar se seguem ativas), além da carteira de cada vendedor.
-2. Em **Evidência**, compare a regra atual (56,9% do valor ganho capturado) com ordenar só por valor de tabela (53,8%) e com o acaso (23,2%), e leia o que essa medida não prova.
+1. Em **Equipe**, veja 2.089 abertas: 157 em Focar (até o tempo em que 90% das vendas ganhas fecharam: não deixar esfriar), 141 em Acompanhar, 1.291 em Confirmar (acima da venda mais longa já fechada: confirmar se seguem) e 500 em Qualificar, além da carteira de cada vendedor.
+2. Em **Evidência**, compare a regra atual (58,4% do valor ganho capturado) com ordenar só por valor de tabela (53,8%) e com o acaso (23,2%). Leia também a limitação: sem as negociações que nunca fecham, "só valor de tabela" fica 1,0 ponto à frente.
 
 ### Lógica de Scoring
 
-A auditoria mostrou que **produto, vendedor, conta, setor e região não separam quem ganha de quem perde** (AUC entre 0,48 e 0,51 fora do tempo). O único sinal legítimo é **há quanto tempo a negociação está aberta**, e ele aparece só por causa das negociações que nunca recebem desfecho na base (ver Resultados). O sinal mais forte é o mês de fechamento, que é vazamento, porque só existe depois do resultado. Por isso a ferramenta **não calcula probabilidade nem nota**. Ela classifica e ordena por regras declaradas, com o que os dados sustentam ([ADR-001](./docs/architecture.md#adr-001)).
+A auditoria mostrou que **produto, vendedor, conta, setor e região não separam quem ganha de quem perde** (AUC entre 0,48 e 0,51 fora do tempo). O único sinal legítimo é **há quanto tempo a negociação está aberta**, e ele aparece só por causa das negociações que nunca recebem desfecho na base (ver Resultados). O sinal mais forte é o mês de fechamento, que é vazamento, porque só existe depois do resultado. Por isso a ferramenta **não calcula probabilidade nem nota**. Ela classifica e ordena por regras declaradas, com o que os dados sustentam ([ADR-001](./docs/architecture.md#adr-001); a regra de grupos é a regra A, [ADR-006](./docs/architecture.md#adr-006)).
 
-**1. Estado** (cada aberta cai em exatamente um):
+**1. Grupo** (cada aberta cai em exatamente um). Dois limites de idade, os dois calculados só com fechadas até o `as_of`:
+- **L1:** o piso do P90 do ciclo de todas as vendas ganhas (106 dias). Um número só para todos os produtos.
+- **L2:** o maior ciclo já fechado, ganha ou perdida (138 dias).
 
-| Estado | Regra | Com os dados auditados |
-| --- | --- | --- |
-| **Focar** | Engaging com idade até o maior ciclo já fechado (138 dias) | 298 |
-| **Revisar** | Engaging acima desse limite; a idade não prova que o negócio terminou | 1.291 |
-| **Qualificar** | Prospecting (sem data de engajamento, logo sem idade) | 500 |
-| **Não pontuável** | Falta produto, preço ou, em Engaging, a data de engajamento; o item diz qual campo corrigir | 0 |
+| Grupo (chave) | Nome na tela | Regra | Com os dados auditados |
+| --- | --- | --- | --- |
+| `focar` | **Focar** | Engaging com idade até L1 | 157 |
+| `acompanhar` | **Acompanhar** | Engaging com idade acima de L1 e até L2 | 141 |
+| `revisar` | **Confirmar** | Engaging acima de L2; a idade não prova que o negócio terminou | 1.291 |
+| `qualificar` | **Qualificar** | Prospecting (sem data de engajamento, logo sem idade) | 500 |
+| `nao_pontuavel` | **Completar** | Falta produto, preço ou, em Engaging, a data de engajamento; o item diz qual campo corrigir | 0 |
 
-**2. Ordem dentro do estado:** faixa de valor de tabela (alto ≥ 3.000; médio de 500 a 2.999; baixo < 500) → preço de tabela decrescente → ID, só para a ordem ficar estável. O preço de tabela reproduz o valor fechado com ±20% em 95,9% das vendas ganhas. **A idade aparece, mas não muda a ordem**, porque não mostrou sinal estável. Deals do mesmo estado e produto são empate e aparecem agrupados.
+Os limites aparecem para o vendedor só como fato do histórico ("90% das vendas ganhas fecharam em até 106 dias"), nunca como prazo: sem contagem regressiva, e "prazo", "vencida", "atrasada" e "parada" estão na lista de termos proibidos.
 
-**3. Explicação:** quatro motivos por oportunidade, cada um com um papel.
-- **Os que decidem:** o motivo do grupo (idade × maior ciclo, estágio Prospecting ou campo ausente) e o da ordem (faixa e preço de tabela).
-- **Os de contexto:** a referência do produto (P90 do ciclo das ganhas, com N e aviso quando N < 30) e a taxa das fechadas ("Não sabemos a chance de fechar desta oportunidade: cerca de 63% das fechadas foram ganhas (48% a 72% contando as abertas)").
+**2. Ordem dentro do estado:** faixa de valor de tabela (alto ≥ 3.000; médio de 500 a 2.999; baixo < 500) → preço de tabela decrescente → ID, só para a ordem ficar estável. O preço de tabela reproduz o valor fechado com ±20% em 95,9% das vendas ganhas. Dentro de cada grupo, **a idade aparece, mas não muda a ordem**. O produto também não: dentro de cada faixa de idade, a taxa de ganho não difere entre produtos (permutação, p = 0,82), e trocar "preço" por "taxa do produto × preço" não muda nenhuma das 180 listas do backtest. Deals do mesmo grupo e produto são empate e aparecem agrupados.
+
+**3. Explicação:** exatamente dois motivos por oportunidade, os que decidiram.
+- **O do grupo:** idade × L1 e L2 (citando só os limites que decidiram), estágio Prospecting ou campo ausente.
+- **O da ordem:** faixa e preço de tabela.
+- **Nada que não decide entra como motivo.** A referência de ciclo por produto e a taxa das fechadas saíram na versão 5: a primeira mostraria um segundo "P90", diferente do que decide. No lugar, uma nota fixa diz o que o sistema não vê (ligações, reuniões, e-mails).
 - **O próximo passo** vem do grupo.
-- **Os valores são os da regra:** a API entrega cada motivo como código, com exatamente os valores que a regra usou, e a tela e a CLI escrevem a frase.
+- **Os valores são os da regra:** a API entrega cada motivo como código, com exatamente os valores que a regra usou, e a tela e a CLI escrevem a frase. Um teste reconstrói o grupo e a ordem dos 2.089 itens só a partir desses valores.
 
 **Premissas e guardas:**
 - `as_of` (o "hoje") é parâmetro, com padrão em 31/12/2017, o último fechamento do dataset.
-- A régua do ciclo usa só fechamentos até o `as_of`.
+- Os dois limites usam só fechamentos até o `as_of`; sem nenhuma venda ganha até ele, a API responde 503 com `no_won_history`.
 - `close_date`, `close_value` e o ID nunca entram na classificação. Os testes embaralham as fechadas e incluem uma venda futura sem que nada mude.
 - Conta, vendedor, manager e escritório são escopo, nunca critério.
-- Faixas e limite são política provisória, editáveis em `leadscorer/policy.py`.
+- Faixas e percentil do primeiro limite são política provisória, editáveis em `leadscorer/policy.py`.
+- **Uma regra só:** o grupo vem de `triage.engaging_group`, a mesma função que o backtest usa em cada corte; testes provam que núcleo, API, CLI, carteira da equipe, detalhe e backtest servem a mesma lista.
 
 ### Abordagem
 
@@ -120,15 +127,15 @@ _Como você atacou o problema. Por onde começou? Como decompôs? O que priorizo
 
 | O que foi verificado | Resultado |
 | --- | --- |
-| Testes automatizados | `pytest`: 147 verdes com os CSVs; sem eles, 114 verdes e 33 pulados com aviso. `npm test`: 119 verdes; `npm run typecheck` e `npm run build` sem erros |
-| Reconciliação | 8.800 linhas após cada junção; 2.089 abertas = 298 + 1.291 + 500 + 0 |
-| Explicações | Nas 2.089, cada motivo de grupo e de ordem cita exatamente os valores que decidiram; todo número das frases vem desses valores; nenhum termo proibido ("probabilidade", "perdida", "encerre", "score"…) nos textos da CLI ou da tela |
-| Contrato | Todas as respostas passam pelos modelos tipados (versão 4); todo código tem texto na tela e na CLI; resposta fora do contrato vira mensagem de erro na tela; a evidência servida bate com o backtest e não traz a armadilha de vazamento |
+| Testes automatizados | `pytest`: 169 verdes com os CSVs; sem eles, 135 verdes e 34 pulados com aviso. `npm test`: 141 verdes; `npm run typecheck` e `npm run build` sem erros |
+| Reconciliação | 8.800 linhas após cada junção; 2.089 abertas = 157 + 141 + 1.291 + 500 + 0 |
+| Explicações | Nas 2.089, exatamente dois motivos, que citam os valores que decidiram e, sozinhos, reconstroem o grupo e a ordem; todo número das frases vem desses valores; nenhum termo proibido ("probabilidade", "perdida", "prazo", "parada", "score"…) nos textos da CLI ou da tela, conferido por início de palavra com uma lista só |
+| Contrato | Todas as respostas passam pelos modelos tipados (versão 5); todo código tem texto na tela e na CLI; resposta fora do contrato vira mensagem de erro na tela; a evidência servida bate com o backtest, traz o carimbo da regra servida e não traz a armadilha de vazamento |
 | Design system | Todo par de texto com contraste AA (≥ 4,5 : 1) nos temas claro e escuro; composições só com primitivos do shadcn, sem cor literal nem estilo inline (ambos em teste) |
-| Paridade | CLI = API = núcleo para os 35 vendedores; soma = 2.089 |
+| Paridade | CLI = API = núcleo para os 35 vendedores; soma = 2.089; a carteira da equipe, o detalhe e as regras usam a mesma lista e o mesmo `meta`; o backtest reproduz a ordem servida em todos os 7 cortes |
 | Robustez | Arquivo ausente, vazio ou inválido, rótulo desconhecido, data ou preço fora do formato e `as_of` inválido param com mensagem; nenhuma lista parcial |
 | Ensaio das jornadas (tela) | Vendedor e RevOps nas quatro páginas, nos temas claro e escuro, em 1280 px e 375 px; todos os itens do roteiro apareceram, nenhum erro no console e nenhuma página rola na horizontal |
-| Backtest temporal (7 cortes) | Produto e preço não separam quem ganha; a regra da ferramenta concentra mais valor ganho que ordenar só por preço, por causa das negociações sem desfecho (detalhes abaixo) |
+| Backtest temporal (7 cortes) | Produto e preço não separam quem ganha; a regra servida (A) concentra mais valor ganho que a regra anterior e que ordenar só por preço, por causa das negociações sem desfecho (detalhes abaixo) |
 
 **Validação offline** ([relatório completo](./solution/data/processed/backtest_report.md), gerado por `scripts/backtest.py`):
 - **População:** em cada corte T (fim de março a fim de setembro de 2017), todas as negociações em Engaging abertas em T, inclusive as que nunca fecham na base (1.330 a 2.409 por corte).
@@ -140,19 +147,20 @@ _Como você atacou o problema. Por onde começou? Como decompôs? O que priorizo
 - **Incerteza:** os cortes se sobrepõem, então as diferenças têm IC95% por bootstrap de vendedores.
 - **Não coberto:** Prospecting não tem data e fica de fora.
 
-| Ordenador | AUC média | P@10 | Val@10 | Δ Val@10 contra a regra da ferramenta (IC95%) |
+| Ordenador | AUC média | P@10 | Val@10 | Δ Val@10 contra a regra servida (IC95%) |
 | --- | --- | --- | --- | --- |
-| Aleatório | 0,510 | 38,9% | 23,2% | −33,7 pp |
-| Taxa por produto | 0,494 | 37,7% | 14,0% | −43,0 pp |
-| Só valor de tabela | 0,505 | 38,7% | 53,8% | −3,1 pp (−4,4 a −1,9) |
-| **Regra da ferramenta** (até o maior ciclo → preço) | 0,574 | 41,2% | 56,9% | — |
-| Alternativa avaliada, não implementada: até o P90 das ganhas → até o maior ciclo → preço | 0,604 | 43,0% | 58,4% | +1,5 pp (+0,2 a +2,7) |
+| Aleatório | 0,510 | 38,9% | 23,2% | −35,2 pp (−41,1 a −29,7) |
+| Taxa por produto | 0,494 | 37,7% | 14,0% | −44,5 pp (−50,6 a −38,2) |
+| Só valor de tabela | 0,505 | 38,7% | 53,8% | −4,6 pp (−6,8 a −2,5) |
+| Regra anterior (até a v4): só até o maior ciclo → preço | 0,574 | 41,2% | 56,9% | −1,5 pp (−2,7 a −0,2) |
+| **Regra servida (A):** até o P90 das ganhas → até o maior ciclo → preço | 0,604 | 43,0% | 58,4% | — |
 | [Vazamento] fechou no 3º mês do trimestre | 0,711 | — | — | — |
 
 Como ler:
-1. **Produto e preço não preveem quem ganha** (AUC perto de 0,5). O que separa é a idade: o grupo Revisar não teve nenhuma negociação ganha nem perdida depois de passar dos 138 dias.
-2. **Por que a regra captura mais valor que "só preço":** ela põe abaixo as negociações paradas, que nunca fecham na base. Sem elas, a vantagem some: a regra empata com "só preço" (Val@10 de 79,1% nos dois), e a alternativa pelo P90 fica 1,0 pp abaixo (IC −1,9 a −0,3). Essas negociações têm sinais de vir da construção da base, então o ganho é condicional a elas.
-3. **Valor capturado não é efeito causal.** O backtest mede quem teria ganhado de qualquer forma. O efeito de trabalhar a lista só um piloto com grupo de controle mostra.
+1. **Produto e preço não preveem quem ganha** (AUC perto de 0,5). O que separa é a idade: nenhuma negociação foi ganha nem perdida depois de passar dos 138 dias.
+2. **Por que a regra A foi adotada:** ela supera a regra anterior (+1,5 pp em Val@10 e +1,7 pp em P@10) e, escolhendo o limite só com os cortes anteriores, nenhum limite fixo a supera (55,8% contra 56,3%). O P90 sai de 4.238 ganhas e usa só o passado; o 138 é um caso extremo. E a lista fica coerente: hoje, 2 das 157 em Focar passaram do P90 do próprio produto, contra 140 das 298 com a regra anterior.
+3. **A limitação principal:** a vantagem das regras por idade vem das negociações que nunca fecham na base. Sem elas, "só valor de tabela" fica 1,0 pp à frente da regra servida (IC +0,3 a +1,9), porque A rebaixa negociações de 107 a 138 dias que, quando fecham, ganham bastante. Essas negociações têm sinais de vir da construção da base, então o ganho é condicional a elas. A página Evidência mostra essa conclusão, calculada pelo back. No pior caso, a regra A perde menos que a anterior (−1,0 contra −1,5 pp).
+4. **Valor capturado não é efeito causal.** O backtest mede quem teria ganhado de qualquer forma. O efeito de trabalhar a lista só um piloto com grupo de controle mostra.
 
 Critérios de aceite e oráculos: [PRD](./docs/prd.md). Plano de build, desvios e cortes: [build-plan.md](./docs/build-plan.md). Auditoria dos dados: [data-audit.md](./docs/data-audit.md).
 
@@ -172,15 +180,15 @@ _O que a empresa deveria fazer com base nos seus findings. Priorize._
   - a página avisa quando o resultado não veio dos CSVs auditados.
 
 **O que depende de premissa:**
-- **Data do recorte:** a data de extração é desconhecida, então o `as_of` padrão de 31/12/2017 é premissa. Com ela, 81% das Engaging caem em Revisar e o Focar tem só 298 itens; o tamanho muda com o `as_of` (160 em 31/01/2018, 34 em 31/03/2018).
+- **Data do recorte:** a data de extração é desconhecida, então o `as_of` padrão de 31/12/2017 é premissa. Com ela, 81% das Engaging caem em Confirmar e o Focar tem 157 itens; sem dados novos, ele esvazia rápido com o `as_of` (84 em 31/01/2018, 9 em 31/03/2018). O selo "Dados até…" fica sempre visível.
 - **Cliente ausente:** 68% das abertas não têm cliente registrado (e 0% das fechadas). A tela avisa uma vez e identifica o deal pelo ID.
 - **Linhas idênticas:** 461 linhas abertas idênticas (exceto pelo ID) foram mantidas, sem prova de duplicidade.
-- **Política provisória:** faixas de valor e limite de ciclo não foram validados pela Head de RevOps.
+- **Política provisória:** faixas de valor e o percentil do primeiro limite não foram validados pela Head de RevOps. Em produção, o segundo limite (o maior ciclo) deveria virar um quantil robusto ou uma política definida com a RevOps.
 - **Dataset provavelmente sintético** (fechamentos em fins de semana e sem estrutura de sinal); não generalizar para a empresa real.
 
 **O que não foi verificado:**
-- **Compreensão:** o teste com 3 a 5 pessoas não técnicas ainda não foi feito.
-- **Focar × Revisar:** o backtest agora avalia essa divisão. A vantagem dela depende das negociações que nunca recebem desfecho, e não dá para saber se elas estão de fato encerradas ou se são registros sem atualização.
+- **Compreensão:** o teste dos nomes (Focar, Acompanhar, Confirmar, Qualificar, Completar) com 3 a 5 pessoas não técnicas ainda não foi feito.
+- **A divisão por idade:** o backtest avalia os três grupos de Engaging. A vantagem deles depende das negociações que nunca recebem desfecho, e não dá para saber se elas estão de fato encerradas ou se são registros sem atualização.
 - **Qualificar:** Prospecting não tem data, então o grupo não é avaliado no backtest.
 
 **Para escalar:**

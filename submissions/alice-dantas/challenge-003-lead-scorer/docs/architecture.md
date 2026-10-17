@@ -1,7 +1,7 @@
 # Architecture — Challenge 003 | Lead Scorer
 
-**Status:** Decisões propostas (ADR-001 a ADR-003, registradas em 15/10/2026); ADR-004 (16/10/2026) corrige o contrato entre back e front do ADR-003; ADR-005 (16/10/2026) registra o design system Rankio e a navegação entre páginas. A seção 1 mantém as **entradas de produto** como contexto; a seção 2 registra as decisões. Implementação não iniciada.
-**Última atualização:** 15/10/2026
+**Status:** Decisões propostas (ADR-001 a ADR-003, registradas em 15/10/2026); ADR-004 (16/10/2026) corrige o contrato entre back e front do ADR-003; ADR-005 (16/10/2026) registra o design system Rankio e a navegação entre páginas; ADR-006 (16/10/2026) troca a regra de grupos pela regra A e substitui em parte o ADR-001 e a decisão 5 do ADR-002. A seção 1 mantém as **entradas de produto** como contexto; a seção 2 registra as decisões. Implementação não iniciada.
+**Última atualização:** 16/10/2026
 **Documentos de origem:** [discovery.md](./discovery.md) (Etapas 1 a 4) e [data-audit.md](./data-audit.md) (auditoria dos dados)
 
 <a id="indice"></a>
@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | **Antes de começar** | Como ler este documento? | [Como ler](#como-ler) · [Procedência](#procedencia) · [Convenção de identificadores](#ids) |
 | [**1. Contexto: entradas de produto**](#secao-1) | O que construir primeiro, para quem, com que evidência e sob quais limites? | [1.1 Conclusões](#sub-1-1) · [1.2 Requisitos](#sub-1-2) · [1.3 Matriz de oportunidades](#sub-1-3) · [1.4 Priorização](#sub-1-4) · [1.5 P0 e jornada](#sub-1-5) · [1.6 Rastreabilidade](#sub-1-6) · [1.7 Trade-offs](#sub-1-7) · [1.8 Fora do MVP](#sub-1-8) · [1.9 Sinais mínimos e restrições](#sub-1-9) · [1.10 Incertezas](#sub-1-10) |
-| [**2. Registros de decisão arquitetural**](#secao-2) | O que decidimos, por quê, o que rejeitamos, o que sacrificamos, como verificamos e quando mudaríamos de ideia? | [2.0 Panorama](#sub-2-0) · [ADR-001 Scoring](#adr-001) · [ADR-002 Dados](#adr-002) · [ADR-003 Tecnologia](#adr-003) · [ADR-004 Contrato](#adr-004) · [ADR-005 Design system](#adr-005) |
+| [**2. Registros de decisão arquitetural**](#secao-2) | O que decidimos, por quê, o que rejeitamos, o que sacrificamos, como verificamos e quando mudaríamos de ideia? | [2.0 Panorama](#sub-2-0) · [ADR-001 Scoring](#adr-001) · [ADR-002 Dados](#adr-002) · [ADR-003 Tecnologia](#adr-003) · [ADR-004 Contrato](#adr-004) · [ADR-005 Design system](#adr-005) · [ADR-006 Regra A](#adr-006) |
 | [**3. Rastreabilidade e pendências**](#secao-3) | Onde cada questão aberta foi resolvida e o que ainda precisa ser corrigido? | [3.1 Questões do discovery](#sub-3-1) · [3.2 Requisitos por ADR](#sub-3-2) · [3.3 Evidência nova](#sub-3-3) · [3.4 Correções pendentes](#sub-3-4) |
 | **Apêndice** | Limites e registro | [Limites deste documento](#limites) |
 
@@ -52,7 +52,7 @@ Cada identificador tem um link para o ponto onde é definido.
 | [RJ-01](#rj-01) a [RJ-07](#rj-07) | Abordagens rejeitadas do MVP | [1.8](#sub-1-8) |
 | [Q-01](#q-01) a [Q-03](#q-03) | Questões adicionais para a arquitetura | [1.9](#sub-1-9) |
 | [U-01](#u-01) a [U-10](#u-10) | Incertezas | [1.10](#sub-1-10) |
-| [ADR-001](#adr-001) a [ADR-005](#adr-005) | Registros de decisão arquitetural | [2](#secao-2) |
+| [ADR-001](#adr-001) a [ADR-006](#adr-006) | Registros de decisão arquitetural | [2](#secao-2) |
 | [CP-01](#cp-01) a [CP-06](#cp-06) | Correções pendentes nos documentos de origem | [3.4](#sub-3-4) |
 | [P-001](./discovery.md#p-001) a [P-003](./discovery.md#p-003) · [H-001](./discovery.md#h-001) a [H-008](./discovery.md#h-008) | Problemas e hipóteses | [discovery 1.3](./discovery.md#sub-1-3) |
 | [HD-01](./discovery.md#hd-01) a [HD-08](./discovery.md#hd-08) | Decisões do mapa | [discovery 2.6](./discovery.md#sub-2-6) |
@@ -411,7 +411,7 @@ Cada incerteza diz de onde vem, o que muda no MVP e como reduzi-la. As marcadas 
 >
 > **O que esta seção responde:** o que decidimos construir, por que, o que rejeitamos, o que sacrificamos, como vamos verificar e quando mudaríamos de ideia.
 >
-> **Como está organizada:** são três decisões independentes, cada uma com sua evidência e sua condição de revisão: [ADR-001](#adr-001) (scoring), [ADR-002](#adr-002) (dados) e [ADR-003](#adr-003) (tecnologia). O [ADR-004](#adr-004) (contrato entre back e front) veio depois do build e corrige o ADR-003; o [ADR-005](#adr-005) registra o design system e a navegação.
+> **Como está organizada:** são três decisões independentes, cada uma com sua evidência e sua condição de revisão: [ADR-001](#adr-001) (scoring), [ADR-002](#adr-002) (dados) e [ADR-003](#adr-003) (tecnologia). O [ADR-004](#adr-004) (contrato entre back e front) veio depois do build e corrige o ADR-003; o [ADR-005](#adr-005) registra o design system e a navegação; o [ADR-006](#adr-006) troca a regra de grupos (regra A) e substitui em parte o ADR-001.
 >
 > **O que NÃO decide:** pesos definitivos. As faixas de valor e a ordem de desempate são **política provisória** ([U-06](#u-06)), à espera de validação da Head de RevOps.
 
@@ -436,7 +436,7 @@ Cada incerteza diz de onde vem, o que muda no MVP e como reduzi-la. As marcadas 
 <a id="adr-001"></a>
 ### ADR-001 — Estratégia de Scoring
 
-**Status:** Proposto
+**Status:** Proposto. **A regra de estados foi substituída em parte pelo [ADR-006](#adr-006)** (16/10/2026): Engaging passa a ter três grupos (até o P90 das ganhas, até o maior ciclo, acima dele) e a referência de ciclo por produto sai da explicação. Ordenação, faixas e o restante deste ADR continuam valendo.
 **Data:** 15/10/2026
 
 #### Contexto
@@ -655,7 +655,7 @@ A auditoria identificou:
 2. **Junções `m:1` validadas**, com contagem de linhas antes e depois de cada passo; o total de 8.800 é verificado.
 3. **As 461 linhas são mantidas**, sem deduplicar.
 4. **`as_of` é parâmetro**, com padrão `max(close_date)` (2017-12-31), exibido na tela.
-5. **Limite do ciclo:** o maior ciclo fechado, 138 d, global e parametrizável; P90 por produto só em texto.
+5. **Limite do ciclo:** o maior ciclo fechado, 138 d, global e parametrizável; P90 por produto só em texto. *Substituída pelo [ADR-006](#adr-006): dois limites globais (o P90 das ganhas e o maior ciclo), e o P90 por produto sai da tela.*
 6. **Referência de ciclo** calculada apenas com fechadas de `close_date` ≤ `as_of`.
 7. **Lista de campos permitidos:** estágio, produto, preço, `engage_date`, vendedor, manager, escritório e, apenas para o aviso, conta.
 8. **Estados** conforme [ADR-001](#adr-001), com conta nula como **aviso único no cabeçalho** e identificação da linha por `opportunity_id` ([Q-02](#q-02)).
@@ -911,6 +911,12 @@ O [ADR-003](#adr-003) pedia apresentação desacoplada da lógica e um contrato 
   - `GET /api/rules`: a política como dado (`meta`, `ordering` e faixas de valor de tabela).
   - `by_seller` em `/api/pipeline`: o resumo de cada vendedor do filtro, inclusive quem tem zero abertas, em ordem alfabética.
   - A mudança é aditiva no back. O front exige a versão 4 e mostra erro de contrato contra uma API antiga.
+- **Versão 5** (16/10/2026, para a regra A do [ADR-006](#adr-006)):
+  - grupo `acompanhar`; `meta.won_cycle_limit_days` (L1) ao lado de `cycle_limit_days` (L2);
+  - motivos de grupo `age_within_won_cycle`, `age_above_won_cycle` e `age_above_cycle_limit`; cada item tem exatamente dois motivos (grupo e ordem). Saem os motivos de contexto, o papel `context`, `meta.cycle_references`, `meta.min_cases` e `meta.base_rate`;
+  - ação `check_progress`; `start_with_group` leva os dois limites; erro `no_won_history` (503);
+  - estratégias com nomes que descrevem a regra (`age_p90_then_max_cycle`, `age_max_cycle_only`); `evidence.reference` é a servida, o resultado traz o carimbo `design.served_rule` (outra regra dá 503) e `without_no_outcome_verdict` diz, em código, como a regra servida fica sem as negociações que nunca fecham.
+  - A mudança quebra o contrato: back, CLI e tela mudam juntos.
 
 O campo `meta.contract_version` informa qual é a versão em uso.
 
@@ -1069,6 +1075,65 @@ O campo `meta.contract_version` informa qual é a versão em uso.
 
 ---
 
+<a id="adr-006"></a>
+### ADR-006: Regra A — dois limites de idade para as negociações em andamento
+
+**Status:** Aceito em 16/10/2026. Substitui em parte o [ADR-001](#adr-001) (a regra de estados) e a decisão 5 do [ADR-002](#adr-002).
+**Data:** 16/10/2026
+
+#### Contexto
+
+- **[Dados] A regra do ADR-001 tinha um corte só, no maior ciclo fechado (138 d).** Focar juntava negociações de 10 e de 130 dias e ordenava só por preço, então uma negociação velha e cara ficava no topo, à frente de uma recente.
+- **[Dados] A tela contradizia a si mesma:** 140 das 298 em Focar já tinham passado do P90 do ciclo do próprio produto, que a explicação mostrava como contexto.
+- **[Backtest] As duas regras por idade dependem das negociações que nunca recebem desfecho.** Sem elas, a regra de 138 d empata com "só preço" (é idêntica a ele, porque nenhuma fechada passou de 138 d) e a regra A fica 1,0 pp atrás.
+- **[Dados] Dentro de cada faixa de idade, o produto não muda a chance de ganhar** (permutação estratificada, p = 0,82); trocar "preço" por "taxa do produto × preço" não muda nenhuma das 180 listas top-10.
+
+#### Alternativas consideradas
+
+| Alternativa | Val@10 com / sem as que nunca fecham | Por que não (ou por que sim) |
+| --- | --- | --- |
+| Manter 138 d | 56,9% / 79,1% | Um caso extremo como limite; contradiz a referência que a tela mostra |
+| Só preço | 53,8% / 79,1% | Ignora o único sinal que separa ganho nesta base |
+| Limite fixo (90 a 120 d) | 58,0% a 59,3% / — | Escolhido olhando o teste; no walk-forward rende 55,8% |
+| **Regra A: P90 das ganhas em T → maior ciclo → preço** | **58,4% / 78,1%** | Calculada só com o passado, dentro do platô de 100 a 120 d, e nenhum limite escolhido fora da amostra a supera (56,3%) |
+
+#### Decisão
+
+- **Dois limites, os dois só com fechadas até o `as_of`:** L1 = piso do P90 linear do ciclo das ganhas (106 d), um número para todos os produtos; L2 = maior ciclo fechado (138 d).
+- **Grupos:** `focar` (idade ≤ L1, 157), `acompanhar` (L1 < idade ≤ L2, 141), `revisar` (> L2, 1.291), `qualificar` (Prospecting, 500), `nao_pontuavel` (0). Prospecting continua depois das Engaging: o backtest não o avalia, então a posição dele não muda.
+- **A ordem dentro do grupo continua por faixa e preço;** sem peso por produto.
+- **Fonte única:** `triage.engaging_group` decide o grupo; `classify` e o backtest a chamam.
+- **Explicação:** só o que decidiu (grupo e ordem), com os limites como fato do histórico, nunca como prazo. Nomes na tela: Focar, Acompanhar, Confirmar, Qualificar e Completar.
+- **Sem venda ganha até o `as_of`:** erro `no_won_history`, em vez de um limite inventado.
+
+#### Consequências
+
+- **O ganho é condicional e pequeno:** +1,5 pp de Val@10 (IC +0,2 a +2,7) e +1,7 pp de P@10 contra a regra anterior, cerca de 0,18 venda a mais por lista de 10 a cada 90 dias. Sem as que nunca fecham, "só preço" fica 1,0 pp à frente (IC +0,3 a +1,9). A Evidência mostra essa conclusão, calculada pelo back.
+- **No pior caso, perde menos que a regra anterior:** −1,0 pp contra −1,5 pp.
+- **Mais vendedores sem Focar:** 10 dos 27 com Engaging (antes, 6); o cartão leva para Acompanhar (4) ou Confirmar (6).
+- **Com dados parados, Focar esvazia mais rápido:** 84 em 31/01/2018 e 9 em 31/03/2018 (antes, 160 e 34).
+- **Contrato v5** ([ADR-004](#adr-004)): back, CLI e tela mudam juntos.
+
+#### Validação
+
+| # | O que verificar | Como |
+| --- | --- | --- |
+| 1 | Fronteiras: L1, L1 + 1, L2, L2 + 1 e o piso do P90 | `tests/test_triage.py` (dados sintéticos com L1 = 100 exato) |
+| 2 | Os dois motivos reconstroem o grupo e a ordem dos 2.089 itens | `tests/test_codes.py` |
+| 3 | Núcleo, API, CLI, carteira da equipe, detalhe e regras servem a mesma lista | `tests/test_views.py`, `tests/test_api.py` |
+| 4 | O backtest reproduz a ordem servida em cada um dos 7 cortes | `tests/test_backtest.py` |
+| 5 | A evidência traz o carimbo da regra servida e o veredito | `tests/test_evidence.py` |
+| 6 | A tela segue a ordem de grupos da API e nenhum componente escreve uma chave de grupo | `web/tests/policy.test.ts` |
+
+#### Condição para revisitar a decisão
+
+- **Dados reais com atividade:** testar se a idade continua separando ganho sem as negociações que nunca fecham; se não separar, voltar a "só preço" dentro de Engaging.
+- **Produção:** trocar L2 (um caso extremo) por um quantil robusto ou por uma política definida com a RevOps.
+- **Piloto com grupo de controle:** é o que mede se trabalhar a lista muda o resultado.
+- **Teste de compreensão dos nomes** com 3 a 5 vendedores leigos.
+
+---
+
 <a id="secao-3"></a>
 ## 3. Rastreabilidade e pendências
 
@@ -1083,7 +1148,7 @@ O campo `meta.contract_version` informa qual é a versão em uso.
 | --- | --- | --- |
 | [AR-01](./discovery.md#ar-01) Regras de scoring: pesos, faixas, desempate | [ADR-001](#adr-001) | Faixas de valor de tabela alto, médio e baixo, por preço; ordem estado → faixa → preço exato; idade só exibida; política provisória |
 | [AR-02](./discovery.md#ar-02) Reconciliar "não é só ordenar por valor" | [ADR-001](#adr-001) | Três dimensões integradas, com explicação; pesos declarados como política |
-| [AR-03](./discovery.md#ar-03) Uma fila ou duas; envelhecidos | [ADR-001](#adr-001), [ADR-002](#adr-002) | Estados Focar e Revisar, com limite de 138 d parametrizável |
+| [AR-03](./discovery.md#ar-03) Uma fila ou duas; envelhecidos | [ADR-001](#adr-001), [ADR-002](#adr-002), [ADR-006](#adr-006) | Três grupos de Engaging (Focar, Acompanhar, Revisar) com os limites L1 = P90 das ganhas e L2 = maior ciclo, calculados no `as_of` |
 | [AR-04](./discovery.md#ar-04) Expressar incerteza e taxa-base | [ADR-001](#adr-001) | Faixa na explicação; nunca por deal |
 | [AR-05](./discovery.md#ar-05) Estado na data da decisão | [ADR-001](#adr-001), [ADR-002](#adr-002) | Quatro estados, partição que soma 2.089 |
 | [AR-06](./discovery.md#ar-06) Tratamento do Prospecting | [ADR-001](#adr-001) | "Qualificar": só valor, sem idade |
@@ -1142,7 +1207,7 @@ Registradas aqui e **não aplicadas**: exigem editar o `discovery.md` ou o `data
 | <a id="cp-02">CP-02</a> | Atualizar [U-03](#u-03) e a leitura dos "envelhecidos": é acúmulo ao longo do tempo, não valor constante | [discovery 3.8](./discovery.md#sub-3-8), [discovery 4.5](./discovery.md#sub-4-5) |
 | <a id="cp-03">CP-03</a> | Alinhar o papel da completude: aviso, não critério do score | [discovery 4.3](./discovery.md#sub-4-3) (linha 4) |
 | <a id="cp-04">CP-04</a> | Alinhar o tratamento de Prospecting: "Qualificar", só valor | [discovery 3.6](./discovery.md#sub-3-6) (decisão 3) |
-| <a id="cp-05">CP-05</a> | Fixar "dentro do ciclo" como idade ≤ 138 d (com `<` seriam 288, não 298) | [discovery 4.3](./discovery.md#sub-4-3) (linha 6) |
+| <a id="cp-05">CP-05</a> | Fixar "dentro do ciclo" como idade ≤ 138 d (com `<` seriam 288, não 298). Com a regra A ([ADR-006](#adr-006)), os dois limites são inclusivos: idade ≤ 106 d é Focar (157) e idade ≤ 138 d é Acompanhar | [discovery 4.3](./discovery.md#sub-4-3) (linha 6) |
 | <a id="cp-06">CP-06</a> | Explicitar a sensibilidade ao `as_of` além de 81,2% → 77,9% | [discovery 3.1](./discovery.md#sub-3-1) |
 
 ---

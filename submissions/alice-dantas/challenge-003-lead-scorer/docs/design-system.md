@@ -61,14 +61,17 @@ O lilás da marca (`#8091FA`) é o mesmo nos dois temas.
 
 ### 3.2. Status dos grupos
 
-Cada grupo tem um par de texto e fundo. A cor nunca aparece sem o nome do grupo.
+Cada grupo tem um par de texto e fundo. A cor nunca aparece sem o nome do grupo. O token segue a chave do grupo; o nome na tela é do catálogo ([ADR-006](./architecture.md#adr-006)).
 
-| Grupo | Claro (texto / fundo) | Escuro (texto / fundo) | Leitura | Contraste |
+| Grupo (nome na tela) | Claro (texto / fundo) | Escuro (texto / fundo) | Leitura | Contraste |
 | --- | --- | --- | --- | --- |
-| Focar | `#4F5BD5` / `#EEF0FE` | `#A5B1FC` / `#2D395A` | Lilás da marca | 4,9 / 5,6 : 1 |
-| Revisar (também `--warning`) | `#92400E` / `#FEF3C7` | `#FBBF24` / `#414037` | Âmbar, de atenção; nunca vermelho, porque não é "perdida" | 6,4 / 6,3 : 1 |
-| Qualificar | `#0E7490` / `#CFFAFE` | `#67D4E8` / `#294457` | Ciano, de início de funil | 4,8 / 5,9 : 1 |
-| Não pontuável | `#5B6577` / `#ECEEF2` | `#A3AEBD` / `#27344B` | Neutro, porque falta dado | 5,1 / 5,6 : 1 |
+| `focar` (Focar) | `#4F5BD5` / `#EEF0FE` | `#A5B1FC` / `#2D395A` | Lilás da marca | 4,9 / 5,6 : 1 |
+| `acompanhar` (Acompanhar) | `#6D28D9` / `#EDE9FE` | `#C4B5FD` / `#3B2F5C` | Violeta, vizinho do lilás de Focar: ainda em andamento, há mais tempo | 6,0 / 6,5 : 1 |
+| `revisar` (Confirmar; também `--warning`) | `#92400E` / `#FEF3C7` | `#FBBF24` / `#414037` | Âmbar, de atenção; nunca vermelho, porque não é "perdida" | 6,4 / 6,3 : 1 |
+| `qualificar` (Qualificar) | `#0E7490` / `#CFFAFE` | `#67D4E8` / `#294457` | Ciano, de início de funil | 4,8 / 5,9 : 1 |
+| `nao_pontuavel` (Completar) | `#5B6577` / `#ECEEF2` | `#A3AEBD` / `#27344B` | Neutro, porque falta dado | 5,1 / 5,6 : 1 |
+
+Dois usos que não são grupo têm variante própria no `Badge`, com as cores de um grupo: `reference` (a estratégia de referência na Evidência, cor de Focar) e `missing` (o campo ausente na tabela, cor de Completar). Assim nenhum componente escreve uma chave de grupo à mão (`web/tests/policy.test.ts`).
 
 **Gráficos:**
 - `--chart-1` é o lilás: a regra atual, em destaque.
@@ -148,7 +151,7 @@ A grade é de 4 px (escala padrão do Tailwind).
 - As variantes e os utilitários CSS de que os primitivos dependem estão em `web/app/shadcn.css`. O arquivo é uma cópia sem alteração do `dist/tailwind.css` do shadcn 4.21.1 (MIT). A alternativa seria instalar a CLI como dependência, o que traria 34 dependências só por esse CSS.
 
 1. **Antes de criar,** procure no registro do shadcn (documentação ou `npx shadcn view <nome>`). Se existir, use o que existe.
-2. **`components/ui/`** só tem primitivos gerados pela CLI do shadcn. A única edição permitida é ligar tokens: variantes de status no `Badge` e a variante `warning` no `Alert`.
+2. **`components/ui/`** só tem primitivos gerados pela CLI do shadcn. A única edição permitida é ligar tokens: variantes de status no `Badge` (uma por grupo, mais `reference` e `missing`) e a variante `warning` no `Alert`.
 3. **Composições do produto** ficam em `components/<domínio>/` e são montadas só com primitivos. Elas não usam elementos HTML crus que tenham equivalente shadcn (`<button>`, `<table>`, `<select>`, `<details>`), cor literal nem `style={{…}}`. O teste `web/tests/design-system.test.ts` confere essa regra.
 4. **Nada de CSS próprio** além dos tokens e da camada base em `globals.css`.
 
@@ -185,8 +188,9 @@ A grade é de 4 px (escala padrão do Tailwind).
   - Assim não se confundem com as abas de grupo (segmentadas) que ficam dentro de "Por oportunidade".
   - A escolha fica na URL.
 - **Abas de grupo:**
-  - Rótulo com contagem.
+  - Rótulo com contagem, na ordem de `ordering.group_order`.
   - A aba inicial é o grupo por onde começar, conforme o back (`start_with_group` quando Focar está vazio).
+  - No celular, a lista vira uma grade de duas colunas que cresce em linhas (cinco grupos, três linhas); a partir de `sm`, uma linha de 36 px.
   - A aba fica na URL.
 - **Tabelas:**
   - A ordem é a do back.
@@ -198,7 +202,7 @@ A grade é de 4 px (escala padrão do Tailwind).
   - A linha inteira abre a sheet, e o ID é o botão acessível.
   - Os números ficam à direita.
 - **Sheet "Por que está aqui":**
-  - Motivos agrupados pelo `role` do contrato: o que decidiu o grupo, o que decidiu a posição e o que é só contexto.
+  - Os dois motivos, agrupados pelo `role` do contrato: o que decidiu o grupo e o que decidiu a posição. Abaixo, uma nota fixa do que o sistema não vê (ligações, reuniões, e-mails).
   - Depois vem o próximo passo, com Anterior e Próxima na ordem do grupo, e "Copiar ID".
 - **Estados:** carregando usa Skeleton; vazio usa Empty com o texto do código; erro usa Alert `destructive`; dados fora da versão auditada usam Alert `warning`.
 - **Gráficos:**
@@ -209,7 +213,8 @@ A grade é de 4 px (escala padrão do Tailwind).
 - **Tabelas de pessoas** (por vendedor): seguem a ordem da API, que é alfabética, e não têm controle de ordenação, para que a tela nunca vire um ranking.
 - **Filtros dependentes:** cada filtro mostra só as opções compatíveis com o outro; por exemplo, com um gerente escolhido aparecem só os escritórios dele.
 - **Duas linguagens** (Evidência):
-  - **Linguagem de negócio,** o padrão para gestores: pontos em palavras ("3,1 pontos a menos, margem de erro entre 1,9 e 4,4"), sem siglas nem jargão estatístico, que um teste confere.
+  - **Linguagem de negócio,** o padrão para gestores: pontos em palavras ("4,6 pontos a menos, margem de erro entre 2,5 e 6,8"), sem siglas nem jargão estatístico, que um teste confere.
+  - **O recorte sem as negociações que nunca fecham** fica em largura cheia, com o veredito do back num Alert `warning` quando a regra servida fica atrás: é a limitação principal da evidência.
   - **Linguagem técnica,** para quem audita o método: Val@K, P@K, Lift@K, AUC, IC95% e o desenho do backtest.
   - A escolha fica na URL (`?linguagem=tecnica`), e os números são os mesmos nas duas.
 
