@@ -158,16 +158,29 @@ describe("carteira", () => {
 });
 
 describe("equipe", () => {
-  test("números, lista com vendedor e filtros na URL e na chamada", async () => {
+  test("números, duas análises em abas, filtros na URL e na chamada", async () => {
     const fetch = stubApi(() => ok(load("team-all")));
     navigation.go("/equipe?gerente=Mara%20Um");
     render(<TeamPage />);
     const payload = teamPipeline("team-all");
     const summary = await screen.findByRole("region", { name: UI.teamSummaryLabel });
     expect(within(summary).getAllByText(UI.ofTotal(payload.summary.total)).length).toBe(4);
-    // A coluna Vendedor está na lista de oportunidades e na tabela por vendedor.
-    expect(screen.getAllByRole("columnheader", { name: UI.columns.seller })).toHaveLength(2);
     expect(fetch.mock.calls.some(([url]) => String(url).endsWith("/api/pipeline?manager=Mara+Um"))).toBe(true);
+
+    // Abaixo dos números, uma aba por análise, com a contagem; abre em "Por vendedor".
+    const views = screen.getByRole("tablist", { name: TEAM.views.label });
+    const sellersTab = within(views).getByRole("tab", { name: new RegExp(`^${TEAM.views.sellers}`) });
+    const itemsTab = within(views).getByRole("tab", { name: new RegExp(`^${TEAM.views.opportunities}`) });
+    expect(sellersTab.getAttribute("aria-selected")).toBe("true");
+    expect(sellersTab.textContent).toContain(String(payload.by_seller.length));
+    expect(itemsTab.textContent).toContain(String(payload.summary.total));
+    expect(screen.queryByRole("tablist", { name: UI.groupsLabel })).toBeNull();
+
+    // A escolha vai para a URL e só a análise aberta fica na tela (sem rolagem longa).
+    fireEvent.mouseDown(itemsTab);
+    expect(navigation.params.get("visao")).toBe("oportunidades");
+    expect(await screen.findByRole("tablist", { name: UI.groupsLabel })).toBeTruthy();
+    expect(screen.getAllByRole("columnheader", { name: UI.columns.seller })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: UI.filters.clear }));
     expect(navigation.params.get("gerente")).toBeNull();
@@ -176,7 +189,7 @@ describe("equipe", () => {
 
   test("filtro sem oportunidades", async () => {
     stubApi(() => ok(load("team-empty")));
-    navigation.go("/equipe?gerente=Ninguem");
+    navigation.go("/equipe?gerente=Ninguem&visao=oportunidades");
     render(<TeamPage />);
     expect(await screen.findByText(pipelineEmptyText(teamPipeline("team-empty").empty!))).toBeTruthy();
   });
@@ -209,7 +222,7 @@ describe("equipe por vendedor", () => {
     stubApi(() => ok(load("team-all")));
     navigation.go("/equipe");
     render(<TeamPage />);
-    const table = (await screen.findByText(TEAM.bySellerTitle)).closest("[data-slot=card]") as HTMLElement;
+    const table = (await screen.findByText(TEAM.bySellerHelp)).closest("[data-slot=card]") as HTMLElement;
     const rows = (load("team-all") as TeamPipeline).by_seller;
     const links = within(table).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual(rows.map((row) => row.seller));
@@ -218,12 +231,20 @@ describe("equipe por vendedor", () => {
     expect(screen.getByRole("link", { name: TEAM.seeEvidence }).getAttribute("href")).toBe("/evidencia");
   });
 
-  test("filtro sem vendedores não mostra a tabela", async () => {
+  test("filtro sem vendedores: a aba mostra a mensagem, sem tabela vazia", async () => {
     stubApi(() => ok(load("team-empty")));
     navigation.go("/equipe?gerente=Ninguem");
     render(<TeamPage />);
-    await screen.findByText(pipelineEmptyText(teamPipeline("team-empty").empty!));
-    expect(screen.queryByText(TEAM.bySellerTitle)).toBeNull();
+    expect(await screen.findByText(TEAM.noSellers)).toBeTruthy();
+    expect(screen.queryByText(TEAM.bySellerHelp)).toBeNull();
+  });
+
+  test("escritório com vendedor sem abertas: ele aparece com zeros; a lista de oportunidades fica vazia", async () => {
+    stubApi(() => ok(load("team-east")));
+    navigation.go("/equipe?escritorio=East");
+    render(<TeamPage />);
+    const table = (await screen.findByText(TEAM.bySellerHelp)).closest("[data-slot=card]") as HTMLElement;
+    expect(within(table).getAllByRole("link").map((link) => link.textContent)).toEqual(["Carla Gama"]);
   });
 });
 

@@ -11,6 +11,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GROUP_LABELS, UI, actionText, groupDescription, groupEmptyText } from "@/copy/pt-BR";
 import type { Group } from "@/lib/contract";
+import { formatInt } from "@/lib/format";
 import { PAGE_SIZE, pageOf } from "@/lib/pagination";
 
 import { ItemsTable } from "./items-table";
@@ -58,7 +59,7 @@ export function GroupTabs({
           <TabsTrigger key={group.state} value={group.state} className="h-8 px-3 sm:h-[calc(100%-1px)]">
             {GROUP_LABELS[group.state]}
             <Badge variant={group.count ? group.state : "secondary"} className="tabular-nums">
-              {group.count}
+              {formatInt(group.count)}
             </Badge>
           </TabsTrigger>
         ))}

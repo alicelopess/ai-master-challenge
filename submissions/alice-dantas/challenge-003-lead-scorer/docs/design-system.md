@@ -178,6 +178,12 @@ A grade é de 4 px (escala padrão do Tailwind).
   - Mobile: a navegação desce para uma segunda linha centralizada.
   - Não há sidebar. Uma página nova entra como uma rota e uma linha em `lib/nav.ts`.
 - **Abertura de página:** título (h1), uma linha do que a página responde e, em seguida, a resposta (cartão ou números). A lista vem depois.
+- **Abas de análise** (Equipe):
+  - Dividem análises diferentes da mesma página: "Por vendedor" e "Por oportunidade".
+  - Ficam abaixo dos números, para a página não virar uma rolagem longa.
+  - Variante `line` do Tabs, centralizada, com sublinhado lilás. No celular ocupam a largura toda, em duas metades.
+  - Assim não se confundem com as abas de grupo (segmentadas) que ficam dentro de "Por oportunidade".
+  - A escolha fica na URL.
 - **Abas de grupo:**
   - Rótulo com contagem.
   - A aba inicial é o grupo por onde começar, conforme o back (`start_with_group` quando Focar está vazio).

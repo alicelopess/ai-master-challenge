@@ -104,7 +104,8 @@ export const UI = {
 } as const;
 
 export const TEAM = {
-  bySellerTitle: "Por vendedor",
+  views: { label: "Análises da equipe", sellers: "Por vendedor", opportunities: "Por oportunidade" },
+  noSellers: "Nenhum vendedor neste filtro.",
   bySellerHelp: "A carteira aberta de cada vendedor, em ordem alfabética. A tabela não ordena pessoas por resultado.",
   total: "Abertas",
   withoutAccount: "Sem cliente",

@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { TablePagination } from "@/components/app/table-pagination";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { GROUP_LABELS, TEAM, UI } from "@/copy/pt-BR";
 import type { SellerSummary } from "@/lib/contract";
@@ -28,7 +28,6 @@ export function BySellerTable({ rows }: { rows: SellerSummary[] }) {
   return (
     <Card className="gap-4 pb-0">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">{TEAM.bySellerTitle}</CardTitle>
         <CardDescription>{TEAM.bySellerHelp}</CardDescription>
       </CardHeader>
       <CardContent className="px-0">

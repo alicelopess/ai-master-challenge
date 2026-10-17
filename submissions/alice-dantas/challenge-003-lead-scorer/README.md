@@ -67,7 +67,7 @@ CLI, API e tela consomem **o mesmo payload**, então a lista é idêntica nas tr
 | Página | Para quem | Pergunta que responde | O que mostra |
 | --- | --- | --- | --- |
 | Carteira | Vendedor | Qual é o meu próximo passo? | Cartão "Seu próximo passo" com a ação e o primeiro bloco da ordem (o empate inteiro, sem eleger um ID). Uma aba por grupo, com contagem e definição. Painel "Por que está aqui" com os motivos separados por papel: decidiu o grupo, decidiu a posição ou é só contexto. Anterior e Próxima percorrem a lista; "Copiar ID" leva ao CRM. O vendedor fica na URL, e o último escolhido volta na próxima visita |
-| Equipe | Gestor e Head de RevOps | Onde está a carteira da equipe? | Filtros de gerente e escritório, cada um restringindo o outro. Os quatro números da carteira, a tabela "Por vendedor" em ordem alfabética, sem ordenação por resultado, e a lista com a coluna Vendedor. Tabelas paginadas |
+| Equipe | Gestor e Head de RevOps | Onde está a carteira da equipe? | Filtros de gerente e escritório, cada um restringindo o outro. Os quatro números da carteira e, abaixo deles, duas abas: "Por vendedor" (em ordem alfabética, sem ordenação por resultado) e "Por oportunidade" (a lista com a coluna Vendedor). Tabelas paginadas |
 | Evidência | Head de RevOps | A lista ajuda a escolher onde investir? | Do valor vendido em 90 dias, quanto estava nas 10 primeiras de cada vendedor: regra atual, "só valor de tabela" e o acaso, com a diferença e a margem de erro. Também o recorte sem as negociações que nunca fecham e o que a evidência não mostra. Em **linguagem de negócio** (padrão) ou **técnica** (Val@10, P@10, Lift@10, AUC e IC95%) |
 | Como funciona | Todos | Como a lista é montada? | Os quatro grupos, a ordem, as faixas de valor de tabela, a referência de ciclo por produto, a taxa-base e o que a ferramenta não faz |
 
@@ -120,7 +120,7 @@ _Como você atacou o problema. Por onde começou? Como decompôs? O que priorizo
 
 | O que foi verificado | Resultado |
 | --- | --- |
-| Testes automatizados | `pytest`: 147 verdes com os CSVs; sem eles, 114 verdes e 33 pulados com aviso. `npm test`: 118 verdes; `npm run typecheck` e `npm run build` sem erros |
+| Testes automatizados | `pytest`: 147 verdes com os CSVs; sem eles, 114 verdes e 33 pulados com aviso. `npm test`: 119 verdes; `npm run typecheck` e `npm run build` sem erros |
 | Reconciliação | 8.800 linhas após cada junção; 2.089 abertas = 298 + 1.291 + 500 + 0 |
 | Explicações | Nas 2.089, cada motivo de grupo e de ordem cita exatamente os valores que decidiram; todo número das frases vem desses valores; nenhum termo proibido ("probabilidade", "perdida", "encerre", "score"…) nos textos da CLI ou da tela |
 | Contrato | Todas as respostas passam pelos modelos tipados (versão 4); todo código tem texto na tela e na CLI; resposta fora do contrato vira mensagem de erro na tela; a evidência servida bate com o backtest e não traz a armadilha de vazamento |
