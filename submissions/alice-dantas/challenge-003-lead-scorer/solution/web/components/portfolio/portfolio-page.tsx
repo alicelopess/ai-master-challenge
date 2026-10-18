@@ -1,19 +1,23 @@
 "use client";
 
 import { ChartNoAxesColumnIncreasing, Inbox } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { DataWarning, ErrorAlert } from "@/components/app/error-alert";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AssessmentSheet, type AssessRequest } from "@/components/assessment/assessment-sheet";
+import { markText } from "@/copy/assisted";
 import { BRAND, PAGES, UI, pipelineEmptyText } from "@/copy/pt-BR";
 import { api } from "@/lib/api";
 import type { Group } from "@/lib/contract";
 import {
   defaultTab, filterGroups, filtersToQuery, hasFilters, parseFilters, productsIn, startGroup, type ListFilters,
 } from "@/lib/portfolio";
+import { evaluate } from "@/lib/assisted/policy";
+import { useAssessments } from "@/lib/assisted/use-assessments";
 import { useApi } from "@/lib/use-api";
 import { useQuery } from "@/lib/use-query";
 
@@ -48,6 +52,8 @@ export function PortfolioPage() {
   const sellers = useApi(() => api.sellers(), "sellers");
   const pipeline = useApi(seller ? () => api.sellerPipeline(seller) : null, `pipeline:${seller}`);
   const [selected, setSelected] = useState<string | null>(null);
+  const [assessing, setAssessing] = useState<AssessRequest | null>(null);
+  const assessments = useAssessments(seller);
 
   const names = sellers.data?.sellers ?? [];
   useEffect(() => {
@@ -58,6 +64,7 @@ export function PortfolioPage() {
 
   useEffect(() => {
     setSelected(null);
+    setAssessing(null);
     if (seller) remember(seller);
   }, [seller]);
 
@@ -67,6 +74,17 @@ export function PortfolioPage() {
   const filters = parseFilters(query);
   const groups = payload ? filterGroups(payload.groups, filters) : [];
   const openGroup = groups.find((g) => g.items.some((i) => i.opportunity_id === selected));
+
+  // O selo das oportunidades já avaliadas: só informa; a ordem da lista continua sendo a oficial.
+  const asOf = payload?.meta.as_of;
+  const marks = useMemo(() => {
+    const out: Record<string, string> = {};
+    if (!asOf) return out;
+    for (const [id, assessment] of Object.entries(assessments.byId)) {
+      if (Object.keys(assessment.answers).length) out[id] = markText(evaluate(assessment, asOf));
+    }
+    return out;
+  }, [assessments.byId, asOf]);
 
   const pickSeller = (name: string) => setQuery({ vendedor: name, grupo: null });
   const changeFilters = useCallback((next: ListFilters) => setQuery(filtersToQuery(next)), [setQuery]);
@@ -123,7 +141,8 @@ export function PortfolioPage() {
             </Empty>
           ) : (
             <>
-              <NextStepCard payload={payload} onSelect={setSelected} onShowGroup={showGroup} />
+              <NextStepCard payload={payload} onSelect={setSelected} onShowGroup={showGroup} marks={marks}
+                            onAssess={(block) => setAssessing({ mode: "set", pool: block })} />
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-semibold tracking-tight">{UI.portfolioTitle}</h2>
@@ -146,10 +165,15 @@ export function PortfolioPage() {
                 limits={payload.meta}
                 filtered={hasFilters(filters)}
                 actionShownFor={startGroup(payload)?.state}
+                marks={marks}
               />
             </>
           )}
-          <ReasonSheet items={openGroup?.items ?? []} selected={selected} onSelect={setSelected} meta={payload.meta} />
+          <ReasonSheet items={openGroup?.items ?? []} selected={selected} onSelect={setSelected} meta={payload.meta}
+                       marks={marks}
+                       onAssess={(item) => { setSelected(null); setAssessing({ mode: "single", pool: [item] }); }} />
+          <AssessmentSheet request={assessing} seller={seller} asOf={payload.meta.as_of} store={assessments}
+                           onClose={() => setAssessing(null)} />
         </>
       )}
     </div>

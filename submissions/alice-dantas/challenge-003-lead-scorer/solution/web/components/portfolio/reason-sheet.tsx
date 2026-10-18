@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import { ASSISTED } from "@/copy/assisted";
 import {
   GROUP_LABELS, ROLE_LABELS, UI, actionText, ageContextText, clientText, reasonText, suggestionText, suggestionsFor,
   tieNote, type AgeContextMeta, type ReasonRole,
@@ -25,10 +26,14 @@ type Props = {
   onSelect: (id: string | null) => void;
   /** Limites e mediana do histórico, para o contexto da idade. */
   meta: AgeContextMeta;
+  /** Abre a priorização assistida desta oportunidade; sem ela, a seção não aparece (ex.: visão da equipe). */
+  onAssess?: (item: Item) => void;
+  /** O selo de cada oportunidade já avaliada, por ID. */
+  marks?: Record<string, string>;
 };
 
 /** "Por que está aqui": motivos separados pelo papel que o contrato dá a cada um, próximo passo e navegação. */
-export function ReasonSheet({ items, selected, onSelect, meta }: Props) {
+export function ReasonSheet({ items, selected, onSelect, meta, onAssess, marks }: Props) {
   const index = items.findIndex((item) => item.opportunity_id === selected);
   const item = index >= 0 ? items[index] : undefined;
   const [copied, setCopied] = useState(false);
@@ -94,6 +99,16 @@ export function ReasonSheet({ items, selected, onSelect, meta }: Props) {
                 <h3 className="text-sm font-semibold">{UI.nextStep}</h3>
                 <p className="text-sm leading-relaxed">{actionText(item.next_action, item.account)}</p>
               </section>
+              {onAssess && (
+                <section aria-label={ASSISTED.single.title} className="flex flex-col gap-2 rounded-lg border p-3">
+                  <h3 className="text-sm font-semibold">{ASSISTED.single.title}</h3>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{ASSISTED.single.hint}</p>
+                  {marks?.[item.opportunity_id] && <Badge variant="reference" className="h-auto w-fit whitespace-normal">{marks[item.opportunity_id]}</Badge>}
+                  <Button size="sm" variant="outline" className="w-fit" onClick={() => onAssess(item)}>
+                    {marks?.[item.opportunity_id] ? ASSISTED.single.edit : ASSISTED.single.button}
+                  </Button>
+                </section>
+              )}
               <section aria-label={UI.suggestionsTitle} className="flex flex-col gap-2 rounded-lg border p-3">
                 <h3 className="text-sm font-semibold">{UI.suggestionsTitle}</h3>
                 <p className="text-xs leading-relaxed text-muted-foreground">{UI.suggestionsIntro}</p>

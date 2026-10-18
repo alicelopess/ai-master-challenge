@@ -50,6 +50,14 @@
 - **README:** "faixa provável" vira "o intervalo em que ela deve ficar", na linha da Inteligência.
 - **Fora desta revisão:** a ordem dentro dos empates (por código) e a regra não mudam. Ajudar a escolher entre empatadas com perguntas de triagem fica para decisão à parte.
 
+**Revisão 11** (18/10/2026): priorização assistida pelo vendedor ([ADR-010](./architecture.md#adr-010)). Origem: teste com seis personas simuladas, persona do vendedor sobrecarregado (Darcel): "tenho várias oportunidades empatadas, por qual começo?".
+- **O que é:** uma camada **declarada pelo vendedor**, separada do scoring. Ele escolhe de 2 a 5 oportunidades empatadas (ou avalia uma só), responde 7 perguntas (interesse, momento, necessidade, urgência, orçamento, decisão e próxima ação, sempre com "Não sei") e recebe uma ordem sugerida de trabalho por **pontos de qualificação declarada (0 a 100)**, com a quebra por pergunta, o que ainda não se sabe e o que fazer agora.
+- **Pontos:** pesos 20/20/15/15/15/10/5, definidos pela dona do produto (Urgência reduzida de 25 para 15 para somar 100). "Não sei" vale 0 ponto confirmado e não é um "não": a tela mostra também até onde a pontuação iria se o que se desconhece se confirmasse. Pontos iguais ficam empatados. Quem tem 4 ou mais respostas "Não sei" fica num bloco à parte, sem posição. Pesos e pontos por resposta são **hipóteses a validar**, e a tela diz isso.
+- **Categoria de trabalho** (o que fazer, não ordena): compromisso a cumprir ou a organizar, definir continuidade, avançar qualificação, retomar ou reavaliar, investigar primeiro, qualificar necessidade. "Hoje" é a data dos dados; ação com data até 7 dias depois (ou anterior) conta como compromisso a cumprir.
+- **Onde fica:** só no navegador (`localStorage`), sem texto livre; nada vai ao servidor nem ao CRM. Aparece no cartão "O que verificar agora" (empate no topo), no painel "Por que está aqui" e como selo discreto na Carteira, sem mudar a ordem oficial.
+- **Não muda:** classificação, ordem oficial, contrato (v7), API, CLI, backtest e Evidência. Nunca mostra porcentagem, "chance" ou "melhor oportunidade".
+- **Fora desta revisão:** validação com vendedores reais (protocolo na entrega de validação), persistência em backend com usuários autenticados e ordenação a partir de pontos aprendidos nos dados.
+
 ## 1. Problema e valor
 
 - **Problema:** segundo a Head de RevOps, os vendedores escolhem no feeling quais das 2.089 oportunidades abertas trabalhar, sem critério comum e visível. O custo disso nunca foi medido.
@@ -127,6 +135,12 @@
 - **Lógica:** taxa = ganhas ÷ fechadas, com Wilson 95%; teste de acaso por qui-quadrado nos segmentos com pelo menos 20 fechadas, com α = 0,05 ÷ 7 dimensões; decomposição da receita em volume × taxa × ticket pela variância do log, com pelo menos 4 segmentos; diagnósticos e descobertas por regras fixas com limites em `policy.py`.
 - **Dados ausentes:** abertas sem cliente saem dos recortes de setor, cliente e porte, e a página diz quantas; nenhum dado ausente vira "baixo potencial".
 - **Pronto quando:** AC-6.x verdes e a etapa 6 da jornada.
+
+**P0-5 · Priorização assistida pelo vendedor (Revisão 11).** Origem: persona do vendedor sobrecarregado (Darcel) e do iniciante (Boris): "tenho várias oportunidades empatadas, por qual começo?"; RD-06, RJ-02; [ADR-010](./architecture.md#adr-010).
+- **Descrição:** o vendedor responde 7 perguntas sobre 2 a 5 oportunidades empatadas (ou sobre uma) e recebe uma ordem sugerida de trabalho por pontos de qualificação declarada, com a explicação de cada ponto. É uma camada separada do scoring: usa só o que o vendedor declara e nada do que o backtest validou.
+- **Entradas:** as oportunidades empatadas da carteira (`tie_size`, mesmo grupo e produto), as respostas do vendedor e `meta.as_of` como "hoje".
+- **Saídas:** pontos confirmados e potencial (0 a 100), quebra por pergunta, categoria de trabalho, lacunas, orientação e ordem; resumo e plano para copiar. Tudo calculado no navegador e guardado só nele.
+- **Pronto quando:** AC-7.x verdes e o teste de compreensão com vendedores reais (protocolo em `docs/validacao-priorizacao-assistida.md`) feito.
 
 **Fora do escopo:** F-07, F-10 a F-13, RJ-01 a RJ-07, escrita no CRM e envio por Slack ou e-mail. F-08 volta como P0-4 (Revisão 5).
 
@@ -300,6 +314,22 @@ Fixture = arquivo sintético de teste. Os demais casos rodam nos CSVs reais com 
 | AC-6.10 | P0-4 | Fim de trimestre | o diagnóstico `quarter_end_outcome_mix` | o texto é exibido | aparece como conferência do registro da data de fechamento, nunca como sinal ou como "melhor época para vender" (RJ-02) |
 | AC-6.11 | P0-4 | Desempenho | os CSVs auditados | `/api/intelligence` é chamado | resposta em menos de 300 ms locais (cerca de 100 KB); o detalhamento das 4.238 ganhas cabe numa resposta |
 | AC-6.12 | P0-4 | Arranjo da página | a Inteligência aberta | a página é exibida | os filtros ficam num botão "Filtros" (popover com os sete campos), com o recorte ativo em chips e a contagem no botão; o corpo tem só números, gráficos e tabelas, com a leitura abaixo de cada tabela; diagnósticos e descobertas ficam em "Ver análises" (painel lateral, abas Processo e Resultados, com contagem) e as definições em "Como funciona" |
+| AC-7.1 | P0-5 | O núcleo não muda | a priorização assistida em uso | as respostas são salvas ou alteradas | a classificação, a ordem oficial, os contadores, `openapi.json`, as fixtures e a Evidência ficam idênticos (nenhum arquivo do back muda) |
+| AC-7.2 | P0-5 | Seleção | um empate no topo do cartão | o vendedor abre "Avaliar estas oportunidades" | a lista mostra todas as empatadas (mesmo grupo, produto e valor de tabela), nada vem marcado e só avança com 2 a 5 escolhidas; a sexta fica travada até desmarcar uma |
+| AC-7.3 | P0-5 | Questionário | uma oportunidade em avaliação | o vendedor responde | as 7 perguntas aparecem numa tela, cada uma com "Não sei", sem resposta pré-marcada; cada resposta é guardada na hora; dá para voltar, pular e deixar incompleta |
+| AC-7.4 | P0-5 | "Não sei" não é "não" | uma resposta "Não sei" | os pontos são calculados | vale 0 ponto confirmado, é contada à parte e aumenta a faixa "até N pontos"; nunca é tratada como resposta negativa |
+| AC-7.5 | P0-5 | Avaliação incompleta | uma pergunta sem resposta | o resultado é exibido | a oportunidade fica fora da ordem, listada como comparação parcial, com atalho para responder |
+| AC-7.6 | P0-5 | Política determinística | as mesmas respostas e a mesma data dos dados | a avaliação roda de novo | pontos, categoria, ordem e textos são idênticos; os pesos somam 100 |
+| AC-7.7 | P0-5 | Explicação | qualquer resultado | o cartão é exibido | traz os pontos, a quebra por pergunta, por que, o que ainda não se sabe, o que fazer agora e a data da avaliação, e o aviso "não é previsão de fechamento" |
+| AC-7.8 | P0-5 | Empate preservado | duas avaliações com os mesmos pontos | a ordem é exibida | ficam com a mesma posição, marcadas como empate, sem desempate por ID |
+| AC-7.9 | P0-5 | Quase tudo desconhecido | 4 ou mais respostas "Não sei" | o resultado é exibido | a oportunidade vai para o bloco "Investigar primeiro", sem posição e sem rótulo de qualidade |
+| AC-7.10 | P0-5 | Contradição | "ainda sem contato" com ação combinada (ou com necessidade confirmada) | as respostas são dadas | a tela pergunta se houve equívoco; sem confirmação, a oportunidade fica fora da ordem como "Revisar respostas" |
+| AC-7.11 | P0-5 | Ação com data | uma ação combinada com data | a categoria é decidida | até 7 dias depois da data dos dados (ou anterior), é compromisso a cumprir, e a anterior pede verificar a situação sem dizer que atrasou; depois disso, é só uma nota de compromisso futuro |
+| AC-7.12 | P0-5 | Ordem manual | um resultado com 2 ou mais na ordem | o vendedor sobe ou desce uma oportunidade | a posição muda, aparece "posição escolhida por você" e a justificativa continua ligada às respostas |
+| AC-7.13 | P0-5 | Sem previsão | todos os textos da priorização | a varredura roda | nenhuma porcentagem, "probabilidade", "chance" nem "melhor oportunidade", e o vocabulário proibido do AC-3.8 não aparece |
+| AC-7.14 | P0-5 | Só no navegador | o fluxo completo | é executado | nenhuma chamada além das leituras da API; as respostas ficam em `localStorage` e a tela avisa os limites; se o navegador não guarda, a avaliação segue e avisa |
+| AC-7.15 | P0-5 | Carteira | uma oportunidade avaliada | a Carteira é exibida | mostra o selo "Avaliada · N pontos · categoria" no cartão e na linha, sem mudar a ordem nem o grupo |
+| AC-7.16 | P0-5 | Celular | a avaliação aberta em 375 px | o painel é usado | ocupa a tela toda, sem rolagem horizontal, e funciona só com teclado |
 
 ---
 

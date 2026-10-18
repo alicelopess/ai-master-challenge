@@ -20,6 +20,8 @@ type Props = {
   /** A página a mostrar, como posições [início, fim) na lista; sem ela, todas. As contagens de faixa
    * continuam sendo da lista inteira. */
   range?: [number, number];
+  /** O selo de cada oportunidade já avaliada na priorização assistida, por ID. Não muda a ordem da lista. */
+  marks?: Record<string, string>;
 };
 
 function HelpHead({ label, help, className }: { label: string; help: string; className?: string }) {
@@ -41,7 +43,7 @@ function HelpHead({ label, help, className }: { label: string; help: string; cla
 }
 
 /** Lista na ordem que veio da API, com uma linha de título para cada faixa de valor de tabela. */
-export function ItemsTable({ items, selected, onSelect, showSeller = false, meta, range }: Props) {
+export function ItemsTable({ items, selected, onSelect, showSeller = false, meta, range, marks }: Props) {
   const columns = showSeller ? 7 : 6;
   const bandCounts = new Map<string, number>();
   items.forEach((item) => {
@@ -69,7 +71,7 @@ export function ItemsTable({ items, selected, onSelect, showSeller = false, meta
       );
     }
     rows.push(
-      <Row key={item.opportunity_id} item={item} showSeller={showSeller} meta={meta}
+      <Row key={item.opportunity_id} item={item} showSeller={showSeller} meta={meta} mark={marks?.[item.opportunity_id]}
            active={selected === item.opportunity_id} onSelect={onSelect} />,
     );
   });
@@ -96,11 +98,12 @@ type RowProps = {
   item: Item;
   showSeller: boolean;
   meta?: AgeContextMeta;
+  mark?: string;
   active: boolean;
   onSelect: (id: string) => void;
 };
 
-function Row({ item, showSeller, meta, active, onSelect }: RowProps) {
+function Row({ item, showSeller, meta, mark, active, onSelect }: RowProps) {
   return (
     <TableRow
       data-state={active ? "selected" : undefined}
@@ -121,6 +124,7 @@ function Row({ item, showSeller, meta, active, onSelect }: RowProps) {
         >
           {item.opportunity_id}
         </Button>
+        {mark && <Badge variant="reference" className="ml-2 h-auto whitespace-normal">{mark}</Badge>}
       </TableCell>
       {showSeller && <TableCell>{item.sales_agent}</TableCell>}
       <TableCell>

@@ -1,6 +1,6 @@
 # Architecture — Challenge 003 | Lead Scorer
 
-**Status:** Decisões propostas (ADR-001 a ADR-003, registradas em 15/10/2026); ADR-004 (16/10/2026) corrige o contrato entre back e front do ADR-003; ADR-005 (16/10/2026) registra o design system Rankio e a navegação entre páginas; ADR-006 (16/10/2026) troca a regra de grupos pela regra A e substitui em parte o ADR-001 e a decisão 5 do ADR-002; ADR-007 (17/10/2026) acrescenta a página Inteligência comercial, descritiva; ADR-009 (17/10/2026) põe Qualificar logo depois de Focar; ADR-008 (17/10/2026) troca o "próximo passo" por orientação de verificação, trata a conta ausente como lacuna de cadastro e dá contexto histórico à idade. A seção 1 mantém as **entradas de produto** como contexto; a seção 2 registra as decisões. Implementação não iniciada.
+**Status:** Decisões propostas (ADR-001 a ADR-003, registradas em 15/10/2026); ADR-004 (16/10/2026) corrige o contrato entre back e front do ADR-003; ADR-005 (16/10/2026) registra o design system Rankio e a navegação entre páginas; ADR-006 (16/10/2026) troca a regra de grupos pela regra A e substitui em parte o ADR-001 e a decisão 5 do ADR-002; ADR-007 (17/10/2026) acrescenta a página Inteligência comercial, descritiva; ADR-009 (17/10/2026) põe Qualificar logo depois de Focar; ADR-008 (17/10/2026) troca o "próximo passo" por orientação de verificação, trata a conta ausente como lacuna de cadastro e dá contexto histórico à idade; ADR-010 (18/10/2026) acrescenta a priorização assistida pelo vendedor, no navegador. A seção 1 mantém as **entradas de produto** como contexto; a seção 2 registra as decisões. Implementação não iniciada.
 **Última atualização:** 17/10/2026
 **Documentos de origem:** [discovery.md](./discovery.md) (Etapas 1 a 4) e [data-audit.md](./data-audit.md) (auditoria dos dados)
 
@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | **Antes de começar** | Como ler este documento? | [Como ler](#como-ler) · [Procedência](#procedencia) · [Convenção de identificadores](#ids) |
 | [**1. Contexto: entradas de produto**](#secao-1) | O que construir primeiro, para quem, com que evidência e sob quais limites? | [1.1 Conclusões](#sub-1-1) · [1.2 Requisitos](#sub-1-2) · [1.3 Matriz de oportunidades](#sub-1-3) · [1.4 Priorização](#sub-1-4) · [1.5 P0 e jornada](#sub-1-5) · [1.6 Rastreabilidade](#sub-1-6) · [1.7 Trade-offs](#sub-1-7) · [1.8 Fora do MVP](#sub-1-8) · [1.9 Sinais mínimos e restrições](#sub-1-9) · [1.10 Incertezas](#sub-1-10) |
-| [**2. Registros de decisão arquitetural**](#secao-2) | O que decidimos, por quê, o que rejeitamos, o que sacrificamos, como verificamos e quando mudaríamos de ideia? | [2.0 Panorama](#sub-2-0) · [ADR-001 Scoring](#adr-001) · [ADR-002 Dados](#adr-002) · [ADR-003 Tecnologia](#adr-003) · [ADR-004 Contrato](#adr-004) · [ADR-005 Design system](#adr-005) · [ADR-006 Regra A](#adr-006) · [ADR-007 Inteligência](#adr-007) · [ADR-008 Verificação](#adr-008) · [ADR-009 Ordem](#adr-009) |
+| [**2. Registros de decisão arquitetural**](#secao-2) | O que decidimos, por quê, o que rejeitamos, o que sacrificamos, como verificamos e quando mudaríamos de ideia? | [2.0 Panorama](#sub-2-0) · [ADR-001 Scoring](#adr-001) · [ADR-002 Dados](#adr-002) · [ADR-003 Tecnologia](#adr-003) · [ADR-004 Contrato](#adr-004) · [ADR-005 Design system](#adr-005) · [ADR-006 Regra A](#adr-006) · [ADR-007 Inteligência](#adr-007) · [ADR-008 Verificação](#adr-008) · [ADR-009 Ordem](#adr-009) · [ADR-010 Priorização assistida](#adr-010) |
 | [**3. Rastreabilidade e pendências**](#secao-3) | Onde cada questão aberta foi resolvida e o que ainda precisa ser corrigido? | [3.1 Questões do discovery](#sub-3-1) · [3.2 Requisitos por ADR](#sub-3-2) · [3.3 Evidência nova](#sub-3-3) · [3.4 Correções pendentes](#sub-3-4) |
 | **Apêndice** | Limites e registro | [Limites deste documento](#limites) |
 
@@ -52,7 +52,7 @@ Cada identificador tem um link para o ponto onde é definido.
 | [RJ-01](#rj-01) a [RJ-07](#rj-07) | Abordagens rejeitadas do MVP | [1.8](#sub-1-8) |
 | [Q-01](#q-01) a [Q-03](#q-03) | Questões adicionais para a arquitetura | [1.9](#sub-1-9) |
 | [U-01](#u-01) a [U-10](#u-10) | Incertezas | [1.10](#sub-1-10) |
-| [ADR-001](#adr-001) a [ADR-009](#adr-009) | Registros de decisão arquitetural | [2](#secao-2) |
+| [ADR-001](#adr-001) a [ADR-010](#adr-010) | Registros de decisão arquitetural | [2](#secao-2) |
 | [CP-01](#cp-01) a [CP-06](#cp-06) | Correções pendentes nos documentos de origem | [3.4](#sub-3-4) |
 | [P-001](./discovery.md#p-001) a [P-003](./discovery.md#p-003) · [H-001](./discovery.md#h-001) a [H-008](./discovery.md#h-008) | Problemas e hipóteses | [discovery 1.3](./discovery.md#sub-1-3) |
 | [HD-01](./discovery.md#hd-01) a [HD-08](./discovery.md#hd-08) | Decisões do mapa | [discovery 2.6](./discovery.md#sub-2-6) |
@@ -1272,6 +1272,41 @@ O campo `meta.contract_version` informa qual é a versão em uso.
 - **Não está provado que a ordem nova ajude:** é uma hipótese de produto. Só o piloto com grupo de controle mede se o vendedor que começa por Qualificar vende mais do que o que começa por verificar as antigas.
 - Todos os 10 vendedores sem Focar passam a começar por Qualificar.
 - **Condição para revisitar:** dados de desfecho para Prospecting, ou o piloto mostrar que a verificação das antigas (Confirmar) libera esforço melhor do que a prospecção.
+
+<a id="adr-010"></a>
+### ADR-010: Priorização assistida pelo vendedor, no navegador
+
+**Status:** Aceito em 18/10/2026. Não substitui nenhum ADR; abre uma exceção declarada à regra de fronteira do [ADR-004](#adr-004) ("o front não calcula regra de negócio").
+**Data:** 18/10/2026
+
+#### Contexto
+
+- **[Teste com personas]** Darcel (13 oportunidades empatadas, GTX Plus Pro, 5.482) e Boris pediram uma forma de escolher entre oportunidades que o scoring não separa: a ordem entre elas é só pelo código (ADR-008, "sem ordem entre si").
+- **[Dados]** O que separa essas oportunidades (resposta do cliente, necessidade, decisor, orçamento, ação combinada) **não está nos CSVs**. O desempate por idade e a "sessão de trabalho" foram descartados no ADR-008 por falta de prova.
+- **[Produto]** A dona do produto definiu uma avaliação **declarada pelo vendedor**, com pontos de 0 a 100 (pesos 20/20/15/15/15/10/5, Urgência reduzida de 25 para 15 para somar 100) e a categoria de trabalho ao lado dos pontos.
+
+#### Decisão
+
+- A priorização assistida é um **segundo mecanismo de decisão**, separado do scoring: recebe a oportunidade, coleta respostas e devolve um resultado à parte. **Nenhuma resposta altera grupo, ordem, contadores, contrato (v7), API, CLI, backtest ou Evidência.**
+- O motor roda **no front**, em `lib/assisted/` (função pura, constantes em `weights.ts`, `policy_version` `assisted-points-v1`). Não vai para o núcleo Python porque as respostas são sobre clientes e **nada deve ser gravado no backend**; mantê-las no navegador evita criar a primeira rota que não é GET e uma persistência com autenticação.
+- Os textos vivem em `copy/assisted.ts` e passam pelo mesmo vocabulário proibido (AC-3.8). O resultado nunca mostra porcentagem, "chance" ou "melhor oportunidade".
+- As respostas ficam em `localStorage` (`rankio.avaliacoes.v1`), por vendedor e oportunidade, sem texto livre.
+- **"Não sei" vale 0 ponto confirmado**, mas não é um "não": a tela mostra o potencial (até N pontos). Pontos iguais ficam empatados; 4 ou mais "Não sei" levam ao bloco à parte, sem posição.
+
+#### Alternativas rejeitadas
+
+- **Motor no núcleo Python com POST sem estado:** mantém a regra do ADR-004, mas cria a primeira rota não-GET (CORS, testes de somente leitura) e leva respostas de clientes ao servidor.
+- **Só perguntas orientativas, sem coletar respostas:** não diferencia as empatadas.
+- **Pontuação a partir dos dados:** não há dado que sustente.
+
+#### Consequências
+
+- **Os pesos e os pontos por resposta são hipóteses do desenho, não evidência.** A tela diz "pesos iniciais, a validar". Um número de 0 a 100 pode soar mais exato do que é; por isso há faixa, quebra por pergunta e o aviso fixo.
+- A regra de negócio do front fica restrita a esta camada, testada em unitário e coberta pelos AC-7.x.
+- Os dados somem se o navegador for limpo e não passam de um dispositivo para outro: serve para demonstração e piloto pequeno, não para dado oficial.
+- **Condição para revisitar:** o teste com vendedores reais mostrar que o número é lido como previsão, ou o piloto pedir persistência por usuário (backend com autenticação).
+
+---
 
 ---
 

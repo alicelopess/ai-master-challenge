@@ -186,6 +186,7 @@ A grade é de 4 px (escala padrão do Tailwind).
 | Listas | Table | `portfolio/ItemsTable` |
 | Páginas da tabela | Pagination | `app/TablePagination` |
 | "Por que está aqui" | Sheet + Separator + Button | `portfolio/ReasonSheet` |
+| Priorização assistida (escolher, responder, resultado) | Sheet + Checkbox + RadioGroup + Label + Input + Card + Table + Badge + Alert + Button | `assessment/AssessmentSheet` (`SelectStep`, `QuestionStep`, `ResultStep`, `ResultCard`, `ComparisonTable`) |
 | Ajuda de coluna | Tooltip | `portfolio/ItemsTable` |
 | Vazio, carregando, erro e aviso | Empty, Skeleton, Alert | Todas as páginas |
 | Gráficos da evidência e da Inteligência | Chart (Recharts) | `evidence/*`, `intelligence/BreakdownChart`, `intelligence/TimeResults` |

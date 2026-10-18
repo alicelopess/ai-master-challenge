@@ -3,8 +3,9 @@ import { ArrowRight, Compass } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ASSISTED } from "@/copy/assisted";
 import { GROUP_LABELS, UI, actionText, clientText, groupEmptyText, tieText } from "@/copy/pt-BR";
-import type { Group, SellerPipeline } from "@/lib/contract";
+import type { Group, Item, SellerPipeline } from "@/lib/contract";
 import { formatInt } from "@/lib/format";
 import { firstBlock, startGroup } from "@/lib/portfolio";
 
@@ -14,10 +15,14 @@ type Props = {
   payload: Pick<SellerPipeline, "groups" | "empty">;
   onSelect: (id: string) => void;
   onShowGroup: (state: Group["state"]) => void;
+  /** Abre a priorização assistida com as oportunidades empatadas do topo; sem ela, o botão não aparece. */
+  onAssess?: (block: Item[]) => void;
+  /** O selo de cada oportunidade já avaliada, por ID. */
+  marks?: Record<string, string>;
 };
 
 /** "Seu próximo passo": a ação do grupo por onde começar e o primeiro bloco da ordem que veio da API. */
-export function NextStepCard({ payload, onSelect, onShowGroup }: Props) {
+export function NextStepCard({ payload, onSelect, onShowGroup, onAssess, marks }: Props) {
   const group = startGroup(payload);
   if (!group || !group.next_action) return null;
   const head = payload.groups[0];
@@ -62,10 +67,22 @@ export function NextStepCard({ payload, onSelect, onShowGroup }: Props) {
                   {[item.product || UI.noProduct, clientText(item),
                     item.age_days === null ? null : UI.ageDays(item.age_days)].filter(Boolean).join(" · ")}
                 </span>
+                {marks?.[item.opportunity_id] && (
+                  <Badge variant="reference" className="mt-1 h-auto whitespace-normal">{marks[item.opportunity_id]}</Badge>
+                )}
               </Button>
             </li>
           ))}
         </ul>
+        {onAssess && block.length > 1 && first.sales_price !== null && (
+          <div className="flex flex-col gap-2 rounded-lg bg-accent p-3 text-accent-foreground sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm">
+              {ASSISTED.card.hint}
+              <span className="block text-xs text-muted-foreground">{ASSISTED.card.note}</span>
+            </p>
+            <Button className="shrink-0" onClick={() => onAssess(block)}>{ASSISTED.card.button}</Button>
+          </div>
+        )}
         <Button variant="link" className="w-fit px-0 text-primary-strong" onClick={() => onShowGroup(group.state)}>
           {block.length > shown.length
             ? UI.moreInTab(block.length - shown.length, GROUP_LABELS[group.state])

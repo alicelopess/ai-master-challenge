@@ -16,6 +16,7 @@ import {
 } from "@/lib/format";
 import { METRICS } from "@/lib/intelligence";
 
+import { assistedTexts } from "./assisted-texts";
 import {
   INTELLIGENCE_DEALS, INTELLIGENCE_PAGES, allPipelines, errors, intelligence, intelligenceDeals, load, readContract,
   sellerPipeline,
@@ -93,7 +94,8 @@ const strings = (value: unknown): string[] =>
 function renderedTexts(): string[] {
   const texts: string[] = [...strings([GROUP_LABELS, BRAND, NAV, PAGES, ROLE_LABELS, UI, TEAM, RANKER_LABELS,
     RANKER_DESCRIPTIONS, RANKER_TECH_DESCRIPTIONS, EVIDENCE, EVIDENCE_LANGUAGES, EVIDENCE_TEXT, TECH_COLUMNS, RULES,
-    INTELLIGENCE, DIMENSION_LABELS, METRIC_LABELS, OUTCOME_LABELS]), DATA_WARNING, PEOPLE_DRIVERS_NOTE];
+    INTELLIGENCE, DIMENSION_LABELS, METRIC_LABELS, OUTCOME_LABELS]), DATA_WARNING, PEOPLE_DRIVERS_NOTE,
+    ...assistedTexts()];
   for (const page of pages) texts.push(...intelligenceTexts(page));
   for (const name of INTELLIGENCE_DEALS) {
     const deals = intelligenceDeals(name);

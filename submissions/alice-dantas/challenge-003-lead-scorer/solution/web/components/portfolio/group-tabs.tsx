@@ -33,6 +33,8 @@ type Props = {
   pageSize?: number;
   /** Grupo cujo próximo passo já está no cartão "Seu próximo passo" (não repete a frase). */
   actionShownFor?: State;
+  /** O selo de cada oportunidade avaliada na priorização assistida, por ID. */
+  marks?: Record<string, string>;
 };
 
 /** O que cada grupo significa, na ordem das abas: as mesmas definições que o resumo de cada grupo mostra. */
@@ -63,6 +65,7 @@ function GroupGuide({ groups, limits }: { groups: Group[]; limits: AgeLimits }) 
 /** Um grupo por aba, na ordem da API, com a contagem no rótulo. */
 export function GroupTabs({
   groups, tab, onTab, selected, onSelect, limits, showSeller, filtered = false, pageSize = PAGE_SIZE, actionShownFor,
+  marks,
 }: Props) {
   const [pages, setPages] = useState<Partial<Record<State, number>>>({});
   const tables = useRef<Partial<Record<State, HTMLDivElement | null>>>({});
@@ -114,7 +117,7 @@ export function GroupTabs({
             {group.items.length ? (
               <Card className="scroll-mt-24 gap-0 py-0" ref={(node) => { tables.current[group.state] = node; }}>
                 <ItemsTable items={group.items} selected={selected} onSelect={onSelect} showSeller={showSeller}
-                            meta={limits} range={range} />
+                            meta={limits} range={range} marks={marks} />
                 <TablePagination page={page} total={group.items.length} pageSize={pageSize}
                                  onPage={(next) => goTo(group.state, next)} />
               </Card>
