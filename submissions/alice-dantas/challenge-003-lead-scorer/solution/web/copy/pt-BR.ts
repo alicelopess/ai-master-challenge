@@ -105,6 +105,7 @@ export const UI = {
   suggestionIf: "Se",
   ageContextTitle: "Idade no contexto do histórico",
   ageContextNote: "Isso descreve as vendas que fecharam; não diz o que acontece com esta negociação.",
+  bandRangesLink: "ver as faixas em Como funciona",
   ageContextHelp: "Abrir o contexto histórico da idade",
   copyId: "Copiar ID",
   copied: "ID copiado",

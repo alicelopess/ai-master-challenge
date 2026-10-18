@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,11 @@ export function ItemsTable({ items, selected, onSelect, showSeller = false, meta
         <TableRow key={`band-${band}`} className="hover:bg-transparent">
           <TableHead colSpan={columns} scope="colgroup" className="h-9 bg-muted/50 text-xs font-semibold">
             {band} ({bandCountText(pageCounts.get(band) ?? 0, bandCounts.get(band) ?? 0)})
+            {item.value_band && (
+              <Button asChild variant="link" size="xs" className="ml-2 h-auto px-0 text-xs font-normal text-primary-strong">
+                <Link href="/como-funciona">{UI.bandRangesLink}</Link>
+              </Button>
+            )}
           </TableHead>
         </TableRow>,
       );

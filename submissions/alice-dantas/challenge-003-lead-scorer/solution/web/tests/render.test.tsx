@@ -119,6 +119,18 @@ describe("carteira", () => {
     for (const gone of [/^Ordem:/, /^Nota:/, /Sem oportunidades em/, /^8 abertas/]) expect(screen.queryByText(gone)).toBeNull();
   });
 
+  test("cada título de faixa de valor leva às faixas em Como funciona; a faixa sem valor não tem o link", async () => {
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(bySeller);
+    render(<PortfolioPage />);
+    await screen.findByRole("heading", { name: UI.portfolioTitle });
+    const items = sellerPipeline("pipeline-ana-alfa").groups[0].items;
+    const links = await screen.findAllByRole("link", { name: UI.bandRangesLink });
+    const bands = new Set(items.map((item) => item.value_band).filter(Boolean));
+    expect(links).toHaveLength(bands.size);
+    for (const link of links) expect(link.getAttribute("href")).toBe("/como-funciona");
+  });
+
   test("o último vendedor volta na próxima visita; Focar vazio abre no grupo indicado", async () => {
     window.localStorage.setItem("rankio.vendedor", "Bruno Beta");
     stubApi(bySeller);
