@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { UI, ageContextText, bandCountText, bandTitle, clientText, missingShort, type AgeContextMeta } from "@/copy/pt-BR";
 import type { Item } from "@/lib/contract";
 import { formatDate, formatInt } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 type Props = {
   items: Item[];
@@ -26,7 +27,7 @@ type Props = {
 
 function HelpHead({ label, help, className }: { label: string; help: string; className?: string }) {
   return (
-    <TableHead className={className}>
+    <TableHead className={cn("whitespace-normal", className)}>
       <span className="inline-flex items-center gap-1">
         {label}
         <Tooltip>
@@ -81,11 +82,11 @@ export function ItemsTable({ items, selected, onSelect, showSeller = false, meta
       <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead className="pl-4">{UI.columns.id}</TableHead>
-          {showSeller && <TableHead>{UI.columns.seller}</TableHead>}
+          {showSeller && <TableHead className="whitespace-normal">{UI.columns.seller}</TableHead>}
           <TableHead>{UI.columns.product}</TableHead>
-          <TableHead>{UI.columns.client}</TableHead>
+          <TableHead className="whitespace-normal">{UI.columns.client}</TableHead>
           <HelpHead label={UI.columns.price} help={UI.columnHelp.price} className="text-right" />
-          <TableHead>{UI.columns.engaged}</TableHead>
+          <TableHead className="whitespace-normal">{UI.columns.engaged}</TableHead>
           <HelpHead label={UI.columns.age} help={UI.columnHelp.age} className="pr-4 text-right" />
         </TableRow>
       </TableHeader>
@@ -126,14 +127,14 @@ function Row({ item, showSeller, meta, mark, active, onSelect }: RowProps) {
         </Button>
         {mark && <Badge variant="reference" className="ml-2 h-auto whitespace-normal">{mark}</Badge>}
       </TableCell>
-      {showSeller && <TableCell>{item.sales_agent}</TableCell>}
+      {showSeller && <TableCell className="whitespace-normal">{item.sales_agent}</TableCell>}
       <TableCell>
         <span className="inline-flex items-center gap-2">
           {item.product || UI.empty}
           {item.missing_field && <Badge variant="missing">{missingShort(item.missing_field)}</Badge>}
         </span>
       </TableCell>
-      <TableCell className={item.account ? undefined : "text-muted-foreground"}>{clientText(item)}</TableCell>
+      <TableCell className={cn("whitespace-normal", !item.account && "text-muted-foreground")}>{clientText(item)}</TableCell>
       <TableCell className="text-right tabular-nums">
         {item.sales_price === null ? UI.empty : formatInt(item.sales_price)}
       </TableCell>

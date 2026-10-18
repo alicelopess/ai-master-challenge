@@ -16,7 +16,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/app/page";
 import {
   CONTRACT_ERROR, DIMENSION_LABELS, EVIDENCE, EVIDENCE_TEXT, GROUP_LABELS, INTELLIGENCE, NAV, RANKER_LABELS,
-  ROLE_LABELS, RULES, TECH_COLUMNS, TEAM, UI, actionText, bandRange, bandTitle, diagnosticText, errorText,
+  ROLE_LABELS, RULES, TECH_COLUMNS, TEAM, UI, actionText, bandRange, bandTitle, diagnosticText, groupZeroNote, errorText,
   ageContextText, findingText, groupDescription, groupEmptyText, historyEmptyText, pipelineEmptyText, reasonText,
   suggestionText, suggestionsFor, tieNote, tieText,
 } from "@/copy/pt-BR";
@@ -336,6 +336,38 @@ describe("equipe", () => {
     await waitFor(() => expect(fetch.mock.calls.some(([url]) => String(url).endsWith("/api/pipeline"))).toBe(true));
   });
 
+  test("Focar em zero diz que o zero é de tempo, não de qualidade; com Focar, a frase não aparece", async () => {
+    const payload = load("team-all") as TeamPipeline;
+    stubApi(() => ok({ ...payload, summary: { ...payload.summary, focar: 0 } }));
+    navigation.go("/equipe");
+    const { unmount } = render(<TeamPage />);
+    const summary = await screen.findByRole("region", { name: UI.teamSummaryLabel });
+    expect(within(summary).getByText(groupZeroNote("focar", 0, payload.meta)!)).toBeTruthy();
+    unmount();
+
+    stubApi(() => ok(payload));
+    render(<TeamPage />);
+    const again = await screen.findByRole("region", { name: UI.teamSummaryLabel });
+    expect(within(again).queryByText(groupZeroNote("focar", 0, payload.meta)!)).toBeNull();
+  });
+
+  test("Copiar tabela leva todos os vendedores do filtro, separados por tabulação", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    stubApi(() => ok(load("team-all")));
+    navigation.go("/equipe");
+    render(<TeamPage />);
+    const payload = teamPipeline("team-all");
+    fireEvent.click(await screen.findByRole("button", { name: TEAM.copyTable }));
+    const text = (writeText.mock.calls[0] as unknown as [string])[0];
+    const lines = text.split("\n");
+    expect(lines).toHaveLength(payload.by_seller.length + 1);
+    expect(lines[0].split("\t")).toEqual([UI.columns.seller, TEAM.total,
+      ...payload.ordering.group_order.map((state) => GROUP_LABELS[state]), TEAM.withoutAccount]);
+    expect(lines[1].split("\t")[0]).toBe(payload.by_seller[0].seller);
+    expect(await screen.findByText(TEAM.tableCopied)).toBeTruthy();
+  });
+
   test("filtro sem oportunidades", async () => {
     stubApi(() => ok(load("team-empty")));
     navigation.go("/equipe?gerente=Ninguem&visao=oportunidades");
@@ -376,7 +408,8 @@ describe("equipe por vendedor", () => {
     const links = within(table).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual(rows.map((row) => row.seller));
     expect(links[0].getAttribute("href")).toBe(`/carteira?vendedor=${encodeURIComponent(rows[0].seller)}`);
-    expect(within(table).queryAllByRole("button")).toEqual([]);
+    // O único botão da tabela copia; nenhum ordena.
+    expect(within(table).queryAllByRole("button").map((button) => button.textContent)).toEqual([TEAM.copyTable]);
     expect(screen.getByRole("link", { name: TEAM.seeEvidence }).getAttribute("href")).toBe("/evidencia");
   });
 

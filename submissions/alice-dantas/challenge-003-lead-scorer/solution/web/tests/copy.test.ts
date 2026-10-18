@@ -6,7 +6,7 @@ import {
   METRIC_LABELS, NAV, OUTCOME_LABELS, PAGES, PEOPLE_DRIVERS_NOTE, RANKER_DESCRIPTIONS, RANKER_LABELS,
   RANKER_TECH_DESCRIPTIONS, ROLE_LABELS, RULES, TECH_COLUMNS, TEAM, UI, accountWarning, actionText, bandRange,
   bandCountText, bandTitle, chanceText, clientText, dataLabel, dealsEmptyText, diagnosticText, driversText, errorText, findingText,
-  emptyGroupsText, groupDescription, groupEmptyText, historyEmptyText, legendText, metricText, missingShort, pipelineEmptyText,
+  emptyGroupsText, groupDescription, groupZeroNote, groupEmptyText, historyEmptyText, legendText, metricText, missingShort, pipelineEmptyText,
   ageContextText, reasonText, segmentLabel, sizeLabel, summaryCounts, tieNote, tieText, suggestionText, suggestionsFor, valueLabel,
 } from "@/copy/pt-BR";
 import type { ChanceTest, Evidence, Intelligence, Meta, RevenueDrivers, Rules } from "@/lib/contract";
@@ -122,7 +122,7 @@ function renderedTexts(): string[] {
     RULES.wonLimit(rules.meta.won_cycle_limit_days, rules.meta.cycle_percentile),
     RULES.longestLimit(rules.meta.cycle_limit_days), ...rules.value_bands.map(bandRange),
     ...rules.value_bands.map((b) => bandTitle(b.band)));
-  texts.push(UI.seeGroup(GROUP_LABELS.revisar), UI.moreInTab(3, GROUP_LABELS.focar), UI.whyHereFor("EPP"),
+  texts.push(groupZeroNote("focar", 0, rules.meta)!, UI.seeGroup(GROUP_LABELS.revisar), UI.moreInTab(3, GROUP_LABELS.focar), UI.whyHereFor("EPP"),
     UI.position(1, 5), UI.ageDays(10), UI.ofTotal(2089), UI.pagination.page(2), UI.pagination.range(26, 50, 1291),
     UI.startWithTie(tieText(3, "GTX Plus Pro", 5482)));
   for (const p of pipelines) {
@@ -359,7 +359,8 @@ describe("textos de referência", () => {
       "Todas as negociações em andamento estão abertas há mais de 138 dias. Comece por Confirmar: verifique no CRM " +
         "quais seguem ativas.");
     expect(pipelineEmptyText(sellerPipeline("pipeline-carla-gama").empty!)).toBe(
-      "Nenhuma oportunidade aberta para este vendedor.");
+      "Nenhuma oportunidade aberta para este vendedor. A base não registra nenhuma aberta no nome dele; se isso não era " +
+        "esperado, confira o cadastro no CRM.");
     expect(clientText(itemOf("pipeline-ana-alfa", "E138"))).toBe("sem cliente registrado");
     expect(valueLabel("médio")).toBe("valor de tabela médio");
   });
@@ -368,7 +369,8 @@ describe("textos de referência", () => {
     const meta: Meta = sellerPipeline("pipeline-ana-alfa").meta;
     expect((["focar", "acompanhar", "revisar", "qualificar", "nao_pontuavel"] as const)
       .map((g) => groupDescription(g, meta))).toEqual([
-      "Abertas há até 100 dias. No histórico, 90% das vendas ganhas fecharam dentro desse tempo.",
+      "Abertas há até 100 dias. No histórico, 90% das vendas ganhas fecharam dentro desse tempo. É sobre o tempo " +
+        "aberta, não sobre a chance de fechar.",
       "Abertas há mais de 100 e até 138 dias: mais do que 90% das vendas ganhas levaram, sem passar da venda mais " +
         "longa já fechada.",
       "Para verificar se a negociação continua: abertas há mais de 138 dias, mais do que qualquer venda já fechada " +
@@ -461,10 +463,17 @@ describe("textos de referência da inteligência", () => {
     expect(driversText("seller", sellers)).toBe("A receita varia 9,3 vezes entre 30 vendedores. Quanto da diferença " +
       "cada fator explica: volume de fechadas, 61,5%; receita por venda (depende dos produtos vendidos), 39,9%; taxa de ganho, quase " +
       "nada. A diferença vem sobretudo do volume de fechadas e da receita por venda (depende dos produtos vendidos).");
+    const offsetting: RevenueDrivers = { segments_used: 5, spread_ratio: 3.2, volume_share: -0.303, conversion_share: -0.084,
+      ticket_share: 1.387, main: ["ticket"], negligible: [] };
+    const text = driversText("seller", offsetting);
+    expect(text).toBe("A receita varia 3,2 vezes entre 5 vendedores. Neste recorte os fatores se compensam, então a " +
+      "diferença não se divide em porcentagens. A diferença vem sobretudo da receita por venda (depende dos produtos vendidos).");
+    expect(text).not.toMatch(/%/);
     const chance: ChanceTest = { verdict: "within_chance", segments_tested: 30, segments_small: 0, closed_tested: 6711,
       min_win_rate: 0.549784, max_win_rate: 0.703947, p_value: 0.2639, alpha: 0.007143 };
     expect(chanceText("seller", chance)).toBe(
-      "Entre 30 vendedores, a taxa de ganho vai de 55,0% a 70,4%: diferença pequena demais para ser confiável com 6.711 fechadas.");
+      "Entre 30 vendedores, a taxa de ganho vai de 55,0% a 70,4%: diferença pequena demais para ser confiável com 6.711 fechadas: " +
+        "poderia aparecer mesmo que os recortes fossem iguais.");
   });
 
   test("descobertas: concentração e cobertura do catálogo", () => {

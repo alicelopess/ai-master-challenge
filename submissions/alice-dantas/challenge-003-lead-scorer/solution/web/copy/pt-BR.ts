@@ -162,7 +162,17 @@ export const TEAM = {
   total: "Abertas",
   withoutAccount: "Sem cliente",
   seeEvidence: "A lista ajuda? Ver a evidência",
+  copyTable: "Copiar tabela",
+  tableCopied: "Tabela copiada",
+  copyTableHelp: "Copia todos os vendedores do filtro, para colar em planilha ou e-mail.",
 } as const;
+
+/** Grupo em zero na equipe: para Focar, o zero fala de tempo de abertura, não da qualidade das oportunidades. */
+export function groupZeroNote(state: GroupKey, count: number, limits: AgeLimits): string | null {
+  if (count > 0 || state !== "focar") return null;
+  return `Nenhuma aberta há até ${limits.won_cycle_limit_days} dias. Isso não quer dizer que a equipe esteja sem boas ` +
+    "oportunidades.";
+}
 
 // Estratégias comparadas no backtest (evidence.rankers[].code).
 export const RANKER_LABELS: Record<RankerCode, string> = {
@@ -415,7 +425,8 @@ export function groupDescription(state: GroupKey, limits: AgeLimits): string {
   const { won_cycle_limit_days: won, cycle_limit_days: longest, cycle_percentile: percentile } = limits;
   switch (state) {
     case "focar":
-      return `Abertas há até ${won} dias. No histórico, ${percentile}% das vendas ganhas fecharam dentro desse tempo.`;
+      return `Abertas há até ${won} dias. No histórico, ${percentile}% das vendas ganhas fecharam dentro desse tempo. ` +
+        "É sobre o tempo aberta, não sobre a chance de fechar.";
     case "acompanhar":
       return `Abertas há mais de ${won} e até ${longest} dias: mais do que ${percentile}% das vendas ganhas levaram, ` +
         "sem passar da venda mais longa já fechada.";
@@ -549,7 +560,8 @@ export function groupEmptyText(empty: GroupEmptyState): string {
 }
 
 const PIPELINE_EMPTY: Record<PipelineEmpty["code"], string> = {
-  no_open_for_seller: "Nenhuma oportunidade aberta para este vendedor.",
+  no_open_for_seller: "Nenhuma oportunidade aberta para este vendedor. A base não registra nenhuma aberta no nome dele; " +
+    "se isso não era esperado, confira o cadastro no CRM.",
   no_open_for_filter: "Nenhuma oportunidade aberta para este filtro.",
 };
 
@@ -688,7 +700,7 @@ const DIMENSION_PLURALS: Record<Dimension, string> = {
 
 export const METRIC_LABELS: Record<MetricKey, string> = {
   revenue: "Receita", won: "Vendas ganhas", win_rate: "Taxa de ganho", ticket: "Receita por venda",
-  revenue_per_closed: "Receita por fechada", median_won_cycle_days: "Ciclo mediano de ganho",
+  revenue_per_closed: "Receita por fechada", median_won_cycle_days: "Tempo típico até ganhar",
 };
 
 /** Valor de uma métrica na unidade dela; "—" quando não há fechadas. */
@@ -780,8 +792,8 @@ export const INTELLIGENCE = {
     won: "Vendas ganhas",
     wonOf: (closed: number) => `de ${formatInt(closed)} fechadas`,
     winRate: "Taxa de ganho",
-    winRateRange: (low: number, high: number) => `entre ${formatPct(low)} e ${formatPct(high)}, com boa segurança`,
-    cycle: "Ciclo mediano de ganho",
+    winRateRange: (low: number, high: number) => `entre ${formatPct(low)} e ${formatPct(high)}: onde a taxa de ganho real provavelmente está`,
+    cycle: "Tempo típico até ganhar",
     days: (days: number) => `${formatInt(days)} dias`,
     lostCycle: (days: number) => `${formatInt(days)} dias nas fechadas sem venda`,
   },
@@ -995,11 +1007,17 @@ function driverShare(drivers: RevenueDrivers, driver: Driver): string {
 /** A decomposição da receita de uma dimensão, em palavras. */
 export function driversText(dimension: Dimension, drivers: RevenueDrivers): string {
   const plural = DIMENSION_PLURALS[dimension];
-  const parts = (["volume", "ticket", "conversion"] as const).map((d) => `${DRIVER_LABELS[d]}, ${driverShare(drivers, d)}`);
   const main = drivers.main.length ? ` A diferença vem sobretudo ${listText(drivers.main.map((d) => DRIVER_FROM[d]))}.`
     : "";
-  return `A receita varia ${formatDecimal(drivers.spread_ratio, 1)} vezes entre ${drivers.segments_used} ${plural}. ` +
-    `Quanto da diferença cada fator explica: ${parts.join("; ")}.${main}`;
+  const spread = `A receita varia ${formatDecimal(drivers.spread_ratio, 1)} vezes entre ${drivers.segments_used} ${plural}. `;
+  // Fatia negativa ou acima de 100% (os fatores se compensam): em porcentagem não dá para ler, então não aparece.
+  const shares = (["volume", "ticket", "conversion"] as const).filter((d) => !drivers.negligible.includes(d))
+    .map((d) => drivers[`${d}_share` as const]);
+  if (shares.some((share) => share < 0 || share > 1)) {
+    return `${spread}Neste recorte os fatores se compensam, então a diferença não se divide em porcentagens.${main}`;
+  }
+  const parts = (["volume", "ticket", "conversion"] as const).map((d) => `${DRIVER_LABELS[d]}, ${driverShare(drivers, d)}`);
+  return `${spread}Quanto da diferença cada fator explica: ${parts.join("; ")}.${main}`;
 }
 
 /** Nota que acompanha a decomposição quando a dimensão é de pessoas. */
@@ -1014,12 +1032,13 @@ export function chanceText(dimension: Dimension, chance: ChanceTest): string {
     case "within_chance":
       return `Entre ${formatInt(chance.segments_tested)} ${plural}, a taxa de ganho vai de ` +
         `${formatPct(chance.min_win_rate ?? 0)} a ${formatPct(chance.max_win_rate ?? 0)}: diferença pequena demais para ser ` +
-        `confiável com ${formatInt(chance.closed_tested)} fechadas.${small}`;
+        `confiável com ${formatInt(chance.closed_tested)} fechadas: poderia aparecer mesmo que os recortes fossem ` +
+        `iguais.${small}`;
     case "beyond_chance":
       return `Entre ${formatInt(chance.segments_tested)} ${plural}, a taxa de ganho vai de ` +
         `${formatPct(chance.min_win_rate ?? 0)} a ${formatPct(chance.max_win_rate ?? 0)}: diferença grande o bastante para ` +
-        `ser confiável com ${formatInt(chance.closed_tested)} fechadas. Descreve este histórico; não prova causa nem que ` +
-        `vá se repetir.${small}`;
+        `ser confiável com ${formatInt(chance.closed_tested)} fechadas: dificilmente apareceria se os recortes fossem ` +
+        `iguais. Descreve este histórico; não prova causa nem que vá se repetir.${small}`;
     case "too_few_closed":
       return `Poucas fechadas por ${DIMENSION_LABELS[dimension].toLowerCase()} para comparar a taxa de ganho.${small}`;
     default:
