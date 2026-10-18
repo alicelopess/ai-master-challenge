@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, Copy, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { RemoveAssessment } from "@/components/assessment/remove-assessment";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -28,12 +29,14 @@ type Props = {
   meta: AgeContextMeta;
   /** Abre a priorização assistida desta oportunidade; sem ela, a seção não aparece (ex.: visão da equipe). */
   onAssess?: (item: Item) => void;
+  /** Remove a avaliação de uma oportunidade (só com o selo). */
+  onRemoveAssessment?: (id: string) => void;
   /** O selo de cada oportunidade já avaliada, por ID. */
   marks?: Record<string, string>;
 };
 
 /** "Por que está aqui": motivos separados pelo papel que o contrato dá a cada um, próximo passo e navegação. */
-export function ReasonSheet({ items, selected, onSelect, meta, onAssess, marks }: Props) {
+export function ReasonSheet({ items, selected, onSelect, meta, onAssess, onRemoveAssessment, marks }: Props) {
   const index = items.findIndex((item) => item.opportunity_id === selected);
   const item = index >= 0 ? items[index] : undefined;
   const [copied, setCopied] = useState(false);
@@ -107,6 +110,9 @@ export function ReasonSheet({ items, selected, onSelect, meta, onAssess, marks }
                   <Button size="sm" variant="outline" className="w-fit" onClick={() => onAssess(item)}>
                     {marks?.[item.opportunity_id] ? ASSISTED.single.edit : ASSISTED.single.button}
                   </Button>
+                  {onRemoveAssessment && marks?.[item.opportunity_id] && (
+                    <RemoveAssessment id={item.opportunity_id} onRemove={() => onRemoveAssessment(item.opportunity_id)} />
+                  )}
                 </section>
               )}
               <section aria-label={UI.suggestionsTitle} className="flex flex-col gap-2 rounded-lg border p-3">

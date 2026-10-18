@@ -44,7 +44,11 @@ export function ResultStep({ ids, items, store, seller, asOf, single, onEdit, on
     return (
       <ResultCard key={evaluation.opportunityId} evaluation={evaluation} item={items[evaluation.opportunityId]}
                   assessedAt={assessment.assessedAt} policyVersion={assessment.policyVersion}
-                  onEdit={() => onEdit(evaluation.opportunityId)} {...extra} />
+                  onEdit={() => onEdit(evaluation.opportunityId)}
+                  onRemove={() => {
+                    store.remove(evaluation.opportunityId);
+                    if (single) onClose();
+                  }} {...extra} />
     );
   };
 

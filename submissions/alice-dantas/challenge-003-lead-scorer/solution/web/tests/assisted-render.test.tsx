@@ -191,6 +191,62 @@ describe("do cartão ao resultado", () => {
   });
 });
 
+describe("remover uma avaliação", () => {
+  const stored = () => JSON.parse(window.localStorage.getItem("rankio.avaliacoes.v1") ?? "{}").assessments?.["Ana Alfa"] ?? {};
+
+  async function twoAnswered() {
+    const { sheet } = await openTieSheet();
+    for (const box of within(sheet).getAllByRole("checkbox")) fireEvent.click(box);
+    fireEvent.click(within(sheet).getByRole("button", { name: ASSISTED.select.next }));
+    for (const index of [1, 2]) {
+      await screen.findByText(ASSISTED.ask.progress(index, 2));
+      answer(FULL_NO_ACTION);
+      next();
+    }
+    return screen.findByRole("list", { name: ASSISTED.result.title });
+  }
+
+  test("no cartão de resultado: pede confirmação e, ao confirmar, apaga só aquela avaliação", async () => {
+    const list = await twoAnswered();
+    fireEvent.click(screen.getByRole("button", { name: ASSISTED.remove.label("E050") }));
+    expect(await screen.findByText(ASSISTED.remove.title)).toBeTruthy();
+    expect(Object.keys(stored()).sort()).toEqual(["E050", "E100"]); // ainda não apagou
+    fireEvent.click(screen.getByRole("button", { name: ASSISTED.remove.confirm }));
+    await waitFor(() => expect(Object.keys(stored())).toEqual(["E100"]));
+    expect([...list.querySelectorAll("[data-opportunity]")].map((el) => el.getAttribute("data-opportunity"))).toEqual(["E100"]);
+    expect(screen.getByRole("region", { name: ASSISTED.result.partialTitle })).toBeTruthy();
+  });
+
+  test("cancelar mantém as respostas", async () => {
+    await twoAnswered();
+    fireEvent.click(screen.getByRole("button", { name: ASSISTED.remove.label("E100") }));
+    fireEvent.click(await screen.findByRole("button", { name: ASSISTED.remove.cancel }));
+    expect(Object.keys(stored()).sort()).toEqual(["E050", "E100"]);
+    expect(screen.getByRole("dialog", { name: ASSISTED.title })).toBeTruthy();
+  });
+
+  test("no painel \"Por que está aqui\": o selo some da Carteira depois de remover", async () => {
+    const first = (load("pipeline-ana-alfa") as SellerPipeline).groups[0].items[0];
+    window.localStorage.setItem("rankio.avaliacoes.v1", JSON.stringify({
+      assessments: { "Ana Alfa": { [first.opportunity_id]: {
+        opportunityId: first.opportunity_id, answers: FULL_NO_ACTION, actionDate: null, confirmedConflicts: [],
+        assessedAt: "2018-01-02T10:00:00.000Z", policyVersion: "assisted-points-v1", version: 1 } } },
+      orders: {},
+    }));
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(structuredClone(load("pipeline-ana-alfa")) as SellerPipeline);
+    render(<PortfolioPage />);
+    fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(first.opportunity_id) }));
+    const reasons = await screen.findByRole("dialog", { name: UI.whyHere });
+    expect(within(reasons).getByText(ASSISTED.mark.done(95, CATEGORY_LABELS.define_continuity))).toBeTruthy();
+    fireEvent.click(within(reasons).getByRole("button", { name: ASSISTED.remove.label(first.opportunity_id) }));
+    fireEvent.click(await screen.findByRole("button", { name: ASSISTED.remove.confirm }));
+    await waitFor(() => expect(stored()).toEqual({}));
+    expect(screen.queryByText(ASSISTED.mark.done(95, CATEGORY_LABELS.define_continuity))).toBeNull();
+    expect(within(reasons).queryByRole("button", { name: ASSISTED.remove.label(first.opportunity_id) })).toBeNull();
+  });
+});
+
 describe("respostas que se contradizem", () => {
   test("pede confirmação antes de classificar e deixa o vendedor dizer que está correto", async () => {
     const { sheet } = await openTieSheet();

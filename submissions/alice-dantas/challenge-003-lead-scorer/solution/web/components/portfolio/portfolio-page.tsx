@@ -170,7 +170,7 @@ export function PortfolioPage() {
             </>
           )}
           <ReasonSheet items={openGroup?.items ?? []} selected={selected} onSelect={setSelected} meta={payload.meta}
-                       marks={marks}
+                       marks={marks} onRemoveAssessment={assessments.remove}
                        onAssess={(item) => { setSelected(null); setAssessing({ mode: "single", pool: [item] }); }} />
           <AssessmentSheet request={assessing} seller={seller} asOf={payload.meta.as_of} store={assessments}
                            onClose={() => setAssessing(null)} />

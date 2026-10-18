@@ -54,7 +54,7 @@
 - **O que é:** uma camada **declarada pelo vendedor**, separada do scoring. Ele escolhe de 2 a 5 oportunidades empatadas (ou avalia uma só), responde 7 perguntas (interesse, momento, necessidade, urgência, orçamento, decisão e próxima ação, sempre com "Não sei") e recebe uma ordem sugerida de trabalho por **pontos de qualificação declarada (0 a 100)**, com a quebra por pergunta, o que ainda não se sabe e o que fazer agora.
 - **Pontos:** pesos 20/20/15/15/15/10/5, definidos pela dona do produto (Urgência reduzida de 25 para 15 para somar 100). "Não sei" vale 0 ponto confirmado e não é um "não": a tela mostra também até onde a pontuação iria se o que se desconhece se confirmasse. Pontos iguais ficam empatados. Quem tem 4 ou mais respostas "Não sei" fica num bloco à parte, sem posição. Pesos e pontos por resposta são **hipóteses a validar**, e a tela diz isso.
 - **Categoria de trabalho** (o que fazer, não ordena): compromisso a cumprir ou a organizar, definir continuidade, avançar qualificação, retomar ou reavaliar, investigar primeiro, qualificar necessidade. "Hoje" é a data dos dados; ação com data até 7 dias depois (ou anterior) conta como compromisso a cumprir.
-- **Onde fica:** só no navegador (`localStorage`), sem texto livre; nada vai ao servidor nem ao CRM. Aparece no cartão "O que verificar agora" (empate no topo), no painel "Por que está aqui" e como selo discreto na Carteira, sem mudar a ordem oficial.
+- **Onde fica:** só no navegador (`localStorage`), sem texto livre; nada vai ao servidor nem ao CRM. Aparece no cartão "O que verificar agora" (empate no topo), no painel "Por que está aqui" e como selo discreto na Carteira, sem mudar a ordem oficial. Cada avaliação pode ser removida, com confirmação.
 - **Não muda:** classificação, ordem oficial, contrato (v7), API, CLI, backtest e Evidência. Nunca mostra porcentagem, "chance" ou "melhor oportunidade".
 - **Fora desta revisão:** validação com vendedores reais (protocolo na entrega de validação), persistência em backend com usuários autenticados e ordenação a partir de pontos aprendidos nos dados.
 
@@ -333,6 +333,7 @@ Fixture = arquivo sintético de teste. Os demais casos rodam nos CSVs reais com 
 
 ---
 
+| AC-7.17 | P0-5 | Remover avaliação | uma oportunidade avaliada | o vendedor usa "Remover avaliação" no cartão de resultado ou no painel "Por que está aqui" | a tela pede confirmação; ao confirmar, as respostas daquela oportunidade (e as ordens escolhidas que a incluíam) saem do navegador e o selo some da Carteira; cancelar não apaga nada |
 **Pronto para build: SIM**
 
 **Bloqueios remanescentes** (nenhum impede começar a fatia 0):

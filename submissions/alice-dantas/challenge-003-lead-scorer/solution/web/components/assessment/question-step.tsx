@@ -16,6 +16,8 @@ import { DIMENSIONS, OPTIONS, type Assessment, type Dimension } from "@/lib/assi
 import { conflictsOf } from "@/lib/assisted/policy";
 import type { Item } from "@/lib/contract";
 
+import { ASSESSMENT_CTA } from "./cta";
+
 type Props = {
   item: Item;
   assessment: Assessment;
@@ -118,7 +120,7 @@ export function QuestionStep({ item, assessment, index, total, onChange, onBack,
         {onBack ? <Button variant="outline" onClick={onBack}>{ASSISTED.ask.back}</Button> : <span />}
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={onSkip}>{ASSISTED.ask.skip}</Button>
-          <Button onClick={onNext}>{last ? ASSISTED.ask.finish : ASSISTED.ask.next}</Button>
+          <Button className={ASSESSMENT_CTA} onClick={onNext}>{last ? ASSISTED.ask.finish : ASSISTED.ask.next}</Button>
         </div>
       </SheetFooter>
     </>

@@ -11,6 +11,8 @@ import { MAX_SET, MIN_SET } from "@/lib/assisted/model";
 import type { Item } from "@/lib/contract";
 import { formatInt } from "@/lib/format";
 
+import { ASSESSMENT_CTA } from "./cta";
+
 type Props = {
   pool: Item[];
   chosen: string[];
@@ -62,7 +64,7 @@ export function SelectStep({ pool, chosen, onChange, onNext, assessed }: Props) 
         </ul>
       </div>
       <SheetFooter className="flex-row items-center justify-end border-t">
-        <Button disabled={chosen.length < MIN_SET} onClick={onNext}>{ASSISTED.select.next}</Button>
+        <Button className={ASSESSMENT_CTA} disabled={chosen.length < MIN_SET} onClick={onNext}>{ASSISTED.select.next}</Button>
       </SheetFooter>
     </>
   );

@@ -14,6 +14,8 @@ import type { Evaluation } from "@/lib/assisted/policy";
 import type { Item } from "@/lib/contract";
 import { formatDate } from "@/lib/format";
 
+import { RemoveAssessment } from "./remove-assessment";
+
 type Props = {
   evaluation: Evaluation;
   item: Item | undefined;
@@ -22,6 +24,7 @@ type Props = {
   assessedAt: string;
   policyVersion: string;
   onEdit: () => void;
+  onRemove: () => void;
   onMove?: (delta: -1 | 1) => void;
   canUp?: boolean;
   canDown?: boolean;
@@ -29,7 +32,7 @@ type Props = {
 
 /** Um resultado: pontos e faixa, categoria, por que, o que ainda não se sabe e o que fazer agora. */
 export function ResultCard({
-  evaluation, item, position, assessedAt, policyVersion, onEdit, onMove, canUp, canDown,
+  evaluation, item, position, assessedAt, policyVersion, onEdit, onRemove, onMove, canUp, canDown,
 }: Props) {
   const id = evaluation.opportunityId;
   const category = evaluation.category;
@@ -99,6 +102,7 @@ export function ResultCard({
             <Pencil aria-hidden />
             {ASSISTED.result.edit}
           </Button>
+          <RemoveAssessment id={id} onRemove={onRemove} />
           {onMove && (
             <>
               <Button size="icon-sm" variant="outline" aria-label={ASSISTED.result.up(id)} disabled={!canUp}

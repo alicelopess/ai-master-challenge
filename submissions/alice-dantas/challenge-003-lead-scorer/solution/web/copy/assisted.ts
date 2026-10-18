@@ -264,6 +264,14 @@ export const ASSISTED = {
     copy: "Copiar resumo e plano",
     copied: "Resumo copiado",
   },
+  remove: {
+    button: "Remover avaliação",
+    label: (id: string) => `Remover avaliação de ${id}`,
+    title: "Remover esta avaliação?",
+    body: "As respostas desta oportunidade serão apagadas deste navegador e o selo some da Carteira.",
+    confirm: "Remover",
+    cancel: "Cancelar",
+  },
   mark: {
     done: (points: number, label: string) => `Avaliada · ${points} pontos · ${label}`,
     aside: "Avaliada · investigar primeiro",

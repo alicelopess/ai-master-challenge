@@ -1,5 +1,6 @@
 import { ArrowRight, Compass } from "lucide-react";
 
+import { ASSESSMENT_CTA } from "@/components/assessment/cta";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { GROUP_LABELS, UI, actionText, clientText, groupEmptyText, tieText } fro
 import type { Group, Item, SellerPipeline } from "@/lib/contract";
 import { formatInt } from "@/lib/format";
 import { firstBlock, startGroup } from "@/lib/portfolio";
+import { cn } from "@/lib/utils";
 
 const SHOWN = 5;
 
@@ -80,7 +82,9 @@ export function NextStepCard({ payload, onSelect, onShowGroup, onAssess, marks }
               {ASSISTED.card.hint}
               <span className="block text-xs text-muted-foreground">{ASSISTED.card.note}</span>
             </p>
-            <Button className="shrink-0" onClick={() => onAssess(block)}>{ASSISTED.card.button}</Button>
+            <Button className={cn("shrink-0", ASSESSMENT_CTA)} onClick={() => onAssess(block)}>
+              {ASSISTED.card.button}
+            </Button>
           </div>
         )}
         <Button variant="link" className="w-fit px-0 text-primary-strong" onClick={() => onShowGroup(group.state)}>
