@@ -421,7 +421,8 @@ export function groupDescription(state: GroupKey, limits: AgeLimits): string {
         "sem passar da venda mais longa já fechada.";
     case "revisar":
       return `Para verificar se a negociação continua: abertas há mais de ${longest} dias, mais do que qualquer ` +
-        "venda já fechada aqui. O sistema não vê ligações nem reuniões.";
+        "venda já fechada aqui. Confirmar é limpar a carteira, não prever venda: o sistema não vê ligações nem " +
+        "reuniões.";
     case "qualificar":
       return "Ainda em prospecção, sem data de início da negociação.";
     case "nao_pontuavel":
@@ -589,6 +590,10 @@ export const emptyGroupsText = (payload: Counted): string | null => {
 export const clientText = (item: Item): string => item.account ?? NO_ACCOUNT;
 
 export const valueLabel = (band: ValueBand): string => `valor de tabela ${band}`;
+
+/** Título de faixa: o total da faixa no grupo; se a página mostra só parte dela, quantas mostra. */
+export const bandCountText = (onPage: number, total: number): string =>
+  onPage < total ? `${formatInt(onPage)} de ${formatInt(total)} nesta página` : formatInt(total);
 
 export const bandTitle = (band: ValueBand | null): string => (band ? capitalize(valueLabel(band)) : "Sem valor de tabela");
 

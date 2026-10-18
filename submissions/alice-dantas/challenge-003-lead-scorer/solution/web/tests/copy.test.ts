@@ -5,7 +5,7 @@ import {
   BRAND, DATA_WARNING, DIMENSION_LABELS, EVIDENCE, EVIDENCE_LANGUAGES, EVIDENCE_TEXT, GROUP_LABELS, INTELLIGENCE,
   METRIC_LABELS, NAV, OUTCOME_LABELS, PAGES, PEOPLE_DRIVERS_NOTE, RANKER_DESCRIPTIONS, RANKER_LABELS,
   RANKER_TECH_DESCRIPTIONS, ROLE_LABELS, RULES, TECH_COLUMNS, TEAM, UI, accountWarning, actionText, bandRange,
-  bandTitle, chanceText, clientText, dataLabel, dealsEmptyText, diagnosticText, driversText, errorText, findingText,
+  bandCountText, bandTitle, chanceText, clientText, dataLabel, dealsEmptyText, diagnosticText, driversText, errorText, findingText,
   emptyGroupsText, groupDescription, groupEmptyText, historyEmptyText, legendText, metricText, missingShort, pipelineEmptyText,
   ageContextText, reasonText, segmentLabel, sizeLabel, summaryCounts, tieNote, tieText, suggestionText, suggestionsFor, valueLabel,
 } from "@/copy/pt-BR";
@@ -147,6 +147,14 @@ function renderedTexts(): string[] {
   texts.push(...Object.values(errors()).map(errorText));
   return texts;
 }
+
+describe("título de faixa", () => {
+  test("o total da faixa; se a página mostra só parte dela, quantas mostra", () => {
+    expect(bandCountText(9, 9)).toBe("9");
+    expect(bandCountText(8, 9)).toBe("8 de 9 nesta página");
+    expect(bandCountText(1, 1200)).toBe("1 de 1.200 nesta página");
+  });
+});
 
 describe("cobertura: todo código do contrato tem texto", () => {
   const seen = {
@@ -362,7 +370,7 @@ describe("textos de referência", () => {
       "Abertas há mais de 100 e até 138 dias: mais do que 90% das vendas ganhas levaram, sem passar da venda mais " +
         "longa já fechada.",
       "Para verificar se a negociação continua: abertas há mais de 138 dias, mais do que qualquer venda já fechada " +
-        "aqui. O sistema não vê ligações nem reuniões.",
+        "aqui. Confirmar é limpar a carteira, não prever venda: o sistema não vê ligações nem reuniões.",
       "Ainda em prospecção, sem data de início da negociação.",
       "Falta produto, preço de tabela ou data de engajamento no CRM.",
     ]);

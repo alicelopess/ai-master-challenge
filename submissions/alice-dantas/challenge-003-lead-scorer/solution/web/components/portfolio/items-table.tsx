@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { UI, ageContextText, bandTitle, clientText, missingShort, type AgeContextMeta } from "@/copy/pt-BR";
+import { UI, ageContextText, bandCountText, bandTitle, clientText, missingShort, type AgeContextMeta } from "@/copy/pt-BR";
 import type { Item } from "@/lib/contract";
 import { formatDate, formatInt } from "@/lib/format";
 
@@ -48,6 +48,11 @@ export function ItemsTable({ items, selected, onSelect, showSeller = false, meta
     const band = bandTitle(item.value_band);
     bandCounts.set(band, (bandCounts.get(band) ?? 0) + 1);
   });
+  const pageCounts = new Map<string, number>();
+  items.slice(...(range ?? [0, items.length])).forEach((item) => {
+    const band = bandTitle(item.value_band);
+    pageCounts.set(band, (pageCounts.get(band) ?? 0) + 1);
+  });
 
   const rows: ReactNode[] = [];
   let band: string | null = null;
@@ -58,7 +63,7 @@ export function ItemsTable({ items, selected, onSelect, showSeller = false, meta
       rows.push(
         <TableRow key={`band-${band}`} className="hover:bg-transparent">
           <TableHead colSpan={columns} scope="colgroup" className="h-9 bg-muted/50 text-xs font-semibold">
-            {band} ({bandCounts.get(band)})
+            {band} ({bandCountText(pageCounts.get(band) ?? 0, bandCounts.get(band) ?? 0)})
           </TableHead>
         </TableRow>,
       );

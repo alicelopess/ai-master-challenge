@@ -44,6 +44,12 @@
 - **Guarda de vocabulário:** `copy.test.ts` passa a proibir "margem de erro", "faixa provável", "dentro do acaso", "ticket" e "mix" nos textos da Inteligência e da Evidência em linguagem de negócio.
 - **Fora desta revisão:** a ordem da lista, os grupos, os limites e o backtest não mudam, nem o contrato (v7). A Kary notou que a ordem dentro de Focar é, na prática, o preço de catálogo; a Evidência já diz que a regra rende 4,6 pontos a mais que só o valor de tabela, e essa mensagem fica. Não foi reproduzida a falha de troca de aba em "Ver análises".
 
+**Revisão 10** (17/10/2026): títulos de faixa por página e uma frase sobre Confirmar. Origem: teste com seis personas simuladas, persona do vendedor sobrecarregado (Darcel).
+- **Faixa dividida em páginas:** o título de faixa mostra o total da faixa no grupo; quando a página mostra só parte dela, mostra "X de Y nesta página". Antes, "Valor de tabela baixo (9)" aparecia sobre 8 linhas, e parecia faltar uma.
+- **Confirmar:** a definição do grupo ganha "Confirmar é limpar a carteira, não prever venda", pois a Darcel perguntou se as negociações velhas estão mortas ou só esquecidas, e a base não responde isso.
+- **README:** "faixa provável" vira "o intervalo em que ela deve ficar", na linha da Inteligência.
+- **Fora desta revisão:** a ordem dentro dos empates (por código) e a regra não mudam. Ajudar a escolher entre empatadas com perguntas de triagem fica para decisão à parte.
+
 ## 1. Problema e valor
 
 - **Problema:** segundo a Head de RevOps, os vendedores escolhem no feeling quais das 2.089 oportunidades abertas trabalhar, sem critério comum e visível. O custo disso nunca foi medido.
