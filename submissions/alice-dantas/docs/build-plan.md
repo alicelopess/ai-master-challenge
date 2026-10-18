@@ -231,7 +231,7 @@ groups[]: state, label, count, empty_message, next_step,
 #### 4.3 Entrega · ⏱ 20 min · corte aos 30
 
 - **Entradas:** tudo o que está verde.
-- **Arquivos:** `challenge-003-lead-scorer/README.md` (Setup, Lógica, Limitações, desvios DV-1 a DV-10 e fallbacks da seção 3), `process-log/PROCESS_LOG.md` (Etapa 07), `submissions/alice-dantas/README.md` (linha da entrega).
+- **Arquivos:** `README.md` (hoje, o detalhe está em `docs/referencia-tecnica.md`: Setup, Lógica, Limitações, desvios DV-1 a DV-10 e fallbacks da seção 3), `process-log/PROCESS_LOG.md` (Etapa 07), `submissions/alice-dantas/README.md` (linha da entrega).
 - **Depende de:** 4.2.
 - **Comando:** setup do zero pelo README em um `venv` temporário e `pytest`; etapas 2 a 6 do `commit-flow.md`.
 - **Teste esperado:** nenhum passo fora do README; staging sem `.csv`, `.venv`, `node_modules` ou `.next`; nenhum arquivo fora de `submissions/alice-dantas/`.
@@ -266,7 +266,7 @@ groups[]: state, label, count, empty_message, next_step,
 
 ## 6. Arquivos
 
-**Criar** (em `challenge-003-lead-scorer/`):
+**Criar** (em `submissions/alice-dantas/`; na época do plano, dentro de `challenge-003-lead-scorer/`, pasta achatada na entrega):
 
 | Arquivo | Spec |
 | --- | --- |

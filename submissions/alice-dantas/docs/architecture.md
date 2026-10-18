@@ -31,7 +31,7 @@ Cada afirmação traz uma destas etiquetas:
 
 | Etiqueta | Significado |
 | --- | --- |
-| **[Briefing]** | Está escrito no [README do challenge](../../../../challenges/build-003-lead-scorer/README.md) ou nas regras do repositório ([README raiz](../../../../README.md), [CONTRIBUTING](../../../../CONTRIBUTING.md)) |
+| **[Briefing]** | Está escrito no [README do challenge](../../../challenges/build-003-lead-scorer/README.md) ou nas regras do repositório ([README raiz](../../../README.md), [CONTRIBUTING](../../../CONTRIBUTING.md)) |
 | **[Dados]** | Foi medido na auditoria (referência `A§`) ou em **consulta direta** |
 | **[Hipótese]** | É plausível, mas nem os dados nem a empresa confirmaram |
 | **[Escolha]** | É decisão de projeto: reversível e de nossa responsabilidade, não um fato |
@@ -84,7 +84,7 @@ Cada identificador tem um link para o ponto onde é definido.
 | Sinais, valor e KPIs | [discovery, Etapa 2](./discovery.md#etapa-2) | Sinais mínimos e valor esperado |
 | Evidência dos dados e classificação das hipóteses | [discovery, Etapa 3](./discovery.md#etapa-3) e [data-audit.md](./data-audit.md) | Evidência de cada funcionalidade |
 | Prioridade, restrições e questões abertas | [discovery, Etapa 4](./discovery.md#etapa-4) | Requisitos, restrições e handoff |
-| Requisitos do challenge e regras de submissão | [README do challenge](../../../../challenges/build-003-lead-scorer/README.md) e [submission-guide](../../../../submission-guide.md) | Requisitos RB |
+| Requisitos do challenge e regras de submissão | [README do challenge](../../../challenges/build-003-lead-scorer/README.md) e [submission-guide](../../../submission-guide.md) | Requisitos RB |
 
 <a id="sub-1-1"></a>
 ### 1.1. Conclusões

@@ -434,7 +434,7 @@ AUC no teste, por corte:
 
 **Ambiente.** Python 3.9.6 (sistema); `.venv` em `solution/`; pandas 2.2.3, numpy 2.0.2, scipy 1.13.1, scikit-learn 1.5.2 (fixados em `solution/requirements.txt`). Seeds: 20260101.
 
-**Como reproduzir** (a partir de `submissions/alice-dantas/challenge-003-lead-scorer/solution/`):
+**Como reproduzir** (a partir de `submissions/alice-dantas/solution/`):
 
 ```bash
 python3 -m venv .venv

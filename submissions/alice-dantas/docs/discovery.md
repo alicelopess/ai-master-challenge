@@ -61,7 +61,7 @@ Atenção: `S1` a `S22` (sinais) e `S§n` (seção do script) são coisas difere
 >
 > **O que esta etapa responde:** qual é o problema, de quem é, e para decidir o quê.
 >
-> **O que fizemos:** lemos o [briefing do challenge](../../../../challenges/build-003-lead-scorer/README.md) e o transformamos em problema, decisões de cada papel, hipóteses sobre as causas e impactos possíveis.
+> **O que fizemos:** lemos o [briefing do challenge](../../../challenges/build-003-lead-scorer/README.md) e o transformamos em problema, decisões de cada papel, hipóteses sobre as causas e impactos possíveis.
 >
 > **O que encontramos:** o problema é plausível, mas é uma **percepção** da liderança: não há custo, [baseline](#g-baseline) nem medição. A ferramenta veio como solução antes de provar que priorizar é o gargalo. E o "valor" de uma oportunidade em aberto não existe até ela fechar.
 >

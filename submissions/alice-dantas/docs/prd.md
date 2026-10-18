@@ -156,7 +156,7 @@
 - Radix, `cn`, lucide, next-themes e cmdk;
 - Recharts 3.10, só no gráfico da Evidência. Sem banco, sem segredo, sem LLM e sem rede em execução.
 
-**Comandos do avaliador** (em `submissions/alice-dantas/challenge-003-lead-scorer/solution/`):
+**Comandos do avaliador** (em `submissions/alice-dantas/solution/`):
 
 ```bash
 # 0. Baixar o dataset no Kaggle pelo navegador e copiar os 4 CSVs para data/raw/
@@ -173,7 +173,7 @@ cd web && npm run typecheck && npm test            # testes do front, sem a API 
 
 | Artefato | Risco | Regra |
 | --- | --- | --- |
-| CSVs brutos | Ficam fora do PR, mas `git add -f` os incluiria, e o [commit-flow](../../docs/commit-flow.md) não filtra `.csv` | Excluir `data/raw/*.csv` no `git add` e na etapa 5; publicar `data/raw/README.md` com link e SHA-256 |
+| CSVs brutos | Ficam fora do PR, mas `git add -f` os incluiria, e o [commit-flow](./commit-flow.md) não filtra `.csv` | Excluir `data/raw/*.csv` no `git add` e na etapa 5; publicar `data/raw/README.md` com link e SHA-256 |
 | `outputs/` da CLI | Republica o dataset linha a linha | Fora do PR; fixtures só sintéticas |
 | `audit_log.txt` | Traz caminho absoluto local (`/Users/...`) | Trocar por caminho relativo |
 | Credenciais | Token do Kaggle; `.env` do Next.js | Download pelo navegador; URL da API com padrão no código |
