@@ -182,7 +182,7 @@ A grade é de 4 px (escala padrão do Tailwind).
 | Negociações por trás de um número | Sheet + Tabs + Table + Pagination | `intelligence/DealsSheet` |
 | Linguagem da Evidência (negócio ou técnica) | Select | `evidence/EvidencePage` |
 | Próximo passo, números, blocos de explicação | Card | `portfolio/NextStepCard`, `team/TeamSummary` |
-| Grupos da carteira | Tabs | `portfolio/GroupTabs` |
+| Grupos da carteira | Tabs + Popover + Button | `portfolio/GroupTabs` (o botão "O que significa cada grupo?" ao lado das abas abre o `GroupGuide`) |
 | Listas | Table | `portfolio/ItemsTable` |
 | Páginas da tabela | Pagination | `app/TablePagination` |
 | "Por que está aqui" | Sheet + Separator + Button | `portfolio/ReasonSheet` |
@@ -237,7 +237,7 @@ A grade é de 4 px (escala padrão do Tailwind).
   - **Sheet largo:** a largura usa a mesma variante do primitivo (`data-[side=right]:sm:max-w-3xl` nas negociações, `sm:max-w-2xl` nos painéis), senão a dele (`max-w-sm`) vence.
 - **Filtros dependentes:** cada filtro mostra só as opções compatíveis com o outro; por exemplo, com um gerente escolhido aparecem só os escritórios dele.
 - **Duas linguagens** (Evidência):
-  - **Linguagem de negócio,** o padrão para gestores: pontos em palavras ("4,6 pontos a menos, margem de erro entre 2,5 e 6,8"), sem siglas nem jargão estatístico, que um teste confere.
+  - **Linguagem de negócio,** o padrão para gestores: pontos em palavras ("4,6 pontos a menos; a diferença real deve ficar entre 2,5 e 6,8 pontos a menos"), sem siglas nem jargão estatístico, que um teste confere.
   - **O recorte sem as negociações que nunca fecham** fica em largura cheia, com o veredito do back num Alert `warning` quando a regra servida fica atrás: é a limitação principal da evidência.
   - **Linguagem técnica,** para quem audita o método: Val@K, P@K, Lift@K, AUC, IC95% e o desenho do backtest.
   - A escolha fica na URL (`?linguagem=tecnica`), e os números são os mesmos nas duas.
