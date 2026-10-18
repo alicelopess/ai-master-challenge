@@ -275,6 +275,7 @@ test("inteligência sem jargão estatístico nem promessa de chance", () => {
   const texts = [...pages.flatMap(intelligenceTexts), ...strings(INTELLIGENCE)];
   for (const text of texts) {
     expect(text, text).not.toMatch(/\bpp\b|IC95%|\bIC\b|qui-quadrado|Bonferroni|Wilson|p-valor|\bp =|AUC|score/i);
+    expect(text, text).not.toMatch(/margem de erro|faixa provável|dentro do acaso|ticket|\bmix\b/i);
   }
 });
 
@@ -389,11 +390,11 @@ describe("textos de referência", () => {
     expect(negocio.question(10, 90)).toBe(
       "Se cada vendedor trabalhasse as 10 primeiras da lista, quanto do valor vendido nos 90 dias seguintes estaria nelas?");
     expect(negocio.delta({ value: -0.046, low: -0.068, high: -0.025 })).toBe(
-      "4,6 pontos a menos que a regra atual (margem de erro: entre 2,5 e 6,8 pontos a menos)");
+      "4,6 pontos a menos que a regra atual (a diferença real deve ficar entre 2,5 e 6,8 pontos a menos)");
     expect(negocio.delta({ value: 0.015, low: 0.002, high: 0.027 })).toBe(
-      "1,5 ponto a mais que a regra atual (margem de erro: entre 0,2 e 2,7 pontos a mais)");
+      "1,5 ponto a mais que a regra atual (a diferença real deve ficar entre 0,2 e 2,7 pontos a mais)");
     expect(negocio.delta({ value: 0.004, low: -0.008, high: 0.016 })).toBe(
-      "0,4 ponto a mais que a regra atual (margem de erro: entre 0,8 a menos e 1,6 a mais)");
+      "0,4 ponto a mais que a regra atual (a diferença real deve ficar entre 0,8 a menos e 1,6 a mais)");
     expect(negocio.delta({ value: 0, low: 0, high: 0 })).toBe("Igual à regra atual");
     expect(tecnica.delta({ value: -0.046, low: -0.068, high: -0.025 })).toBe(
       "Δ −4,6 pp contra a regra atual (IC95%: −6,8 pp a −2,5 pp)");
@@ -401,16 +402,16 @@ describe("textos de referência", () => {
     const behind = { code: "reference_behind", ranker: "list_price_only",
       delta: { value: 0.01, low: 0.003, high: 0.019 } } as const;
     expect(negocio.verdict(behind)).toBe("Sem elas, \"Só valor de tabela\" rende 1,0 ponto a mais que a regra atual " +
-      "(margem de erro: entre 0,3 e 1,9 pontos a mais). A vantagem da regra atual vem dessas negociações, e elas podem " +
+      "(a diferença real deve ficar entre 0,3 e 1,9 pontos a mais). A vantagem da regra atual vem dessas negociações, e elas podem " +
       "ser um efeito de como a base foi montada.");
     expect(tecnica.verdict(behind)).toBe("\"Só valor de tabela\": Δ +1,0 pp (IC95%: +0,3 pp a +1,9 pp) contra a regra " +
       "servida. A vantagem da regra servida depende das negociações sem desfecho.");
     expect(negocio.verdict({ code: "inconclusive", ranker: null, delta: null })).toBe(
-      "Sem elas, a diferença entre a regra atual e as outras fica dentro da margem de erro.");
+      "Sem elas, a diferença entre a regra atual e as outras é pequena demais para ser confiável.");
     // A linguagem de negócio não usa siglas nem jargão estatístico.
     const business = [...strings(negocio), ...Object.values(RANKER_DESCRIPTIONS), negocio.question(10, 90),
       negocio.headline(10), negocio.columns.value(10), negocio.columns.delta(10), negocio.verdict(behind)];
-    for (const line of business) expect(line, line).not.toMatch(/\bpp\b|IC95%|AUC|Val@|P@|Lift|bootstrap|oráculo/i);
+    for (const line of business) expect(line, line).not.toMatch(/\bpp\b|IC95%|AUC|Val@|P@|Lift|bootstrap|oráculo|margem de erro|acaso|ticket|\bmix\b/i);
   });
 });
 
@@ -448,12 +449,12 @@ describe("textos de referência da inteligência", () => {
     const sellers: RevenueDrivers = { segments_used: 30, spread_ratio: 9.34, volume_share: 0.614719,
       conversion_share: -0.013776, ticket_share: 0.399058, main: ["volume", "ticket"], negligible: ["conversion"] };
     expect(driversText("seller", sellers)).toBe("A receita varia 9,3 vezes entre 30 vendedores. Quanto da diferença " +
-      "cada fator explica: volume de fechadas, 61,5%; ticket por venda (mix de produto), 39,9%; taxa de ganho, quase " +
-      "nada. A diferença vem sobretudo do volume de fechadas e do ticket por venda (mix de produto).");
+      "cada fator explica: volume de fechadas, 61,5%; receita por venda (depende dos produtos vendidos), 39,9%; taxa de ganho, quase " +
+      "nada. A diferença vem sobretudo do volume de fechadas e da receita por venda (depende dos produtos vendidos).");
     const chance: ChanceTest = { verdict: "within_chance", segments_tested: 30, segments_small: 0, closed_tested: 6711,
       min_win_rate: 0.549784, max_win_rate: 0.703947, p_value: 0.2639, alpha: 0.007143 };
     expect(chanceText("seller", chance)).toBe(
-      "Entre 30 vendedores, a taxa de ganho vai de 55,0% a 70,4%: dentro do que o acaso explica com 6.711 fechadas.");
+      "Entre 30 vendedores, a taxa de ganho vai de 55,0% a 70,4%: diferença pequena demais para ser confiável com 6.711 fechadas.");
   });
 
   test("descobertas: concentração e cobertura do catálogo", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Inbox } from "lucide-react";
+import { ArrowRight, CircleHelp, Inbox } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { TablePagination } from "@/components/app/table-pagination";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GROUP_LABELS, UI, actionText, groupDescription, groupEmptyText, type AgeContextMeta, type AgeLimits } from "@/copy/pt-BR";
 import type { Group } from "@/lib/contract";
@@ -34,6 +35,31 @@ type Props = {
   actionShownFor?: State;
 };
 
+/** O que cada grupo significa, na ordem das abas: as mesmas definições que o resumo de cada grupo mostra. */
+function GroupGuide({ groups, limits }: { groups: Group[]; limits: AgeLimits }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="text-muted-foreground">
+          <CircleHelp aria-hidden />
+          {UI.groupGuide.button}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[min(26rem,calc(100vw-2rem))] gap-3 text-left">
+        <p className="text-xs font-medium text-muted-foreground">{UI.groupGuide.title}</p>
+        <dl className="flex flex-col gap-3">
+          {groups.map((group) => (
+            <div key={group.state} className="flex flex-col gap-0.5">
+              <dt className="font-medium">{GROUP_LABELS[group.state]}</dt>
+              <dd className="text-muted-foreground">{groupDescription(group.state, limits)}</dd>
+            </div>
+          ))}
+        </dl>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /** Um grupo por aba, na ordem da API, com a contagem no rótulo. */
 export function GroupTabs({
   groups, tab, onTab, selected, onSelect, limits, showSeller, filtered = false, pageSize = PAGE_SIZE, actionShownFor,
@@ -56,17 +82,20 @@ export function GroupTabs({
 
   return (
     <Tabs id="grupos" value={tab} onValueChange={(value) => onTab(value as State)} className="gap-4">
-      <TabsList aria-label={UI.groupsLabel}
-                className="grid w-full grid-cols-2 group-data-horizontal/tabs:h-auto sm:inline-flex sm:w-fit sm:group-data-horizontal/tabs:h-9">
-        {groups.map((group) => (
-          <TabsTrigger key={group.state} value={group.state} className="h-8 px-3 sm:h-[calc(100%-1px)]">
-            {GROUP_LABELS[group.state]}
-            <Badge variant={group.count ? group.state : "secondary"} className="tabular-nums">
-              {formatInt(group.count)}
-            </Badge>
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <TabsList aria-label={UI.groupsLabel}
+                  className="grid w-full grid-cols-2 group-data-horizontal/tabs:h-auto sm:inline-flex sm:w-fit sm:group-data-horizontal/tabs:h-9">
+          {groups.map((group) => (
+            <TabsTrigger key={group.state} value={group.state} className="h-8 px-3 sm:h-[calc(100%-1px)]">
+              {GROUP_LABELS[group.state]}
+              <Badge variant={group.count ? group.state : "secondary"} className="tabular-nums">
+                {formatInt(group.count)}
+              </Badge>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <GroupGuide groups={groups} limits={limits} />
+      </div>
 
       {groups.map((group) => {
         const page = pages[group.state] ?? 1;

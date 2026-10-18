@@ -212,6 +212,20 @@ describe("carteira", () => {
     expect(tieNote(sellerPipeline("pipeline-ana-alfa").groups[0].items[0])).toBeNull();
   });
 
+  test("o botão ao lado das abas explica cada grupo, na ordem das abas", async () => {
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(bySeller);
+    render(<PortfolioPage />);
+    const { groups, meta } = sellerPipeline("pipeline-ana-alfa");
+    const limits = { won_cycle_limit_days: meta.won_cycle_limit_days, cycle_limit_days: meta.cycle_limit_days,
+      cycle_percentile: meta.cycle_percentile };
+    fireEvent.click(await screen.findByRole("button", { name: UI.groupGuide.button }));
+    const guide = await screen.findByText(UI.groupGuide.title);
+    const box = guide.parentElement as HTMLElement;
+    expect(within(box).getAllByRole("term").map((t) => t.textContent)).toEqual(groups.map((g) => GROUP_LABELS[g.state]));
+    for (const group of groups) expect(within(box).getByText(groupDescription(group.state, limits))).toBeTruthy();
+  });
+
   test("as abas seguem a ordem Focar, Qualificar, Acompanhar, Confirmar, Completar", async () => {
     navigation.go("/carteira?vendedor=Ana%20Alfa");
     stubApi(bySeller);

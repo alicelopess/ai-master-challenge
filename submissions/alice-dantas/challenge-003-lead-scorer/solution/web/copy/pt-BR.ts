@@ -89,6 +89,7 @@ export const UI = {
   seeGroup: (group: string) => `Ver a aba ${group}`,
   moreInTab: (count: number, group: string) => `+${count} na aba ${group}`,
   groupsLabel: "Grupos da carteira",
+  groupGuide: { button: "O que significa cada grupo?", title: "O que cada grupo significa" },
   whyHere: "Por que está aqui",
   whyHereFor: (id: string) => `Por que ${id} está aqui`,
   closePanel: "Fechar painel",
@@ -177,9 +178,9 @@ export const RANKER_LABELS: Record<RankerCode, string> = {
 export const RANKER_DESCRIPTIONS: Record<RankerCode, string> = {
   global_rate: "A mesma taxa histórica para todas: na prática, não ordena.",
   product_rate: "Maior taxa de ganho histórica do produto primeiro.",
-  random: "Sorteio: o resultado do acaso.",
+  random: "Sorteio: sem critério nenhum, só para servir de comparação.",
   list_price_only: "Maior valor de tabela primeiro, sem olhar a idade.",
-  age_newest_first: "Engajadas há menos tempo primeiro.",
+  age_newest_first: "Iniciadas há menos tempo primeiro.",
   age_max_cycle_only: "A lista até agora: as abertas até a venda mais longa já fechada primeiro; em cada grupo, maior " +
     "valor de tabela.",
   age_p90_then_max_cycle: "A lista desta ferramenta: primeiro as abertas há até o tempo em que 90% das vendas ganhas " +
@@ -219,9 +220,9 @@ const points = (fraction: number): string => formatDecimal(Math.abs(Math.round(f
 const pointWord = (fraction: number): string => (Math.abs(fraction) < 0.02 ? "ponto" : "pontos");
 
 function marginText({ low, high }: Delta): string {
-  if (high < 0) return `margem de erro: entre ${points(high)} e ${points(low)} pontos a menos`;
-  if (low > 0) return `margem de erro: entre ${points(low)} e ${points(high)} pontos a mais`;
-  return `margem de erro: entre ${points(low)} a menos e ${points(high)} a mais`;
+  if (high < 0) return `a diferença real deve ficar entre ${points(high)} e ${points(low)} pontos a menos`;
+  if (low > 0) return `a diferença real deve ficar entre ${points(low)} e ${points(high)} pontos a mais`;
+  return `a diferença real deve ficar entre ${points(low)} a menos e ${points(high)} a mais`;
 }
 
 function businessDelta(delta: Delta): string {
@@ -244,7 +245,7 @@ function businessVerdict(verdict: EvidenceVerdict): string {
       return `Mesmo sem elas, a regra atual fica à frente de todas; a mais próxima é ${quoted(ranker)}, com ` +
         `${delta ? businessDelta(delta) : ""}.`;
     case "inconclusive":
-      return "Sem elas, a diferença entre a regra atual e as outras fica dentro da margem de erro.";
+      return "Sem elas, a diferença entre a regra atual e as outras é pequena demais para ser confiável.";
     default:
       return unreachable(verdict.code);
   }
@@ -299,7 +300,7 @@ export const EVIDENCE_TEXT: Record<EvidenceLanguage, EvidenceText> = {
     chartLabel: "Valor vendido capturado por jeito de ordenar",
     detailTitle: "Comparação dos jeitos de ordenar",
     detailHelp: "Cada linha é um jeito de montar a lista. Quanto maior a porcentagem, mais a lista apontou para o que " +
-      "acabou sendo vendido.",
+      "acabou sendo vendido. Na comparação, cada ponto é 1 ponto da porcentagem da coluna ao lado.",
     columns: {
       strategy: "Como a lista é ordenada",
       value: (topK) => `Valor vendido nas ${topK} primeiras`,
@@ -313,7 +314,7 @@ export const EVIDENCE_TEXT: Record<EvidenceLanguage, EvidenceText> = {
     howTitle: "De onde vêm os números",
     how: (design) =>
       `${formatInt(design.unique_opportunities)} oportunidades da base, olhadas em ${design.cuts.length} datas. A ` +
-      "margem de erro de cada diferença leva em conta que o mesmo vendedor aparece em todas as datas.",
+      "faixa de cada diferença leva em conta que o mesmo vendedor aparece em todas as datas.",
     limitsTitle: "O que esta evidência não mostra",
     limits: [
       "Não mostra se a equipe seguiu a lista: é uma simulação com dados do passado.",
@@ -681,7 +682,7 @@ const DIMENSION_PLURALS: Record<Dimension, string> = {
 };
 
 export const METRIC_LABELS: Record<MetricKey, string> = {
-  revenue: "Receita", won: "Vendas ganhas", win_rate: "Taxa de ganho", ticket: "Ticket por venda",
+  revenue: "Receita", won: "Vendas ganhas", win_rate: "Taxa de ganho", ticket: "Receita por venda",
   revenue_per_closed: "Receita por fechada", median_won_cycle_days: "Ciclo mediano de ganho",
 };
 
@@ -708,11 +709,11 @@ export function metricText(metric: MetricKey, value: number | null): string {
 export const OUTCOME_LABELS: Record<DealOutcome, string> = { won: "Ganhas", lost: "Sem venda", open: "Abertas" };
 
 const DRIVER_LABELS: Record<Driver, string> = {
-  volume: "volume de fechadas", conversion: "taxa de ganho", ticket: "ticket por venda (mix de produto)",
+  volume: "volume de fechadas", conversion: "taxa de ganho", ticket: "receita por venda (depende dos produtos vendidos)",
 };
 // O mesmo fator depois de "vem sobretudo".
 const DRIVER_FROM: Record<Driver, string> = {
-  volume: "do volume de fechadas", conversion: "da taxa de ganho", ticket: "do ticket por venda (mix de produto)",
+  volume: "do volume de fechadas", conversion: "da taxa de ganho", ticket: "da receita por venda (depende dos produtos vendidos)",
 };
 
 /** "a, b e c". */
@@ -774,7 +775,7 @@ export const INTELLIGENCE = {
     won: "Vendas ganhas",
     wonOf: (closed: number) => `de ${formatInt(closed)} fechadas`,
     winRate: "Taxa de ganho",
-    winRateRange: (low: number, high: number) => `faixa provável: ${formatPct(low)} a ${formatPct(high)}`,
+    winRateRange: (low: number, high: number) => `entre ${formatPct(low)} e ${formatPct(high)}, com boa segurança`,
     cycle: "Ciclo mediano de ganho",
     days: (days: number) => `${formatInt(days)} dias`,
     lostCycle: (days: number) => `${formatInt(days)} dias nas fechadas sem venda`,
@@ -810,7 +811,7 @@ export const INTELLIGENCE = {
     title: "O que os resultados mostram",
     help: "Descobertas calculadas por regras fixas sobre o histórico. Descrevem o que aconteceu; não explicam a causa.",
     none: "Nenhuma descoberta neste recorte.",
-    kinds: { descriptive: "Descrição do histórico", statistical: "Comparação com o acaso" },
+    kinds: { descriptive: "Descrição do histórico", statistical: "Comparação entre recortes" },
     seeBy: (dimension: Dimension) => `Ver por ${DIMENSION_LABELS[dimension].toLowerCase()}`,
   },
   explore: {
@@ -820,7 +821,7 @@ export const INTELLIGENCE = {
     peopleNote: "Pessoas aparecem em ordem alfabética e sem gráfico: a tabela não ordena ninguém por resultado.",
     chartNote: "O gráfico mostra as dez primeiras linhas da tabela.",
     columns: {
-      closed: "Fechadas", winRate: "Taxa de ganho", ticket: "Ticket por venda", revenue: "Receita",
+      closed: "Fechadas", winRate: "Taxa de ganho", ticket: "Receita por venda", revenue: "Receita",
       share: "% da receita", open: "Abertas", sector: "Setor", location: "Sede", size: "Porte",
       products: "Produtos comprados", sellers: "Vendedores", actions: "Ações",
     },
@@ -860,10 +861,10 @@ export const INTELLIGENCE = {
       "Receita ganha: soma do valor fechado nas vendas ganhas, pela data de fechamento.",
       "Taxa de ganho: ganhas divididas por fechadas (ganhas e sem venda). Descreve o histórico; não é a chance de uma " +
         "oportunidade fechar.",
-      "Faixa provável: onde a taxa estaria se o mesmo processo se repetisse, com boa margem de segurança.",
-      "Dentro do acaso: com esse número de fechadas, uma diferença desse tamanho apareceria mesmo se todos " +
+      "Entre X e Y, com boa segurança: onde a taxa estaria se o mesmo processo se repetisse.",
+      "Pequena demais para ser confiável: com esse número de fechadas, uma diferença desse tamanho apareceria mesmo se todos " +
         "convertessem igual.",
-      "Ticket por venda: receita dividida pelas vendas ganhas. Ciclo: dias entre o engajamento e o fechamento.",
+      "Receita por venda: receita dividida pelas vendas ganhas. Ciclo: dias entre o início da negociação e o fechamento.",
       "Carteira aberta: oportunidades em prospecção e em negociação na data dos dados, com os grupos da lista. Valor " +
         "de tabela não é receita.",
     ],
@@ -885,7 +886,7 @@ export const INTELLIGENCE = {
     total: (count: number) => `${formatInt(count)} negociações`,
     columns: {
       id: "ID", seller: "Vendedor", product: "Produto", client: "Cliente", value: "Valor fechado",
-      price: "Valor de tabela", closed: "Fechada em", engaged: "Engajada em", cycle: "Ciclo", age: "Idade",
+      price: "Valor de tabela", closed: "Fechada em", engaged: "Início da negociação", cycle: "Ciclo", age: "Idade",
       group: "Grupo",
     },
     valueHelp: "Nas fechadas sem venda, o CRM grava zero: o valor não aparece.",
@@ -997,9 +998,9 @@ export function driversText(dimension: Dimension, drivers: RevenueDrivers): stri
 }
 
 /** Nota que acompanha a decomposição quando a dimensão é de pessoas. */
-export const PEOPLE_DRIVERS_NOTE = "Não mede habilidade: volume e mix dependem da carteira que cada pessoa recebe.";
+export const PEOPLE_DRIVERS_NOTE = "Não mede habilidade: o volume e os produtos vendidos dependem da carteira que cada pessoa recebe.";
 
-/** O veredito do teste de acaso da taxa de ganho numa dimensão. */
+/** O veredito da comparação da taxa de ganho entre os segmentos de uma dimensão. */
 export function chanceText(dimension: Dimension, chance: ChanceTest): string {
   const plural = DIMENSION_PLURALS[dimension];
   const small = chance.segments_small ? ` ${formatInt(chance.segments_small)} com poucas fechadas ficaram fora da ` +
@@ -1007,12 +1008,12 @@ export function chanceText(dimension: Dimension, chance: ChanceTest): string {
   switch (chance.verdict) {
     case "within_chance":
       return `Entre ${formatInt(chance.segments_tested)} ${plural}, a taxa de ganho vai de ` +
-        `${formatPct(chance.min_win_rate ?? 0)} a ${formatPct(chance.max_win_rate ?? 0)}: dentro do que o acaso explica ` +
-        `com ${formatInt(chance.closed_tested)} fechadas.${small}`;
+        `${formatPct(chance.min_win_rate ?? 0)} a ${formatPct(chance.max_win_rate ?? 0)}: diferença pequena demais para ser ` +
+        `confiável com ${formatInt(chance.closed_tested)} fechadas.${small}`;
     case "beyond_chance":
       return `Entre ${formatInt(chance.segments_tested)} ${plural}, a taxa de ganho vai de ` +
-        `${formatPct(chance.min_win_rate ?? 0)} a ${formatPct(chance.max_win_rate ?? 0)}: mais do que o acaso ` +
-        `explicaria com ${formatInt(chance.closed_tested)} fechadas. Descreve este histórico; não prova causa nem que ` +
+        `${formatPct(chance.min_win_rate ?? 0)} a ${formatPct(chance.max_win_rate ?? 0)}: diferença grande o bastante para ` +
+        `ser confiável com ${formatInt(chance.closed_tested)} fechadas. Descreve este histórico; não prova causa nem que ` +
         `vá se repetir.${small}`;
     case "too_few_closed":
       return `Poucas fechadas por ${DIMENSION_LABELS[dimension].toLowerCase()} para comparar a taxa de ganho.${small}`;
@@ -1021,7 +1022,7 @@ export function chanceText(dimension: Dimension, chance: ChanceTest): string {
   }
 }
 
-/** Descoberta: título, texto e o tipo (descrição do histórico ou comparação com o acaso). */
+/** Descoberta: título, texto e o tipo (descrição do histórico ou comparação entre recortes). */
 export function findingText(finding: Finding): { title: string; body: string; kind: "descriptive" | "statistical" } {
   switch (finding.code) {
     case "win_rate_within_chance": {
@@ -1030,7 +1031,7 @@ export function findingText(finding: Finding): { title: string; body: string; ki
       return {
         kind: "statistical",
         title: "A taxa de ganho não separa os recortes",
-        body: `Por ${dims}, as diferenças de taxa de ganho ficam dentro do que o acaso explica com ` +
+        body: `Por ${dims}, as diferenças de taxa de ganho são pequenas demais para serem confiáveis com ` +
           `${formatInt(p.closed)} fechadas. Nesses recortes, comparar taxas não aponta onde vender melhor.`,
       };
     }
@@ -1038,7 +1039,7 @@ export function findingText(finding: Finding): { title: string; body: string; ki
       const p = finding.params;
       return {
         kind: "statistical",
-        title: `A taxa de ganho por ${DIMENSION_LABELS[p.dimension].toLowerCase()} varia mais do que o acaso`,
+        title: `A taxa de ganho por ${DIMENSION_LABELS[p.dimension].toLowerCase()} tem diferenças confiáveis`,
         body: chanceText(p.dimension, p.chance),
       };
     }
@@ -1048,7 +1049,7 @@ export function findingText(finding: Finding): { title: string; body: string; ki
         kind: "descriptive",
         title: `${p.top} de ${p.of} ${DIMENSION_PLURALS[p.dimension]} somam ${formatPct(p.share)} da receita`,
         body: `${listText(p.keys)} ${p.top === 1 ? "responde" : "respondem"} pela maior parte da receita do recorte. ` +
-          "Para interpretar, compare volume, ticket e taxa de ganho no Explore.",
+          "Para interpretar, compare volume, receita por venda e taxa de ganho no Explore.",
       };
     }
     case "revenue_gap_drivers": {
