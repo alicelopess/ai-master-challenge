@@ -316,6 +316,49 @@
       }
     ]
   },
+  "crosstabs": [
+    {
+      "id": "account_product",
+      "row_dimension": "account",
+      "column_dimension": "product",
+      "columns": [],
+      "rows": []
+    },
+    {
+      "id": "sector_product",
+      "row_dimension": "sector",
+      "column_dimension": "product",
+      "columns": [],
+      "rows": []
+    },
+    {
+      "id": "seller_sector",
+      "row_dimension": "seller",
+      "column_dimension": "sector",
+      "columns": [],
+      "rows": [
+        {
+          "key": "Carla Gama",
+          "closed": 0,
+          "cells": []
+        }
+      ]
+    },
+    {
+      "id": "sector_office",
+      "row_dimension": "sector",
+      "column_dimension": "office",
+      "columns": [],
+      "rows": []
+    },
+    {
+      "id": "location_office",
+      "row_dimension": "location",
+      "column_dimension": "office",
+      "columns": [],
+      "rows": []
+    }
+  ],
   "cycle_bands": [
     {
       "low": 0,

@@ -14,6 +14,7 @@ import {
   capitalize, formatCompact, formatDate, formatDecimal, formatInt, formatMonth, formatPct, formatPp, formatWhole,
 } from "@/lib/format";
 import type { DealOutcome, Dimension, MetricKey } from "@/lib/intelligence";
+import type { Concept } from "./visual";
 import type { NavKey } from "@/lib/nav";
 
 export type GroupKey = Item["group"];
@@ -54,7 +55,7 @@ export const PAGES: Record<NavKey, { title: string; description: string }> = {
   equipe: { title: "Equipe", description: "A carteira aberta da equipe, por gerente e escritório." },
   inteligencia: {
     title: "Inteligência comercial",
-    description: "Onde o processo comercial pode melhorar e o que explica a receita, a partir do histórico.",
+    description: "Explore análises históricas dos dados de vendas para entender relações no processo comercial que explicam a receita.",
   },
   evidencia: { title: "Evidência", description: "A lista ajuda a escolher onde investir o próximo esforço?" },
   comoFunciona: { title: "Como funciona", description: "Como a lista é montada e o que ela não faz." },
@@ -82,29 +83,40 @@ export const UI = {
   accountNote: "A ausência do cliente é uma lacuna do cadastro e não diz nada sobre a qualidade da oportunidade.",
   emptyGroups: (labels: string[]) => `Sem oportunidades em ${labels.length > 1
     ? `${labels.slice(0, -1).join(", ")} e ${labels[labels.length - 1]}` : labels[0]}.`,
-  nextStep: "O que verificar agora",
+  nextStep: "Ação recomendada",
   nextStepTitle: "O que verificar agora",
+  verifyLabel: "Ação recomendada",
   startWithOne: "Comece por esta oportunidade:",
   startWithTie: (tie: string) => `Comece por qualquer uma destas ${tie}:`,
+  startHeadline: (group: string) => `Comece por ${group}`,
+  tieChip: (count: number, product: string, price: number) => `${count} empatadas · ${product} · ${formatInt(price)}`,
+  tieHelp: "Sem ordem entre si: a posição é só pelo código.",
+  tieHelpLabel: "Sobre o empate",
+  noAccountShort: "sem cliente",
   seeGroup: (group: string) => `Ver a aba ${group}`,
   moreInTab: (count: number, group: string) => `+${count} na aba ${group}`,
   groupsLabel: "Grupos da carteira",
-  groupGuide: { button: "O que significa cada grupo?", title: "O que cada grupo significa" },
+  groupGuide: {
+    button: "O que significa cada grupo?",
+    title: "O que cada grupo significa",
+  },
   whyHere: "Por que está aqui",
   whyHereFor: (id: string) => `Por que ${id} está aqui`,
   closePanel: "Fechar painel",
-  previous: "Anterior",
-  next: "Próxima",
-  position: (index: number, total: number) => `Item ${index} de ${total}`,
+  closeAnalysis: "Recolher análise",
   limitsNote: "Como o pipeline só apresenta datas, produto e preço de tabela: não apresenta último contato, ligações, " +
-    "reuniões nem e-mails, a base não registra atividades, estágio nem contatos; por isso o Rankio indica " +
-    "possibilidades para diferentes cenários de negociação, não uma certeza de próximo passo.",
+    "reuniões nem e-mails. A base não registra atividades, estágio nem contatos. Por isso o Rankio indica " +
+    "possibilidades para diferentes cenários de negociação, mas não uma certeza de próximo passo.",
   suggestionsTitle: "Sugestões de negociação",
   suggestionsIntro: "O Rankio não sabe em que contexto a negociação está. Estas são possibilidades para diferentes " +
     "cenários: use as que fizerem sentido.",
   suggestionIf: "Se",
+  limitsShort: "O Rankio só vê datas, produto e preço de tabela.",
+  blindSpotButton: "Limitações dos dados",
+  suggestionsCount: (count: number) => `Sugestões por cenário (${count})`,
+  ageContextShort: "Contexto da idade",
   ageContextTitle: "Idade no contexto do histórico",
-  ageContextNote: "Isso descreve as vendas que fecharam; não diz o que acontece com esta negociação.",
+  ageContextNote: "Isso descreve as vendas que fecharam, mas não diz o que acontece com esta negociação.",
   bandRangesLink: "ver as faixas em Como funciona",
   ageContextHelp: "Abrir o contexto histórico da idade",
   copyId: "Copiar ID",
@@ -146,6 +158,15 @@ export const UI = {
     noneHere: "Nenhuma oportunidade deste grupo corresponde à busca e aos filtros.",
   },
   ofTotal: (total: number) => `de ${formatInt(total)} abertas`,
+  details: { show: "Ver detalhe" },
+  moreInfo: "Mais informação",
+  chartClickHint: "Clique para ver as negociações",
+  sort: {
+    next: (current: "asc" | "desc" | null) =>
+      current === null ? ". Ordenar a tabela por esta coluna."
+        : current === "asc" ? ". Ordem crescente. Clique para decrescente."
+          : ". Ordem decrescente. Clique para voltar à ordem original.",
+  },
   pagination: {
     label: "Páginas da tabela",
     previous: "Página anterior",
@@ -159,13 +180,27 @@ export const UI = {
 export const TEAM = {
   views: { label: "Análises da equipe", sellers: "Por vendedor", opportunities: "Por oportunidade" },
   noSellers: "Nenhum vendedor neste filtro.",
-  bySellerHelp: "A carteira aberta de cada vendedor, em ordem alfabética. A tabela não ordena pessoas por resultado.",
+  bySellerHelp: "A carteira aberta de cada vendedor, em ordem alfabética. Clique no título de uma coluna para ordenar.",
   total: "Abertas",
   withoutAccount: "Sem cliente",
   seeEvidence: "A lista ajuda? Ver a evidência",
   copyTable: "Copiar tabela",
   tableCopied: "Tabela copiada",
   copyTableHelp: "Copia todos os vendedores do filtro, para colar em planilha ou e-mail.",
+  compositionTitle: "Carteira aberta",
+  compositionNote: "Clique em um grupo para ver as oportunidades dele.",
+  compositionTotal: "abertas",
+  openValue: {
+    label: "Valor de tabela em aberto",
+    note: "Preço de catálogo das abertas: não é receita e não se soma a ela.",
+  },
+  stats: {
+    label: "Números da equipe",
+    sellers: "Vendedores",
+    sellersHelp: "com carteira aberta",
+  },
+  withoutAccountLine: (count: number) => `${formatInt(count)} ${NO_ACCOUNT}`,
+  accountNoteLabel: "Sobre o cliente ausente",
 } as const;
 
 /** Grupo em zero na equipe: para Focar, o zero fala de tempo de abertura, não da qualidade das oportunidades. */
@@ -192,10 +227,21 @@ export const RANKER_DESCRIPTIONS: Record<RankerCode, string> = {
   random: "Sorteio: sem critério nenhum, só para servir de comparação.",
   list_price_only: "Maior valor de tabela primeiro, sem olhar a idade.",
   age_newest_first: "Iniciadas há menos tempo primeiro.",
-  age_max_cycle_only: "A lista até agora: as abertas até a venda mais longa já fechada primeiro; em cada grupo, maior " +
+  age_max_cycle_only: "A lista até agora: as abertas até a venda mais longa já fechada primeiro. Em cada grupo, maior " +
     "valor de tabela.",
   age_p90_then_max_cycle: "A lista desta ferramenta: primeiro as abertas há até o tempo em que 90% das vendas ganhas " +
-    "fecharam, depois as até a venda mais longa já fechada; em cada grupo, maior valor de tabela.",
+    "fecharam, depois as até a venda mais longa já fechada. Em cada grupo, maior valor de tabela.",
+};
+
+/** As mesmas estratégias em até 8 palavras, para a coluna da tabela de comparação. */
+export const RANKER_SHORT: Record<RankerCode, string> = {
+  global_rate: "Mesma taxa para todas: na prática, não ordena.",
+  product_rate: "Maior taxa de ganho histórica do produto primeiro.",
+  random: "Sorteio, só para comparar.",
+  list_price_only: "Maior valor de tabela primeiro, ignora a idade.",
+  age_newest_first: "Iniciadas há menos tempo primeiro.",
+  age_max_cycle_only: "Lista anterior: um limite de idade só.",
+  age_p90_then_max_cycle: "Esta lista: dois limites de idade, depois valor.",
 };
 
 // Evidência em duas linguagens: a de negócio (padrão, para gestores) e a técnica (para quem audita o método).
@@ -219,7 +265,7 @@ export const RANKER_TECH_DESCRIPTIONS: Record<RankerCode, string> = {
   global_rate: "Taxa de ganho global das fechadas até T, igual para todas: empate total, desfeito pelo ID.",
   product_rate: "Taxa de ganho do produto nas fechadas até T, suavizada pela taxa global.",
   random: "Permutação aleatória com semente fixa.",
-  list_price_only: "Preço de tabela decrescente; ignora a idade.",
+  list_price_only: "Preço de tabela decrescente. Ignora a idade.",
   age_newest_first: "engage_date mais recente primeiro.",
   age_max_cycle_only: "Idade até o maior ciclo fechado até T → faixa → preço de tabela decrescente → ID (a regra até a v4).",
   age_p90_then_max_cycle: "Idade até o piso do P90 do ciclo de todas as ganhas até T → até o maior ciclo fechado até T → " +
@@ -234,6 +280,48 @@ function marginText({ low, high }: Delta): string {
   if (high < 0) return `a diferença real deve ficar entre ${points(high)} e ${points(low)} pontos a menos`;
   if (low > 0) return `a diferença real deve ficar entre ${points(low)} e ${points(high)} pontos a mais`;
   return `a diferença real deve ficar entre ${points(low)} a menos e ${points(high)} a mais`;
+}
+
+/** Pontos com sinal, para a linguagem de negócio: −0.327 → "−32,7"; zero sai sem sinal. */
+const signedPoints = (fraction: number): string => {
+  const text = points(fraction);
+  if (text === points(0)) return text;
+  return `${fraction < 0 ? "−" : "+"}${text}`;
+};
+
+/** Família de cada estratégia no gráfico da Evidência (decisão editorial do catálogo, não do contrato): a regra
+ * atual, as alternativas reais e as linhas de base. Quem é a regra atual vem de `evidence.reference`. */
+export type RankerFamily = "reference" | "alternative" | "baseline";
+export const RANKER_FAMILY: Record<RankerCode, RankerFamily> = {
+  age_p90_then_max_cycle: "reference",
+  list_price_only: "alternative",
+  age_max_cycle_only: "alternative",
+  random: "baseline",
+  global_rate: "baseline",
+  product_rate: "baseline",
+  age_newest_first: "baseline",
+};
+export const FAMILY_LABELS: Record<RankerFamily, string> = {
+  reference: "Regra atual", alternative: "Alternativas reais", baseline: "Linhas de base",
+};
+
+/** Os rótulos dos gráficos da Evidência. */
+export const EVIDENCE_CHART = {
+  familiesLabel: "Tipos de estratégia",
+  all: "Todas as negociações",
+  without: "Sem as que nunca fecharam",
+  /** "53,8% · −4,6": o valor e a diferença para a regra atual, em pontos, ambos da API. */
+  barLabel: (value: number, delta: Delta | null): string =>
+    delta ? `${formatPct(value)} · ${signedPoints(delta.value)}` : formatPct(value),
+  /** O tooltip da barra: a diferença para a regra atual, em pontos, e o convite a ir à linha da tabela. */
+  tipDelta: (delta: Delta | null): string | null =>
+    delta ? `${businessDeltaShort(delta)} em relação à regra atual` : null,
+  tipClick: "Clique para ir à linha da tabela",
+} as const;
+
+function businessDeltaShort(delta: Delta): string {
+  if (points(delta.value) === points(0)) return "Igual";
+  return `${signedPoints(delta.value)} ${pointWord(delta.value)}`;
 }
 
 function businessDelta(delta: Delta): string {
@@ -253,10 +341,66 @@ function businessVerdict(verdict: EvidenceVerdict): string {
       return `Sem elas, ${quoted(ranker)} rende ${delta ? businessDelta(delta) : ""}. A vantagem da regra atual vem ` +
         "dessas negociações, e elas podem ser um efeito de como a base foi montada.";
     case "reference_ahead":
-      return `Mesmo sem elas, a regra atual fica à frente de todas; a mais próxima é ${quoted(ranker)}, com ` +
+      return `Mesmo sem elas, a regra atual fica à frente de todas. A mais próxima é ${quoted(ranker)}, com ` +
         `${delta ? businessDelta(delta) : ""}.`;
     case "inconclusive":
       return "Sem elas, a diferença entre a regra atual e as outras é pequena demais para ser confiável.";
+    default:
+      return unreachable(verdict.code);
+  }
+}
+
+function businessVerdictTitle(verdict: EvidenceVerdict): string {
+  const { ranker, delta } = verdict;
+  switch (verdict.code) {
+    case "reference_behind":
+      return `Sem as que nunca fecharam, ${quoted(ranker)} fica ` +
+        `${delta ? `${points(delta.value)} ${pointWord(delta.value)} ` : ""}à frente.`;
+    case "reference_ahead":
+      return "Mesmo sem as que nunca fecharam, a regra atual fica à frente.";
+    case "inconclusive":
+      return "Sem as que nunca fecharam, a diferença é pequena demais para ser confiável.";
+    default:
+      return unreachable(verdict.code);
+  }
+}
+
+function businessVerdictBody(verdict: EvidenceVerdict): string | null {
+  switch (verdict.code) {
+    case "reference_behind":
+      return "A vantagem da regra atual vem dessas negociações.";
+    case "reference_ahead":
+      return verdict.delta ? `A mais próxima é ${quoted(verdict.ranker)}: ${businessDeltaShort(verdict.delta)}.` : null;
+    case "inconclusive":
+      return null;
+    default:
+      return unreachable(verdict.code);
+  }
+}
+
+function technicalVerdictTitle(verdict: EvidenceVerdict): string {
+  const { ranker, delta } = verdict;
+  switch (verdict.code) {
+    case "reference_behind":
+      return `Sem as negociações sem desfecho, ${quoted(ranker)}${delta ? `: Δ ${formatPp(delta.value)}` : ""} contra a ` +
+        "regra servida.";
+    case "reference_ahead":
+      return "Sem as negociações sem desfecho, a regra servida supera todas com o IC95% abaixo de zero.";
+    case "inconclusive":
+      return "Sem as negociações sem desfecho, nenhuma diferença tem o IC95% fora do zero.";
+    default:
+      return unreachable(verdict.code);
+  }
+}
+
+function technicalVerdictBody(verdict: EvidenceVerdict): string | null {
+  switch (verdict.code) {
+    case "reference_behind":
+      return "A vantagem da regra servida depende das negociações sem desfecho.";
+    case "reference_ahead":
+      return verdict.delta ? `Mais próxima: ${quoted(verdict.ranker)}, Δ ${formatPp(verdict.delta.value)}.` : null;
+    case "inconclusive":
+      return null;
     default:
       return unreachable(verdict.code);
   }
@@ -270,7 +414,7 @@ function technicalVerdict(verdict: EvidenceVerdict): string {
     case "reference_behind":
       return `${cited} contra a regra servida. A vantagem da regra servida depende das negociações sem desfecho.`;
     case "reference_ahead":
-      return `A regra servida supera todas com o IC95% abaixo de zero; a mais próxima é ${cited}.`;
+      return `A regra servida supera todas com o IC95% abaixo de zero. A mais próxima é ${cited}.`;
     case "inconclusive":
       return "Nenhuma diferença contra a regra servida tem o IC95% fora do zero.";
     default:
@@ -283,6 +427,17 @@ type EvidenceText = {
   method: (count: number, first: string, last: string, horizonDays: number) => string;
   headline: (topK: number) => string;
   delta: (delta: Delta) => string;
+  /** A diferença curta ("−4,6 pontos"), a faixa curta ("entre −6,8 e −2,5") e a faixa em frase (popover). */
+  deltaShort: (delta: Delta) => string;
+  deltaRange: (delta: Delta) => string;
+  rangeHelp: (delta: Delta) => string;
+  rangeLabel: string;
+  methodLabel: string;
+  methodStats: (design: EvidenceDesign) => { dates: string; opportunities: string; horizon: string };
+  detailShort: string;
+  pointsHelp: string;
+  pointsHelpLabel: string;
+  shortDescriptions: Record<RankerCode, string>;
   chartLabel: string;
   detailTitle: string;
   detailHelp: string;
@@ -291,23 +446,48 @@ type EvidenceText = {
   withoutTitle: string;
   withoutHelp: string;
   verdict: (verdict: EvidenceVerdict) => string;
+  /** O veredito curto, para o alerta do topo; a frase inteira (`verdict`) fica no detalhe da seção. */
+  verdictTitle: (verdict: EvidenceVerdict) => string;
+  verdictBody: (verdict: EvidenceVerdict) => string | null;
+  seeWithout: string;
+  whyItMatters: string;
   howTitle: string;
   how: (design: EvidenceDesign) => string;
+  /** Os números do desenho, um por linha; `value` nulo é linha só de texto. */
+  howStats: (design: EvidenceDesign) => { concept: Concept; value: string | null; label: string }[];
+  howHelpLabel: string;
+  howHelp: (design: EvidenceDesign) => string;
+  limitsCardTitle: string;
   limitsTitle: string;
   limits: readonly string[];
+  /** Um título curto por limite, na mesma ordem de `limits` (que vira o detalhe). */
+  limitsShort: readonly { concept: Concept; title: string }[];
+  seeLimits: string;
 };
 
 export const EVIDENCE_TEXT: Record<EvidenceLanguage, EvidenceText> = {
   negocio: {
-    question: (topK, horizonDays) =>
-      `Se cada vendedor trabalhasse as ${topK} primeiras da lista, quanto do valor vendido nos ${horizonDays} dias ` +
-      "seguintes estaria nelas?",
+    question: (topK, horizonDays) => `Quanto do valor vendido em ${horizonDays} dias estava nas ${topK} primeiras?`,
     method: (count, first, last, horizonDays) =>
       `Refizemos a lista de cada vendedor em ${count} datas, de ${formatDate(first)} a ${formatDate(last)}, só com o ` +
       `que se sabia em cada dia, e conferimos o que foi vendido nos ${horizonDays} dias seguintes. 100% seria acertar ` +
       "as melhores vendas, como quem já sabe o futuro.",
-    headline: (topK) => `do valor vendido estava nas ${topK} primeiras`,
+    headline: (topK) => `do valor vendido nas ${topK} primeiras`,
     delta: businessDelta,
+    deltaShort: businessDeltaShort,
+    deltaRange: ({ low, high }) => `entre ${signedPoints(low)} e ${signedPoints(high)}`,
+    rangeHelp: (delta) => `${capitalize(marginText(delta))}.`,
+    rangeLabel: "Faixa da diferença",
+    methodLabel: "Como medimos",
+    methodStats: (design) => ({
+      dates: `${design.cuts.length} datas`,
+      opportunities: `${formatInt(design.unique_opportunities)} oportunidades`,
+      horizon: `${design.horizon_days} dias depois`,
+    }),
+    detailShort: "Quanto maior, mais a lista apontou para o que foi vendido.",
+    pointsHelp: "Cada ponto é 1 ponto da porcentagem da coluna ao lado.",
+    pointsHelpLabel: "O que é um ponto",
+    shortDescriptions: RANKER_SHORT,
     chartLabel: "Valor vendido capturado por jeito de ordenar",
     detailTitle: "Comparação dos jeitos de ordenar",
     detailHelp: "Cada linha é um jeito de montar a lista. Quanto maior a porcentagem, mais a lista apontou para o que " +
@@ -315,24 +495,42 @@ export const EVIDENCE_TEXT: Record<EvidenceLanguage, EvidenceText> = {
     columns: {
       strategy: "Como a lista é ordenada",
       value: (topK) => `Valor vendido nas ${topK} primeiras`,
-      delta: () => "Comparado à regra atual",
+      delta: () => "Diferença para a regra atual",
     },
     descriptions: RANKER_DESCRIPTIONS,
-    withoutTitle: "E sem as negociações que nunca fecharam na base?",
-    withoutHelp: "A mesma conta sem as oportunidades que seguem abertas no fim da base. Mostra se a vantagem da regra " +
-      "atual depende delas.",
+    withoutTitle: "Sem as negociações que nunca fecharam",
+    withoutHelp: "A vantagem da regra atual depende delas?",
     verdict: businessVerdict,
+    verdictTitle: businessVerdictTitle,
+    verdictBody: businessVerdictBody,
+    seeWithout: "Ver o recorte",
+    whyItMatters: "Por que isso importa",
     howTitle: "De onde vêm os números",
     how: (design) =>
       `${formatInt(design.unique_opportunities)} oportunidades da base, olhadas em ${design.cuts.length} datas. A ` +
       "faixa de cada diferença leva em conta que o mesmo vendedor aparece em todas as datas.",
+    howStats: (design) => [
+      { concept: "data", value: formatInt(design.unique_opportunities), label: "oportunidades" },
+      { concept: "engaged", value: String(design.cuts.length), label: "datas" },
+      { concept: "people", value: null, label: "Faixa por vendedor" },
+    ],
+    howHelpLabel: "Faixa por vendedor",
+    howHelp: () => "A faixa de cada diferença leva em conta que o mesmo vendedor aparece em todas as datas.",
+    limitsCardTitle: "Limites e método",
     limitsTitle: "O que esta evidência não mostra",
+    limitsShort: [
+      { concept: "blindSpot", title: "Não mostra se a equipe seguiu a lista." },
+      { concept: "evidence", title: "Não garante o futuro: teste com parte da equipe." },
+      { concept: "qualify", title: "Não avalia Qualificar: não há data para simular." },
+      { concept: "data", title: "Base de exemplo: repita com os dados da empresa." },
+    ],
+    seeLimits: "Ver os limites",
     limits: [
       "Não mostra se a equipe seguiu a lista: é uma simulação com dados do passado.",
-      "Não garante o mesmo resultado daqui para frente; para medir o efeito de verdade, é preciso testar com parte " +
+      "Não garante o mesmo resultado daqui para frente. Para medir o efeito de verdade, é preciso testar com parte " +
         "da equipe.",
       "Não avalia as oportunidades em prospecção: elas não têm data para simular o passado.",
-      "Usa a base do desafio (um CRM de exemplo); vale repetir com os dados da empresa.",
+      "Usa a base do desafio (um CRM de exemplo). Vale repetir com os dados da empresa.",
     ],
   },
   tecnica: {
@@ -347,6 +545,21 @@ export const EVIDENCE_TEXT: Record<EvidenceLanguage, EvidenceText> = {
     headline: (topK) => `Val@${topK}`,
     delta: (delta) =>
       `Δ ${formatPp(delta.value)} contra a regra atual (IC95%: ${formatPp(delta.low)} a ${formatPp(delta.high)})`,
+    deltaShort: (delta) => formatPp(delta.value),
+    deltaRange: (delta) => `${formatPp(delta.low)} a ${formatPp(delta.high)}`,
+    rangeHelp: (delta) => `IC95%: ${formatPp(delta.low)} a ${formatPp(delta.high)} (bootstrap de vendedores).`,
+    rangeLabel: "IC95%",
+    methodLabel: "Método",
+    methodStats: (design) => ({
+      dates: `${design.cuts.length} cortes mensais`,
+      opportunities: `${formatInt(design.observations)} observações`,
+      horizon: `horizonte de ${design.horizon_days} dias`,
+    }),
+    detailShort: "Métricas de cada ordenador nos cortes do backtest.",
+    pointsHelp: "P@K: ganhas nas K ÷ K. Lift@K: ganhas ÷ esperadas ao acaso. Val@K: valor ganho nas K ÷ valor das K " +
+      "melhores sabendo o futuro. AUC: 0,5 é o acaso. Δ contra a regra atual com IC95% por bootstrap de vendedores.",
+    pointsHelpLabel: "Definições das métricas",
+    shortDescriptions: RANKER_TECH_DESCRIPTIONS,
     chartLabel: "Val@K por ordenador",
     detailTitle: "Métricas por ordenador",
     detailHelp: "P@K: ganhas nas K ÷ K. Lift@K: ganhas ÷ esperadas ao acaso. Val@K: valor ganho nas K ÷ valor das K " +
@@ -360,18 +573,40 @@ export const EVIDENCE_TEXT: Record<EvidenceLanguage, EvidenceText> = {
     withoutTitle: "Sensibilidade: sem as negociações sem desfecho",
     withoutHelp: "Mesmas métricas excluindo as negociações que seguem abertas no fim da base.",
     verdict: technicalVerdict,
+    verdictTitle: technicalVerdictTitle,
+    verdictBody: technicalVerdictBody,
+    seeWithout: "Ver a sensibilidade",
+    whyItMatters: "Veredito completo",
     howTitle: "Desenho do backtest",
     how: (design) =>
       `${formatInt(design.observations)} observações (negociação × corte) de ${formatInt(design.unique_opportunities)} ` +
-      `negociações únicas; top-${design.top_k} por vendedor com pelo menos ${design.top_k} abertas no corte; IC95% por ` +
+      `negociações únicas. Top-${design.top_k} por vendedor com pelo menos ${design.top_k} abertas no corte. IC95% por ` +
       `${formatInt(design.n_boot_sellers)} reamostragens de vendedores, cada um com todos os cortes.`,
+    howStats: (design) => [
+      { concept: "data", value: formatInt(design.observations), label: "observações (negociação × corte)" },
+      { concept: "engaged", value: String(design.cuts.length), label: "cortes" },
+      { concept: "people", value: formatInt(design.n_boot_sellers), label: "reamostragens de vendedores" },
+    ],
+    howHelpLabel: "Desenho completo",
+    howHelp: (design) =>
+      `${formatInt(design.observations)} observações (negociação × corte) de ${formatInt(design.unique_opportunities)} ` +
+      `negociações únicas. Top-${design.top_k} por vendedor com pelo menos ${design.top_k} abertas no corte. IC95% por ` +
+      `${formatInt(design.n_boot_sellers)} reamostragens de vendedores, cada um com todos os cortes.`,
+    limitsCardTitle: "Limites e desenho",
     limitsTitle: "Limites do método",
+    limitsShort: [
+      { concept: "evidence", title: "Associação, não efeito causal: exige piloto." },
+      { concept: "qualify", title: "Qualificar fica fora: sem engage_date." },
+      { concept: "engaged", title: "Cortes sobrepostos: bootstrap por vendedor." },
+      { concept: "data", title: "Base provavelmente sintética." },
+    ],
+    seeLimits: "Ver os limites",
     limits: [
-      "Retrospectivo e observacional: mede associação, não o efeito causal de mudar a ordem de trabalho; exige " +
+      "Retrospectivo e observacional: mede associação, mas não o efeito causal de mudar a ordem de trabalho. Exige " +
         "piloto com grupo de controle.",
       "Qualificar fica fora: Prospecting não tem engage_date, então não há como reconstruir a carteira em T.",
       "Cortes sobrepostos: as observações não são independentes (tratado com bootstrap por vendedor).",
-      "Base provavelmente sintética (ver as limitações no README); não generalizar sem dados reais.",
+      "Base provavelmente sintética (ver as limitações no README). Não generalizar sem dados reais.",
     ],
   },
 };
@@ -389,6 +624,23 @@ export const RULES = {
   groupsTitle: "Os grupos",
   groupsHelp: "Cada oportunidade aberta cai em um grupo. A ordem dos grupos é a ordem da lista.",
   orderTitle: "A ordem dentro do grupo",
+  notUsedTitle: "O que a ordem não usa, e por quê",
+  notUsedHelp: "Dois números do histórico que parecem úteis para priorizar e ficaram de fora.",
+  notUsed: [
+    {
+      title: "Taxa de ganho do vendedor em cada produto",
+      body: "Cada vendedor tem cerca de 30 fechadas por produto, e metade das combinações tem menos que isso. Com tão " +
+        "poucas, a taxa balança muito e não se repete: na primeira metade do histórico ela não prevê a da segunda. " +
+        "E a ordem passaria a falar da pessoa, não da negociação.",
+    },
+    {
+      title: "Tempo típico de ganho do cliente",
+      body: "Não falta venda: cada cliente tem dezenas de ganhas. O que falta é padrão. O tempo de uma venda varia dentro " +
+        "do mesmo cliente tanto quanto varia entre todos, e o tempo típico de um cliente numa metade do histórico não " +
+        "se repete na outra. Por isso a idade é comparada ao histórico geral, nos limites do grupo.",
+    },
+  ],
+  notUsedSee: "Por que a ordem não usa isso",
   bandsColumns: { band: "Faixa", range: "Valor de tabela" },
   ageTitle: "Os dois limites de idade",
   ageHelp: "Separam as negociações em andamento pelo tempo que as vendas levaram no histórico. Descrevem o " +
@@ -398,15 +650,32 @@ export const RULES = {
     `${GROUP_LABELS.focar}.`,
   longestLimit: (days: number) =>
     `A venda mais longa já fechada levou ${days} dias. Entre os dois limites, a negociação fica em ` +
-    `${GROUP_LABELS.acompanhar}; acima, em ${GROUP_LABELS.revisar}.`,
+    `${GROUP_LABELS.acompanhar}. Acima, em ${GROUP_LABELS.revisar}.`,
+  ageHelpShort: "Descrevem o passado: uma negociação mais antiga pode seguir viva.",
+  ageRulerLabel: "Grupos pela idade",
+  ageMark: (days: number) => `${days} d`,
+  seeMore: "Ver mais",
+  flowLabel: "Como a ordem é montada",
+  stepLabel: (n: number) => `Critério ${n}`,
+  orderHelp: "A lista segue três critérios, um depois do outro. A idade aparece na tabela, mas não muda a ordem.",
+  orderSteps: (groups: string) => [
+    { title: "Primeiro, o grupo", body: `As oportunidades ficam agrupadas, nesta ordem: ${groups}.` },
+    { title: "Depois, a faixa de valor de tabela", body: "Dentro de cada grupo, vem a faixa alta, depois a média e depois a baixa. As faixas estão no cartão ao lado." },
+    { title: "Por fim, o preço de tabela", body: "Dentro da faixa, o maior preço vem primeiro. Se dois preços empatam, o código decide." },
+  ],
+  bandsTitle: "Faixas de valor de tabela",
   limitsTitle: "O que a ferramenta não faz",
   limits: [
     "Não calcula chance de fechar por oportunidade.",
     "Não escreve no CRM: só lê os dados e indica o que verificar.",
-    "Não ordena vendedores: a equipe aparece em ordem alfabética.",
+    "Não classifica vendedores: a equipe aparece em ordem alfabética, e a ordem por coluna é só para consulta.",
     "Não se atualiza sozinha: a lista vale para a data dos dados.",
   ],
 } as const;
+
+/** Os grupos que a idade separa, na régua de Como funciona (limites de grupo, nunca posição de uma oportunidade). */
+export const AGE_GROUPS: readonly GroupKey[] = ["focar", "acompanhar", "revisar"];
+
 
 /** Faixa de valor de tabela em palavras: "a partir de 3.000", "500 a 2.999", "até 499". */
 export function bandRange(rule: ValueBandRule): string {
@@ -444,6 +713,50 @@ export function groupDescription(state: GroupKey, limits: AgeLimits): string {
   }
 }
 
+/** O limite do grupo em chip curto; os números vêm do `meta`. */
+export function groupRange(state: GroupKey, limits: AgeLimits): string {
+  switch (state) {
+    case "focar":
+      return `até ${limits.won_cycle_limit_days} d`;
+    case "acompanhar":
+      return `mais de ${limits.won_cycle_limit_days} d`;
+    case "revisar":
+      return `mais de ${limits.cycle_limit_days} d`;
+    case "qualificar":
+      return "sem data";
+    case "nao_pontuavel":
+      return "falta dado";
+    default:
+      return unreachable(state);
+  }
+}
+
+/** A definição em até 10 palavras, ao lado do chip. A versão inteira, com as ressalvas, é `groupDescription`
+ * (Como funciona). */
+export function groupShort(state: GroupKey, limits: AgeLimits): string {
+  switch (state) {
+    case "focar":
+      return `Tempo em que ${limits.cycle_percentile}% das ganhas fecharam.`;
+    case "acompanhar":
+      return `Passou do tempo de ${limits.cycle_percentile}% das ganhas, até ${limits.cycle_limit_days} d.`;
+    case "revisar":
+      return "Mais tempo que qualquer venda já fechada.";
+    case "qualificar":
+      return "Em prospecção, sem início de negociação.";
+    case "nao_pontuavel":
+      return "Produto, preço de tabela ou data no CRM.";
+    default:
+      return unreachable(state);
+  }
+}
+
+/** A ordem dentro do grupo, curta, para o rodapé do popover; uma ordem nova cai na legenda completa. */
+export function groupOrderShort(ordering: Ordering): string {
+  if (ordering.within_group.join(",") !== KNOWN_WITHIN_GROUP) return legendText(ordering);
+  return ordering.age_affects_order ? "No grupo: maior valor de tabela primeiro."
+    : "No grupo: maior valor de tabela primeiro. Idade não muda a ordem.";
+}
+
 // Verbos no infinitivo: os moldes "Comece por {nome}" e "{nome} porque…" leem bem com todos.
 export const GROUP_LABELS: Record<GroupKey, string> = {
   focar: "Focar",
@@ -452,6 +765,12 @@ export const GROUP_LABELS: Record<GroupKey, string> = {
   qualificar: "Qualificar",
   nao_pontuavel: "Completar",
 };
+
+/** Os grupos fora da régua, com o motivo curto. */
+export const OUTSIDE_RULER: { state: GroupKey; text: string }[] = [
+  { state: "qualificar", text: `${GROUP_LABELS.qualificar}: sem data de início` },
+  { state: "nao_pontuavel", text: `${GROUP_LABELS.nao_pontuavel}: falta dado no CRM` },
+];
 
 // Campo ausente: motivo curto (na linha) e o nome usado nas frases.
 const MISSING: Record<MissingField, { short: string; name: string }> = {
@@ -466,7 +785,7 @@ export function reasonText(reason: Reason): string {
   switch (reason.code) {
     case "age_within_won_cycle": {
       const p = reason.params;
-      return `${GROUP_LABELS.focar} porque está aberta há ${p.age_days} dias; ${p.percentile}% das vendas ganhas ` +
+      return `${GROUP_LABELS.focar} porque está aberta há ${p.age_days} dias. Entre as vendas ganhas, ${p.percentile}% ` +
         `fecharam em até ${p.won_cycle_limit_days} dias.`;
     }
     case "age_above_won_cycle": {
@@ -542,27 +861,40 @@ const START_ACTIONS: Record<StartWithParams["action"], string> = {
   fix_missing_fields: "corrija o cadastro no CRM",
 };
 
+type StartEmpty = Extract<GroupEmptyState, { code: "start_with_group" }>;
+
+/** Focar vazio: por que o cartão começa por outro grupo. Cita só o limite que importa para o grupo indicado. */
+export function startReason(empty: StartEmpty): string {
+  const p = empty.params;
+  return p.group === "acompanhar" || (p.group === "qualificar" && p.has_engaging)
+    ? `Nenhuma aberta há até ${p.won_cycle_limit_days} dias.`
+    : p.group === "revisar" ? `Todas as negociações em andamento estão abertas há mais de ${p.cycle_limit_days} dias.`
+      : "Nenhuma negociação em andamento.";
+}
+
+/** O mesmo motivo, com o nome do grupo vazio na frente, para a linha pequena do cartão. */
+export const startReasonShort = (empty: StartEmpty, head: GroupKey): string => {
+  const why = startReason(empty);
+  return `${GROUP_LABELS[head]} vazio: ${why.charAt(0).toLowerCase()}${why.slice(1)}`;
+};
+
+/** A ação do grupo indicado, como frase. */
+export const startAction = (empty: StartEmpty): string => `${capitalize(START_ACTIONS[empty.params.action])}.`;
+
 export function groupEmptyText(empty: GroupEmptyState): string {
   switch (empty.code) {
     case "group_empty":
       return "Nenhuma oportunidade neste grupo.";
-    case "start_with_group": {
-      // Focar vazio: cita só o limite que importa para o grupo indicado.
-      const p = empty.params;
-      const why = p.group === "acompanhar" || (p.group === "qualificar" && p.has_engaging)
-        ? `Nenhuma aberta há até ${p.won_cycle_limit_days} dias.`
-        : p.group === "revisar" ? `Todas as negociações em andamento estão abertas há mais de ${p.cycle_limit_days} dias.`
-          : "Nenhuma negociação em andamento.";
-      return `${why} Comece por ${GROUP_LABELS[p.group]}: ${START_ACTIONS[p.action]}.`;
-    }
+    case "start_with_group":
+      return `${startReason(empty)} Comece por ${GROUP_LABELS[empty.params.group]}: ${START_ACTIONS[empty.params.action]}.`;
     default:
       return unreachable(empty);
   }
 }
 
 const PIPELINE_EMPTY: Record<PipelineEmpty["code"], string> = {
-  no_open_for_seller: "Nenhuma oportunidade aberta para este vendedor. A base não registra nenhuma aberta no nome dele; " +
-    "se isso não era esperado, confira o cadastro no CRM.",
+  no_open_for_seller: "Nenhuma oportunidade aberta para este vendedor. A base não registra nenhuma aberta no nome dele. " +
+    "Se isso não era esperado, confira o cadastro no CRM.",
   no_open_for_filter: "Nenhuma oportunidade aberta para este filtro.",
 };
 
@@ -574,14 +906,14 @@ const KNOWN_WITHIN_GROUP = "value_band,sales_price_desc,opportunity_id";
 export function legendText(ordering: Ordering): string {
   const groups = ordering.group_order.map((key) => GROUP_LABELS[key]).join(" → ");
   if (ordering.within_group.join(",") !== KNOWN_WITHIN_GROUP) return `Ordem: ${groups}.`;
-  const age = ordering.age_affects_order ? "" : "; a idade aparece, mas não muda a ordem";
-  return `Ordem: ${groups}; em cada grupo, maior valor de tabela primeiro${age}.`;
+  const age = ordering.age_affects_order ? "" : " A idade aparece, mas não muda a ordem.";
+  return `Ordem: ${groups}. Em cada grupo, maior valor de tabela primeiro.${age}`;
 }
 
 export const dataLabel = (meta: Meta): string => `Dados até ${formatDate(meta.as_of)}`;
 
 export const DATA_WARNING =
-  "Atenção: dados diferentes da versão auditada; os números conferidos no PRD deixam de ser garantidos.";
+  "Atenção: dados diferentes da versão auditada. Os números conferidos no PRD deixam de ser garantidos.";
 
 export const accountWarning = (withoutAccount: number, total: number): string =>
   `${formatInt(withoutAccount)} de ${formatInt(total)} ${NO_ACCOUNT}`;
@@ -608,6 +940,10 @@ export const valueLabel = (band: ValueBand): string => `valor de tabela ${band}`
 export const bandCountText = (onPage: number, total: number): string =>
   onPage < total ? `${formatInt(onPage)} de ${formatInt(total)} nesta página` : formatInt(total);
 
+/** A contagem curta da faixa, para o chip do título ("25 de 69" quando a página mostra só parte). */
+export const bandCountShort = (onPage: number, total: number): string =>
+  onPage < total ? `${formatInt(onPage)} de ${formatInt(total)}` : formatInt(total);
+
 export const bandTitle = (band: ValueBand | null): string => (band ? capitalize(valueLabel(band)) : "Sem valor de tabela");
 
 export const missingShort = (field: MissingField): string => MISSING[field].short;
@@ -620,9 +956,15 @@ export const tieText = (count: number, product: string, price: number): string =
 export const tieNote = (item: Item): string | null => {
   if (item.tie_size < 2 || item.sales_price === null) return null;
   const others = item.tie_size - 1;
-  return `Empata com ${others} ${others === 1 ? "outra" : "outras"} do mesmo produto e valor de tabela; a ordem ` +
+  return `Empata com ${others} ${others === 1 ? "outra" : "outras"} do mesmo produto e valor de tabela. A ordem ` +
     "entre elas é só pelo código.";
 };
+
+/** No painel de uma oportunidade de produto com poucas vendas fechadas: o valor de tabela dele tem pouca base no
+ * histórico. Só informa; não muda o grupo nem a posição. */
+export const smallSampleNote = (product: string, closed: number, won: number): string =>
+  `Só ${formatInt(closed)} vendas fechadas do ${product} no histórico (${formatInt(won)} ganhas): o valor de tabela ` +
+  "dele tem pouca base de comparação.";
 
 export type Suggestion = { when: string; then: string };
 
@@ -694,7 +1036,7 @@ export const DIMENSION_LABELS: Record<Dimension, string> = {
   account: "Cliente", size: "Porte do cliente",
 };
 
-const DIMENSION_PLURALS: Record<Dimension, string> = {
+export const DIMENSION_PLURALS: Record<Dimension, string> = {
   product: "produtos", seller: "vendedores", manager: "gerentes", office: "escritórios", sector: "setores",
   account: "clientes", size: "portes de cliente",
 };
@@ -724,7 +1066,7 @@ export function metricText(metric: MetricKey, value: number | null): string {
   }
 }
 
-export const OUTCOME_LABELS: Record<DealOutcome, string> = { won: "Ganhas", lost: "Sem venda", open: "Abertas" };
+export const OUTCOME_LABELS: Record<DealOutcome, string> = { won: "Ganhas", lost: "Perdidas", open: "Abertas" };
 
 const DRIVER_LABELS: Record<Driver, string> = {
   volume: "volume de fechadas", conversion: "taxa de ganho", ticket: "receita por venda (depende dos produtos vendidos)",
@@ -747,12 +1089,31 @@ export function sizeLabel(band: SizeBand, bands: SizeBand[]): string {
 }
 
 /** Nome de um segmento; a chave nula é a falta do dado. */
+/** Os valores do cadastro que vêm em inglês, para a tela inteira em português. A chave original continua sendo o que
+ * vai para a URL e para a API; sem tradução conhecida, o texto aparece como veio. */
+const SECTOR_LABELS: Record<string, string> = {
+  employment: "Emprego e RH", entertainment: "Entretenimento", finance: "Finanças", marketing: "Marketing",
+  medical: "Saúde", retail: "Varejo", services: "Serviços", software: "Software", technology: "Tecnologia",
+  telecommunications: "Telecomunicações",
+};
+const COUNTRY_LABELS: Record<string, string> = {
+  Belgium: "Bélgica", Brazil: "Brasil", China: "China", Germany: "Alemanha", Italy: "Itália", Japan: "Japão",
+  Jordan: "Jordânia", Kenya: "Quênia", Korea: "Coreia", Norway: "Noruega", Panama: "Panamá", Philippines: "Filipinas",
+  Poland: "Polônia", Romania: "Romênia", "United States": "Estados Unidos",
+};
+const OFFICE_LABELS: Record<string, string> = { Central: "Central", East: "Leste", West: "Oeste" };
+export const sectorLabel = (key: string) => SECTOR_LABELS[key] ?? key;
+export const countryLabel = (key: string) => COUNTRY_LABELS[key] ?? key;
+export const officeLabel = (key: string) => OFFICE_LABELS[key] ?? key;
+
 export function segmentLabel(dimension: Dimension, key: string | null, bands: SizeBand[]): string {
   if (key === null) return dimension === "product" ? UI.noProduct : NO_ACCOUNT;
   if (dimension === "size") {
     const band = bands.find((b) => b.key === key);
     return band ? sizeLabel(band, bands) : `Porte ${key}`;
   }
+  if (dimension === "sector") return sectorLabel(key);
+  if (dimension === "office") return officeLabel(key);
   return key;
 }
 
@@ -778,7 +1139,7 @@ export const INTELLIGENCE = {
     button: "Como funciona",
     title: "Como funciona a Inteligência",
     help: "O que cada número quer dizer e o que esta página não faz.",
-    explore: "Explore: escolha um recorte em \"Ver por\" e filtre por qualquer linha; a página inteira passa a mostrar " +
+    explore: "Explore: escolha um recorte em \"Ver por\" e filtre por qualquer linha. A página inteira passa a mostrar " +
       "só aquele recorte. O ícone de lista abre as negociações por trás da linha.",
   },
   searchSeller: "Buscar vendedor…",
@@ -789,6 +1150,10 @@ export const INTELLIGENCE = {
   kpis: {
     label: "Histórico do recorte",
     revenue: "Receita ganha",
+    revenueShort: (revenue: number) => `${formatInt(revenue)} em valor fechado`,
+    winRateChip: (low: number, high: number) => `${formatPct(low)}–${formatPct(high)}`,
+    winRateRangeLabel: "Sobre a faixa da taxa",
+    lostCycleShort: (days: number) => `${formatInt(days)} d nas perdidas`,
     revenueHelp: (revenue: number) => `${formatInt(revenue)}: soma do valor fechado nas vendas ganhas.`,
     won: "Vendas ganhas",
     wonOf: (closed: number) => `de ${formatInt(closed)} fechadas`,
@@ -796,10 +1161,11 @@ export const INTELLIGENCE = {
     winRateRange: (low: number, high: number) => `entre ${formatPct(low)} e ${formatPct(high)}: onde a taxa de ganho real provavelmente está`,
     cycle: "Tempo típico até ganhar",
     days: (days: number) => `${formatInt(days)} dias`,
-    lostCycle: (days: number) => `${formatInt(days)} dias nas fechadas sem venda`,
+    lostCycle: (days: number) => `${formatInt(days)} dias nas fechadas perdidas`,
   },
   open: {
     title: "Carteira aberta",
+    titleCount: (total: number) => `Carteira aberta · ${formatInt(total)}`,
     count: (total: number) => `${formatInt(total)} abertas na data dos dados`,
     listValue: (value: number) => `${formatCompact(value)} em valor de tabela`,
     notRevenue: "Valor de tabela não é receita e não se soma a ela.",
@@ -816,18 +1182,33 @@ export const INTELLIGENCE = {
     seeTeam: "Ver na Equipe",
     seeAccounts: "Ver por cliente",
     seeMonths: "Ver o ritmo mensal",
+    detail: "Ver detalhe",
     crmTitle: "O que o CRM não registra",
-    crmHelp: "Sem estes campos, algumas perguntas não têm resposta em nenhuma análise.",
+    crmGapsShort: [
+      "Atividades do vendedor", "Engajamento do cliente", "Dados da negociação", "Estágio da negociação",
+      "Relação entre nome da conta e fechamento", "Motivo da perda", "Valor proposto nas perdidas",
+    ],
+    crmHelp: "Nenhuma das análises abaixo considera estes pontos, porque o CRM não os registra.",
     crmGaps: [
-      "Motivo da perda: sem ele, não dá para saber por que as fechadas sem venda não avançaram.",
-      "Atividades (ligações, reuniões, e-mails): sem elas, não dá para saber se uma negociação esfriou.",
-      "Histórico de estágio: sem ele, não dá para medir quanto tempo cada etapa leva.",
-      "Valor proposto nas fechadas sem venda: o CRM grava zero, então não dá para medir o valor que deixou de entrar.",
+      "Atividades do vendedor: se ligou, se enviou e-mail e quando executou cada ação. Sem elas, não dá para saber " +
+        "se uma negociação esfriou.",
+      "Engajamento do cliente: as datas das interações, como quando entrou em contato, quanto demora para responder " +
+        "e quando foi a última resposta. Sem elas, não dá para saber se o cliente segue engajado.",
+      "Dados da negociação: as informações de qualificação, com base em BANT e/ou SPICED. Sem elas, não dá para " +
+        "saber o quanto a negociação está qualificada.",
+      "Estágio da negociação: etapas como qualificação e fechamento, e a passagem por cada uma. Sem isso, não dá " +
+        "para medir quanto tempo cada etapa leva.",
+      "Relação entre nome da conta e fechamento: se o nome da conta só é adicionado quando a negociação chega ao " +
+        "fechamento. Sem isso, não dá para saber se a ausência do cliente nas abertas é falha de cadastro ou regra " +
+        "do processo.",
+      "Motivo da perda: quais foram as objeções dos clientes. Sem ele, não dá para saber por que as fechadas " +
+        "perdidas não avançaram.",
+      "Valor proposto nas perdidas: o CRM grava zero, então não dá para medir o valor que deixou de entrar.",
     ],
   },
   findings: {
     title: "O que os resultados mostram",
-    help: "Descobertas calculadas por regras fixas sobre o histórico. Descrevem o que aconteceu; não explicam a causa.",
+    help: "Descobertas calculadas por regras fixas sobre o histórico. Descrevem o que aconteceu, mas não explicam a causa.",
     none: "Nenhuma descoberta neste recorte.",
     kinds: { descriptive: "Descrição do histórico", statistical: "Comparação entre recortes" },
     seeBy: (dimension: Dimension) => `Ver por ${DIMENSION_LABELS[dimension].toLowerCase()}`,
@@ -836,12 +1217,41 @@ export const INTELLIGENCE = {
     title: "Explore os resultados",
     viewBy: "Ver por",
     metric: "Métrica do gráfico",
-    peopleNote: "Pessoas aparecem em ordem alfabética e sem gráfico: a tabela não ordena ninguém por resultado.",
-    chartNote: "O gráfico mostra as dez primeiras linhas da tabela.",
+    peopleNote: "Não mede habilidade: o volume e os produtos vendidos dependem da carteira de cada pessoa. A tabela abre em " +
+      "ordem alfabética e você pode ordenar por qualquer coluna, mas a ordem não diz quem vende melhor.",
+    accountNote: "O tempo típico de ganho de cada cliente não aparece: ele não se repete de um período para o outro.",
+    accountNoteSee: "Por que a ordem não usa isso",
+    reality: {
+      title: (plural: string) => `A taxa de ganho muda de verdade entre ${plural}?`,
+      label: "Sobre a comparação das taxas",
+    },
+    sources: {
+      title: "De onde vem a diferença de receita",
+      caption: "Quanto da diferença cada fator explica",
+      label: "Sobre a decomposição da receita",
+    },
+    chartNote: "O gráfico mostra as dez primeiras linhas da tabela. Passe o mouse para ver o valor e clique numa barra para ver as negociações.",
     columns: {
-      closed: "Fechadas", winRate: "Taxa de ganho", ticket: "Receita por venda", revenue: "Receita",
+      closed: "Fechadas", won: "Ganhas", lost: "Perdidas", winRate: "Taxa de ganho", ticket: "Receita por venda", revenue: "Receita",
       share: "% da receita", open: "Abertas", sector: "Setor", location: "Sede", size: "Porte",
       products: "Produtos comprados", sellers: "Vendedores", actions: "Ações",
+    },
+    columnHelp: {
+      name: (dimension: string) => `${dimension} do recorte. Clique no título para ordenar.`,
+      sector: "Segmento de atuação do cliente, como está no cadastro.",
+      location: "País da sede do cliente, como está no cadastro. Não é o escritório do vendedor.",
+      size: "Porte do cliente, em faixas da receita anual cadastrada (o 1 é o menor).",
+      products: "Produtos diferentes que o cliente já comprou, entre os negociados no catálogo.",
+      sellers: "Vendedores diferentes que já fecharam negociação com o cliente.",
+      closed: "Negociações já encerradas, ganhas e perdidas. Não conta as abertas.",
+      won: "Fechadas com venda.",
+      lost: "Fechadas perdidas: terminaram sem venda.",
+      winRate: "Ganhas divididas por fechadas. A faixa menor embaixo é onde a taxa real provavelmente está: quanto menos " +
+        "fechadas, mais larga. Descreve o histórico, não a chance de uma negociação.",
+      ticket: "Receita dividida pelas vendas ganhas: o valor de cada venda ganha.",
+      revenue: "Soma do valor fechado nas vendas ganhas.",
+      share: "Quanto da receita total do recorte vem deste segmento.",
+      open: "Oportunidades ainda abertas hoje. O número é só contagem: valor de tabela não é receita.",
     },
     rateRange: (low: number, high: number) => `${formatPct(low)} a ${formatPct(high)}`,
     productsOf: (bought: number, total: number) => `${bought} de ${total}`,
@@ -855,10 +1265,44 @@ export const INTELLIGENCE = {
       "acompanha a fatia.",
     noRate: "A taxa de ganho por vendedor e produto não aparece: com poucas fechadas por combinação, a diferença não " +
       "se repete de um período para o outro.",
+    noRateSee: "Por que a ordem também não usa isso",
     total: "Fechadas",
+    sellerHelp: "Vendedor do recorte, em ordem alfabética até você ordenar por uma coluna.",
+    productHelp: (product: string) => `Fechadas com ${product} e a fatia dele nas fechadas do vendedor.`,
+    totalHelp: "Todas as fechadas do vendedor, de qualquer produto.",
     cell: (closed: number, share: number | null) => share === null ? formatInt(closed)
       : `${formatInt(closed)} · ${formatPct(share)}`,
     cellLabel: (seller: string, product: string) => `Ver negociações de ${seller} com ${product}`,
+  },
+  crosstab: {
+    viewBy: "Cruzar",
+    /** Cada cruzamento: o título do cartão, a primeira coluna e a leitura. Só contagens de fechadas, sem taxa por célula. */
+    tables: {
+      seller_product: { option: "O que cada vendedor vende", title: "O que cada vendedor vende", first: "Vendedor",
+        help: "Fechadas por produto e a fatia de cada produto nas fechadas do vendedor, em ordem alfabética. A cor " +
+          "acompanha a fatia." },
+      account_product: { option: "O que cada cliente compra", title: "O que cada cliente compra", first: "Cliente",
+        help: "Fechadas por produto e a fatia de cada produto nas fechadas do cliente, dos que mais fecharam aos que " +
+          "menos. A cor acompanha a fatia." },
+      sector_product: { option: "O que cada setor compra", title: "O que cada setor compra", first: "Setor",
+        help: "Fechadas por produto e a fatia de cada produto nas fechadas do setor. A cor acompanha a fatia." },
+      seller_sector: { option: "Quem cada vendedor atende", title: "Quem cada vendedor atende", first: "Vendedor",
+        help: "Fechadas de cada vendedor por setor do cliente e a fatia de cada setor nas fechadas dele, em ordem " +
+          "alfabética. Mostra a carteira que cada pessoa recebe, não o desempenho." },
+      sector_office: { option: "Setores por escritório", title: "Que setores cada escritório atende", first: "Setor",
+        help: "Fechadas de cada setor por escritório do vendedor e a fatia de cada escritório nas fechadas do setor." },
+      location_office: { option: "Países por escritório", title: "Que países cada escritório atende", first: "País da sede",
+        help: "Fechadas de cada país de sede do cliente por escritório do vendedor e a fatia de cada escritório nas " +
+          "fechadas do país." },
+    },
+    totalHelp: "Todas as fechadas da linha, de qualquer coluna.",
+    firstHelp: "Quem está na linha. Clique no título para ordenar.",
+    columnHelp: (name: string) => `Fechadas em ${name} e a fatia dela nas fechadas da linha.`,
+    cell: (closed: number, share: number | null) => share === null ? formatInt(closed)
+      : `${formatInt(closed)} · ${formatPct(share)}`,
+    cellLabel: (row: string, column: string) => `Ver negociações de ${row} em ${column}`,
+    noRate: "Sem taxa de ganho por célula: com poucas fechadas por combinação, a diferença não se repete de um período " +
+      "para o outro.",
   },
   time: {
     title: "Tempo e resultado",
@@ -866,18 +1310,30 @@ export const INTELLIGENCE = {
     bandsHelp: (meta: Meta) => `Dias entre o engajamento e o fechamento. As duas últimas faixas terminam nos limites ` +
       `da regra: ${meta.won_cycle_limit_days} dias (${meta.cycle_percentile}% das vendas ganhas fecharam até aí) e ` +
       `${meta.cycle_limit_days} dias (a venda mais longa já fechada).`,
-    columns: { band: "Ciclo (dias)", won: "Ganhas", lost: "Sem venda", rate: "Taxa de ganho" },
+    columns: { band: "Ciclo (dias)", won: "Ganhas", lost: "Perdidas", rate: "Taxa de ganho" },
+    columnHelp: {
+      band: "Quantos dias a negociação levou do engajamento ao fechamento.",
+      won: "Fechadas com venda nesta faixa de tempo.",
+      lost: "Fechadas perdidas nesta faixa de tempo.",
+      rate: "Ganhas divididas por fechadas na faixa. Descreve o histórico, não a chance de uma negociação.",
+    },
+    monthHelp: {
+      month: "Mês do calendário.",
+      engaged: "Negociações que começaram no mês, pela data de engajamento.",
+      won: "Vendas fechadas no mês, pela data de fechamento.",
+      lost: "Fechadas perdidas no mês, pela data de fechamento.",
+    },
     band: (low: number, high: number) => `${low} a ${high}`,
     monthlyTitle: "Ritmo mensal",
     monthlyHelp: "Novas negociações pela data de engajamento e fechamentos pela data de fechamento.",
-    monthColumns: { month: "Mês", engaged: "Novas negociações", won: "Ganhas", lost: "Sem venda" },
+    monthColumns: { month: "Mês", engaged: "Novas negociações", won: "Ganhas", lost: "Perdidas" },
     chartLabel: "Novas negociações por mês",
   },
   reading: {
     title: "Como ler esta página",
     definitions: [
       "Receita ganha: soma do valor fechado nas vendas ganhas, pela data de fechamento.",
-      "Taxa de ganho: ganhas divididas por fechadas (ganhas e sem venda). Descreve o histórico; não é a chance de uma " +
+      "Taxa de ganho: ganhas divididas por fechadas (ganhas e perdidas). Descreve o histórico, mas não é a chance de uma " +
         "oportunidade fechar.",
       "Entre X e Y, com boa segurança: onde a taxa estaria se o mesmo processo se repetisse.",
       "Pequena demais para ser confiável: com esse número de fechadas, uma diferença desse tamanho apareceria mesmo se todos " +
@@ -886,6 +1342,10 @@ export const INTELLIGENCE = {
       "Carteira aberta: oportunidades em prospecção e em negociação na data dos dados, com os grupos da lista. Valor " +
         "de tabela não é receita.",
     ],
+    /** Título curto (≤ 4 palavras) de cada definição, na mesma ordem, mais o do Explore. */
+    definitionTitles: ["Receita ganha", "Taxa de ganho", "Entre X e Y", "Pequena demais", "Receita por venda e ciclo",
+      "Carteira aberta"],
+    exploreTitle: "Explore",
     limitsTitle: "O que esta página não faz",
     limits: [
       "Não prevê nem pontua oportunidades: a lista de trabalho está na Carteira.",
@@ -905,9 +1365,10 @@ export const INTELLIGENCE = {
     columns: {
       id: "ID", seller: "Vendedor", product: "Produto", client: "Cliente", value: "Valor fechado",
       price: "Valor de tabela", closed: "Fechada em", engaged: "Início da negociação", cycle: "Ciclo", age: "Idade",
-      group: "Grupo",
+      group: "Grupo", result: "Resultado",
     },
-    valueHelp: "Nas fechadas sem venda, o CRM grava zero: o valor não aparece.",
+    result: { won: "Ganha", lost: "Perdida" },
+    valueHelp: "Nas fechadas perdidas, o CRM grava zero: o valor não aparece.",
     seePortfolio: (seller: string) => `Abrir a carteira de ${seller}`,
   },
 } as const;
@@ -935,7 +1396,7 @@ export function diagnosticText(diagnostic: Diagnostic): { title: string; body: s
     }
     case "open_without_account": {
       const p = diagnostic.params;
-      const closed = p.closed_without_account === 0 ? `Nas ${formatInt(p.closed)} fechadas, todas têm cliente; por ` +
+      const closed = p.closed_without_account === 0 ? `Nas ${formatInt(p.closed)} fechadas, todas têm cliente. Por ` +
         "isso a base não permite saber se a ausência do cliente diz algo sobre o desfecho."
         : `Nas fechadas, ${formatInt(p.closed_without_account)} de ${formatInt(p.closed)} não têm.`;
       return {
@@ -969,7 +1430,7 @@ export function diagnosticText(diagnostic: Diagnostic): { title: string; body: s
       return {
         title: "Ganhos concentrados no último mês do trimestre",
         body: `No último mês de cada trimestre, ${formatPct(p.quarter_end_win_rate)} das ${formatInt(p.quarter_end_closed)} ` +
-          `fechadas são ganhas; nos outros meses, ${formatPct(p.other_win_rate)} das ${formatInt(p.other_closed)}.`,
+          `fechadas são ganhas. Nos outros meses, ${formatPct(p.other_win_rate)} das ${formatInt(p.other_closed)}.`,
         step: "Conferir se a data de fechamento registrada é a data real (desfechos registrados em lote?). O padrão só " +
           "aparece depois do desfecho: não serve para prever nem para escolher quando vender.",
       };
@@ -998,6 +1459,173 @@ export function diagnosticText(diagnostic: Diagnostic): { title: string; body: s
   }
 }
 
+/** Um número do nível 1 de um cartão: o valor da API já formatado, a frase curta ao lado e, só quando a API manda
+ * a participação (`share`), o comprimento de uma barra (sem escrever outro número). */
+export type HeadlineMetric = { value: string; label: string; share?: number };
+export type Headline = { metrics: HeadlineMetric[]; chips?: string[] };
+
+/** O próximo passo de um diagnóstico em uma linha (≤ 12 palavras); a frase inteira fica no "Ver detalhe". */
+export function diagnosticStepShort(diagnostic: Diagnostic): string {
+  switch (diagnostic.code) {
+    case "engaging_beyond_longest_cycle":
+      return "Rotina de confirmação no CRM com cada vendedor.";
+    case "open_without_account":
+      return "Exigir o cliente ao passar para negociação.";
+    case "prospecting_without_engage_date":
+      return "Registrar a data de criação de cada oportunidade.";
+    case "sellers_without_opportunities":
+      return "Confirmar se seguem na equipe e se recebem carteira.";
+    case "quarter_end_outcome_mix":
+      return "Conferir se a data de fechamento registrada é a real.";
+    case "engagement_inflow_drop":
+      return "Conferir se a geração caiu ou se o registro atrasou.";
+    case "accounts_shared_by_sellers":
+      return "Decidir se haverá dono de conta.";
+    default:
+      return unreachable(diagnostic);
+  }
+}
+
+/** Os números protagonistas de um diagnóstico, todos dos params. */
+export function diagnosticHeadline(diagnostic: Diagnostic): Headline {
+  switch (diagnostic.code) {
+    case "engaging_beyond_longest_cycle": {
+      const p = diagnostic.params;
+      return { metrics: [{ value: formatInt(p.count), label: `de ${formatInt(p.engaging)} em andamento`,
+        share: p.share ?? undefined }] };
+    }
+    case "open_without_account": {
+      const p = diagnostic.params;
+      return { metrics: [{ value: formatInt(p.count), label: `de ${formatInt(p.open)} abertas`, share: p.share ?? undefined }] };
+    }
+    case "prospecting_without_engage_date": {
+      const p = diagnostic.params;
+      return { metrics: [{ value: formatInt(p.count), label: `de ${formatInt(p.prospecting)} em prospecção` }] };
+    }
+    case "sellers_without_opportunities": {
+      const p = diagnostic.params;
+      return { metrics: [{ value: formatInt(p.count), label: `de ${formatInt(p.team)} vendedores` }] };
+    }
+    case "quarter_end_outcome_mix": {
+      const p = diagnostic.params;
+      return { metrics: [
+        { value: formatPct(p.quarter_end_win_rate), label: "ganhas no último mês do trimestre", share: p.quarter_end_win_rate },
+        { value: formatPct(p.other_win_rate), label: "ganhas nos outros meses", share: p.other_win_rate },
+      ] };
+    }
+    case "engagement_inflow_drop": {
+      const p = diagnostic.params;
+      return { metrics: [
+        ...p.recent.map((m) => ({ value: formatInt(m.engaged), label: `em ${formatMonth(m.month)}` })),
+        { value: formatDecimal(p.base_average, 1), label: "por mês antes" },
+      ] };
+    }
+    case "accounts_shared_by_sellers": {
+      const p = diagnostic.params;
+      return { metrics: [
+        { value: String(p.median_sellers), label: "vendedores por cliente (mediana)" },
+        { value: String(p.max_sellers), label: "no máximo" },
+      ] };
+    }
+    default:
+      return unreachable(diagnostic);
+  }
+}
+
+/** Os números protagonistas de uma descoberta, todos dos params. */
+export function findingHeadline(finding: Finding): Headline {
+  switch (finding.code) {
+    case "win_rate_within_chance": {
+      const p = finding.params;
+      return { metrics: [{ value: formatInt(p.closed), label: "fechadas comparadas" }],
+        chips: p.dimensions.map((d) => DIMENSION_LABELS[d]) };
+    }
+    case "win_rate_beyond_chance": {
+      const p = finding.params;
+      return { metrics: [{ value: chanceRange(p.chance), label: `em ${formatInt(p.chance.segments_tested)} ` +
+        DIMENSION_PLURALS[p.dimension] }] };
+    }
+    case "revenue_concentrated": {
+      const p = finding.params;
+      // Pessoas não ganham barra nem chips com nomes: seria uma lista de pessoas por resultado.
+      const people = PEOPLE_DIMENSIONS.includes(p.dimension);
+      return { metrics: [{ value: formatPct(p.share), label: `da receita em ${p.top} de ${p.of} ${DIMENSION_PLURALS[p.dimension]}`,
+        share: people ? undefined : p.share }], chips: people ? undefined : p.keys };
+    }
+    case "revenue_gap_drivers": {
+      const p = finding.params;
+      return { metrics: [{ value: `${formatDecimal(p.drivers.spread_ratio, 1)}×`,
+        label: `entre ${p.drivers.segments_used} ${DIMENSION_PLURALS[p.dimension]}` }] };
+    }
+    case "fast_losses": {
+      const p = finding.params;
+      return { metrics: [
+        { value: `${p.median_lost_cycle_days} d`, label: "nas perdidas (mediana)" },
+        { value: `${p.median_won_cycle_days} d`, label: "nas ganhas (mediana)" },
+      ] };
+    }
+    case "account_product_coverage": {
+      const p = finding.params;
+      const top = p.distribution.reduce((a, b) => (b.accounts > a.accounts ? b : a), p.distribution[0]);
+      return { metrics: top ? [{ value: formatInt(top.accounts),
+        label: `de ${formatInt(p.accounts)} compraram ${top.bought} de ${p.products}` }] : [] };
+    }
+    default:
+      return unreachable(finding);
+  }
+}
+
+/** Recortes que são pessoas: sem gráfico e sem destaque por resultado. */
+export const PEOPLE_DIMENSIONS: readonly Dimension[] = ["seller", "manager", "office"];
+
+/** Nome curto de cada fator da receita, para a legenda da barra. */
+export const DRIVER_SHORT: Record<Driver, string> = {
+  volume: "Volume de fechadas", ticket: "Receita por venda", conversion: "Taxa de ganho",
+};
+
+/** Rótulo curto do veredito da comparação de taxas (chip). */
+export const CHANCE_LABELS: Record<ChanceVerdict, string> = {
+  beyond_chance: "Diferença confiável",
+  within_chance: "Pequena demais para ser confiável",
+  too_few_closed: "Poucas fechadas para comparar",
+};
+
+/** A faixa da taxa de ganho entre os recortes ("60,0% a 64,8%"), com os valores da API. */
+export const chanceRange = (chance: ChanceTest): string =>
+  `${formatPct(chance.min_win_rate ?? 0)} a ${formatPct(chance.max_win_rate ?? 0)}`;
+
+/** A linha de apoio do veredito: faixa, recortes e fechadas comparadas. */
+export const chanceSupport = (dimension: Dimension, chance: ChanceTest): string =>
+  chance.verdict === "too_few_closed" ? `${formatInt(chance.closed_tested)} fechadas`
+    : `${chanceRange(chance)} em ${formatInt(chance.segments_tested)} ${DIMENSION_PLURALS[dimension]} · ` +
+      `${formatInt(chance.closed_tested)} fechadas`;
+
+/** O veredito em uma frase, sem número: o texto completo fica no popover. */
+export const chanceShort = (chance: ChanceTest): string => {
+  switch (chance.verdict) {
+    case "beyond_chance": return "Grande o bastante para não ser só acaso.";
+    case "within_chance": return "Pequena: poderia ser só acaso.";
+    case "too_few_closed": return "Poucas fechadas por recorte para comparar.";
+    default: return unreachable(chance.verdict);
+  }
+};
+
+/** "A receita varia 80,2× entre 7 produtos". */
+export const spreadText = (dimension: Dimension, drivers: RevenueDrivers): string =>
+  `A receita varia ${formatDecimal(drivers.spread_ratio, 1)}× entre ${drivers.segments_used} ${DIMENSION_PLURALS[dimension]}`;
+
+/** As fatias da decomposição que dá para ler em porcentagem; `null` quando os fatores se compensam. */
+export function driverShares(drivers: RevenueDrivers): { driver: Driver; share: number; negligible: boolean }[] | null {
+  const all = (["volume", "ticket", "conversion"] as const).map((driver) => ({
+    driver, share: drivers[`${driver}_share` as const], negligible: drivers.negligible.includes(driver),
+  }));
+  if (all.filter((d) => !d.negligible).some((d) => d.share < 0 || d.share > 1)) return null;
+  return all;
+}
+
+/** A fatia de um fator na legenda: a porcentagem da API, ou "quase nada". */
+export const driverShareText = (drivers: RevenueDrivers, driver: Driver): string => driverShare(drivers, driver);
+
 /** Fatia de um fator da receita: "quase nada" quando o back o marcou como desprezível. */
 function driverShare(drivers: RevenueDrivers, driver: Driver): string {
   if (drivers.negligible.includes(driver)) return "quase nada";
@@ -1018,7 +1646,9 @@ export function driversText(dimension: Dimension, drivers: RevenueDrivers): stri
     return `${spread}Neste recorte os fatores se compensam, então a diferença não se divide em porcentagens.${main}`;
   }
   const parts = (["volume", "ticket", "conversion"] as const).map((d) => `${DRIVER_LABELS[d]}, ${driverShare(drivers, d)}`);
-  return `${spread}Quanto da diferença cada fator explica: ${parts.join("; ")}.${main}`;
+  // Uma frase por fator, sem ponto e vírgula: o primeiro vem depois dos dois-pontos, os outros começam em maiúscula.
+  const sentences = parts.map((part, index) => (index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)));
+  return `${spread}Quanto da diferença cada fator explica: ${sentences.join(". ")}.${main}`;
 }
 
 /** Nota que acompanha a decomposição quando a dimensão é de pessoas. */
@@ -1039,7 +1669,7 @@ export function chanceText(dimension: Dimension, chance: ChanceTest): string {
       return `Entre ${formatInt(chance.segments_tested)} ${plural}, a taxa de ganho vai de ` +
         `${formatPct(chance.min_win_rate ?? 0)} a ${formatPct(chance.max_win_rate ?? 0)}: diferença grande o bastante para ` +
         `ser confiável com ${formatInt(chance.closed_tested)} fechadas: dificilmente apareceria se os recortes fossem ` +
-        `iguais. Descreve este histórico; não prova causa nem que vá se repetir.${small}`;
+        `iguais. Descreve este histórico, mas não prova causa nem que vá se repetir.${small}`;
     case "too_few_closed":
       return `Poucas fechadas por ${DIMENSION_LABELS[dimension].toLowerCase()} para comparar a taxa de ganho.${small}`;
     default:
@@ -1090,8 +1720,8 @@ export function findingText(finding: Finding): { title: string; body: string; ki
       const p = finding.params;
       return {
         kind: "descriptive",
-        title: "As fechadas sem venda se decidem cedo",
-        body: `Metade das ${formatInt(p.lost)} fechadas sem venda fechou em até ${p.median_lost_cycle_days} dias; nas ` +
+        title: "As fechadas perdidas se decidem cedo",
+        body: `Metade das ${formatInt(p.lost)} fechadas perdidas fechou em até ${p.median_lost_cycle_days} dias. Nas ` +
           `${formatInt(p.won)} ganhas, a mediana é de ${p.median_won_cycle_days} dias.`,
       };
     }
@@ -1148,5 +1778,5 @@ export const networkError = (url: string): string =>
 
 export const httpError = (status: number): string => `A API respondeu com erro ${status}.`;
 
-export const CONTRACT_ERROR = "A API respondeu num formato que esta tela não reconhece. Atualize a página; se continuar, " +
+export const CONTRACT_ERROR = "A API respondeu num formato que esta tela não reconhece. Atualize a página. Se continuar, " +
   "avise quem mantém a ferramenta.";

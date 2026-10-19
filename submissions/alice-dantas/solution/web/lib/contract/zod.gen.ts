@@ -149,6 +149,52 @@ export const zAccountProductCoverage = z.object({
 });
 
 /**
+ * CrosstabCell
+ */
+export const zCrosstabCell = z.object({
+    key: z.string(),
+    closed: z.int(),
+    share: z.number().nullable()
+});
+
+/**
+ * CrosstabRow
+ */
+export const zCrosstabRow = z.object({
+    key: z.string(),
+    closed: z.int(),
+    cells: z.array(zCrosstabCell)
+});
+
+/**
+ * Crosstab
+ *
+ * Quem compra o quê e quem atende quem: fechadas por linha e coluna. Sem taxa por célula.
+ */
+export const zCrosstab = z.object({
+    id: z.enum([
+        'account_product',
+        'sector_product',
+        'seller_sector',
+        'sector_office',
+        'location_office'
+    ]),
+    row_dimension: z.enum([
+        'account',
+        'sector',
+        'seller',
+        'location'
+    ]),
+    column_dimension: z.enum([
+        'product',
+        'sector',
+        'office'
+    ]),
+    columns: z.array(z.string()),
+    rows: z.array(zCrosstabRow)
+});
+
+/**
  * CycleBand
  */
 export const zCycleBand = z.object({
@@ -1098,6 +1144,7 @@ export const zIntelligence = z.object({
     ])),
     breakdowns: z.array(zBreakdown),
     matrix: zSellerProductMatrix,
+    crosstabs: z.array(zCrosstab),
     cycle_bands: z.array(zCycleBand),
     monthly: z.array(zMonthPoint)
 });

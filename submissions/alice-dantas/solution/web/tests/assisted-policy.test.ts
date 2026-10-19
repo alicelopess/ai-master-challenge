@@ -4,14 +4,14 @@ import { describe, expect, test } from "vitest";
 import {
   DIMENSIONS, OPTIONS, POINTS, UNKNOWN_LIMIT, WEIGHTS, emptyAssessment, type Answers, type Assessment,
 } from "@/lib/assisted/model";
-import { addDays, conflictsOf, evaluate, move, rank } from "@/lib/assisted/policy";
+import { conflictsOf, evaluate, move, rank } from "@/lib/assisted/policy";
 
 const TODAY = "2017-12-31";
 const NOW = new Date("2018-01-02T10:00:00Z");
 
 const FULL: Answers = {
   interest: "replied", timing: "within_30", need: "confirmed", urgency: "concrete", budget: "confirmed",
-  authority: "access", progress: "dated",
+  authority: "access", progress: "within_7",
 };
 const UNKNOWN: Answers = Object.fromEntries(DIMENSIONS.map((d) => [d, "unknown"])) as Answers;
 
@@ -34,14 +34,14 @@ describe("pesos e pontos", () => {
 
 describe("pontos confirmados e faixa", () => {
   test("todas as melhores respostas somam 100", () => {
-    const e = run(FULL, { actionDate: TODAY });
+    const e = run(FULL);
     expect(e.confirmed).toBe(100);
     expect(e.potential).toBe(100);
   });
   test("\"Não sei\" não vira \"não\": os dois valem 0 confirmado, mas só ele deixa potencial", () => {
     const base: Answers = { ...FULL, budget: "none" };
-    const unknown = run({ ...FULL, budget: "unknown" }, { actionDate: TODAY });
-    const no = run(base, { actionDate: TODAY });
+    const unknown = run({ ...FULL, budget: "unknown" });
+    const no = run(base);
     expect(unknown.confirmed).toBe(no.confirmed);
     expect(no.potential).toBe(no.confirmed);
     expect(unknown.potential).toBe(unknown.confirmed + WEIGHTS.budget);
@@ -87,22 +87,18 @@ describe("categoria de trabalho", () => {
   const category = (answers: Answers, extra: Partial<Assessment> = {}) => run(answers, extra).category;
   const rest: Answers = { timing: "no_forecast", urgency: "none", budget: "none" };
 
-  test("ação com data dentro da janela: compromisso a cumprir", () => {
-    expect(category(FULL, { actionDate: addDays(TODAY, 7) })).toBe("commitment_due");
+  test("ação combinada para os próximos 7 dias: compromisso a cumprir", () => {
+    expect(category(FULL)).toBe("commitment_due");
   });
-  test("ação com data anterior a hoje: ainda compromisso a cumprir, com nota para verificar a situação", () => {
-    const e = run(FULL, { actionDate: "2017-12-28" });
-    expect(e.category).toBe("commitment_due");
-    expect(e.notes).toContainEqual({ code: "past_commitment", date: "2017-12-28" });
+  test("ação para depois dos 7 dias não é urgente: a categoria vem das outras respostas, com a nota de compromisso futuro", () => {
+    for (const progress of ["within_30", "later"] as const) {
+      const e = run({ ...FULL, authority: "no_access", progress });
+      expect(e.category).toBe("advance_qualification");
+      expect(e.notes).toContainEqual({ code: "future_commitment" });
+    }
   });
-  test("ação depois da janela não é urgente: a categoria vem das outras respostas, com a nota de compromisso futuro", () => {
-    const e = run({ ...FULL, authority: "no_access" }, { actionDate: addDays(TODAY, 8) });
-    expect(e.category).toBe("advance_qualification");
-    expect(e.notes).toContainEqual({ code: "future_commitment", date: "2018-01-08" });
-  });
-  test("ação combinada sem data, ou \"com data\" sem a data: compromisso a organizar", () => {
+  test("ação combinada sem prazo: compromisso a organizar", () => {
     expect(category({ ...FULL, progress: "undated" })).toBe("commitment_to_organize");
-    expect(category(FULL, { actionDate: null })).toBe("commitment_to_organize");
   });
   test("necessidade confirmada, interesse recente e nada combinado: definir continuidade", () => {
     expect(category({ ...FULL, ...rest, progress: "none", authority: "access" })).toBe("define_continuity");
@@ -152,7 +148,7 @@ describe("quase tudo desconhecido", () => {
 
 describe("ordem por pontos", () => {
   const a = (id: string, answers: Answers, extra: Partial<Assessment> = {}) => evaluate(make(id, answers, extra), TODAY);
-  const high = a("A", FULL, { actionDate: TODAY });
+  const high = a("A", FULL);
   const mid = a("B", { ...FULL, timing: "unknown", budget: "none", progress: "none" });
   const low = a("C", { ...FULL, interest: "no_reply", timing: "later", need: "investigating", urgency: "none", budget: "none",
     authority: "not_identified", progress: "none" });
@@ -193,7 +189,7 @@ describe("ordem por pontos", () => {
 
 describe("determinismo e retorno posterior", () => {
   test("as mesmas respostas dão o mesmo resultado, e avaliar não altera o que foi guardado", () => {
-    const assessment = make("X", FULL, { actionDate: TODAY });
+    const assessment = make("X", FULL);
     const before = JSON.stringify(assessment);
     expect(evaluate(assessment, TODAY)).toEqual(evaluate(structuredClone(assessment), TODAY));
     expect(JSON.stringify(assessment)).toBe(before);
@@ -203,9 +199,5 @@ describe("determinismo e retorno posterior", () => {
     const after = run({ ...FULL, progress: "none", interest: "no_reply" });
     expect(after.confirmed).toBe(before.confirmed - WEIGHTS.interest);
     expect(after.category).not.toBe(before.category);
-  });
-  test("somar dias atravessa mês e ano", () => {
-    expect(addDays("2017-12-31", 7)).toBe("2018-01-07");
-    expect(addDays("2018-02-27", 3)).toBe("2018-03-02");
   });
 });

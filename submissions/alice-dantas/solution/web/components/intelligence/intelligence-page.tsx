@@ -23,7 +23,7 @@ import { BreakdownExplorer } from "./breakdown-explorer";
 import { DealsSheet, type DealsRequest } from "./deals-sheet";
 import { HistorySummary } from "./history-summary";
 import { ActiveFilters, IntelligenceFilters } from "./intelligence-filters";
-import { SellerProductMatrix } from "./seller-product-matrix";
+import { CrosstabExplorer } from "./crosstab-explorer";
 import { AnalysesPanel, GuidePanel, type Panel } from "./side-panels";
 import { TimeResults } from "./time-results";
 
@@ -79,17 +79,17 @@ export function IntelligencePage() {
           title={PAGES.inteligencia.title}
           description={PAGES.inteligencia.description}
           actions={
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 lg:flex-wrap">
               <IntelligenceFilters filter={filter} options={options} sellers={sellers.data?.sellers ?? []}
                                    onChange={change} />
-              <Button variant="outline" onClick={() => setPanel("analyses")} disabled={!payload}>
+              <Button variant="outline" className="relative max-lg:size-9 max-lg:px-0" onClick={() => setPanel("analyses")} disabled={!payload}>
                 <Lightbulb aria-hidden />
-                {INTELLIGENCE.analyses.button}
-                {payload && <Badge variant="secondary" className="tabular-nums">{formatInt(analyses)}</Badge>}
+                <span className="max-lg:sr-only">{INTELLIGENCE.analyses.button}</span>
+                {payload && <Badge variant="secondary" className="tabular-nums max-lg:absolute max-lg:-top-2 max-lg:-right-2 max-lg:h-4 max-lg:min-w-4 max-lg:px-1 max-lg:text-[0.625rem]">{formatInt(analyses)}</Badge>}
               </Button>
-              <Button variant="outline" onClick={() => setPanel("guide")}>
+              <Button variant="outline" className="relative max-lg:size-9 max-lg:px-0" onClick={() => setPanel("guide")}>
                 <BookOpen aria-hidden />
-                {INTELLIGENCE.guide.button}
+                <span className="max-lg:sr-only">{INTELLIGENCE.guide.button}</span>
               </Button>
             </div>
           }
@@ -128,7 +128,7 @@ export function IntelligencePage() {
                              onMetric={(next) => setQuery({ metrica: next === "revenue" ? null : next })}
                              onFilter={change} onDeals={(segment) => openDeals("won", null, segment)} />
           {payload.matrix.rows.length > 0 && (
-            <SellerProductMatrix matrix={payload.matrix} onDeals={(segment) => openDeals("won", null, segment)} />
+            <CrosstabExplorer matrix={payload.matrix} crosstabs={payload.crosstabs} onDeals={(segment) => openDeals("won", null, segment)} />
           )}
           <TimeResults payload={payload} />
           <AnalysesPanel open={panel === "analyses"} onClose={() => setPanel(null)} diagnostics={payload.diagnostics}

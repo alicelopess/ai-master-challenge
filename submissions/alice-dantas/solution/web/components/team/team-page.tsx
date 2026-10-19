@@ -2,14 +2,13 @@
 
 import { ArrowRight, Inbox } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { DataWarning, ErrorAlert } from "@/components/app/error-alert";
 import { PageHeader } from "@/components/app/page-header";
 import { GroupTabs } from "@/components/portfolio/group-tabs";
 import { ListFiltersBar, ListFiltersStatus } from "@/components/portfolio/list-filters";
-import { PortfolioSummary } from "@/components/portfolio/portfolio-summary";
-import { ReasonSheet } from "@/components/portfolio/reason-sheet";
+import { ReasonPanel } from "@/components/portfolio/reason-panel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty";
@@ -20,12 +19,15 @@ import { api } from "@/lib/api";
 import type { Group } from "@/lib/contract";
 import { formatInt } from "@/lib/format";
 import { defaultTab, filterGroups, filtersToQuery, hasFilters, parseFilters, productsIn, type ListFilters } from "@/lib/portfolio";
+import { emptyFilter } from "@/lib/intelligence";
 import { filterOptions } from "@/lib/team";
 import { useApi } from "@/lib/use-api";
+import { useExpanded } from "@/lib/use-expanded";
 import { useQuery } from "@/lib/use-query";
 
 import { BySellerTable } from "./by-seller-table";
 import { TeamFilters } from "./team-filters";
+import { TeamStats } from "./team-stats";
 import { TeamSummary } from "./team-summary";
 
 export function TeamPage() {
@@ -35,7 +37,9 @@ export function TeamPage() {
   const sellers = useApi(() => api.sellers(), "sellers");
   const key = `team:${manager ?? ""}:${office ?? ""}`;
   const pipeline = useApi(() => api.teamPipeline({ manager, office }), key);
-  const [selected, setSelected] = useState<string | null>(null);
+  // Valor de tabela, vendas e taxa de ganho do mesmo filtro vêm da Inteligência; se falhar, esses cartões ficam vazios.
+  const value = useApi(() => api.intelligence({ ...emptyFilter(), manager, office }), `team-value:${manager ?? ""}:${office ?? ""}`);
+  const rows = useExpanded();
 
   const options = filterOptions(sellers.data?.sellers ?? [], manager, office);
   const payload = pipeline.data;
@@ -44,10 +48,18 @@ export function TeamPage() {
   const filters = parseFilters(query);
   const groups = payload ? filterGroups(payload.groups, filters) : [];
   const changeFilters = useCallback((next: ListFilters) => setQuery(filtersToQuery(next)), [setQuery]);
-  const openGroup = groups.find((g) => g.items.some((i) => i.opportunity_id === selected));
   const error = sellers.error ?? pipeline.error;
   // Duas análises sob os números, em abas, para a página não virar uma rolagem longa. Fica na URL.
   const view = query.get("visao") === "oportunidades" ? "oportunidades" : "vendedores";
+  // Da legenda da composição para a lista: rola só depois que a URL mudou e a aba montou.
+  const scrollToList = useRef(false);
+  useEffect(() => {
+    if (!scrollToList.current || view !== "oportunidades") return;
+    scrollToList.current = false;
+    // Um quadro depois do commit: a troca de aba ainda ajusta o layout no mesmo quadro.
+    window.requestAnimationFrame(() =>
+      document.getElementById("grupos")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [view, tab]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -70,7 +82,7 @@ export function TeamPage() {
         manager={manager}
         office={office}
         onChange={(changes) => {
-          setSelected(null);
+          rows.reset();
           setQuery({ ...changes, grupo: null });
         }}
       />
@@ -79,9 +91,8 @@ export function TeamPage() {
 
       {pipeline.loading && (
         <div className="flex flex-col gap-4" aria-busy="true" aria-label={UI.loading}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {[0, 1, 2, 3, 4].map((n) => <Skeleton key={n} className="h-32 rounded-xl" />)}
-          </div>
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
           <Skeleton className="h-64 w-full rounded-xl" />
         </div>
       )}
@@ -89,7 +100,12 @@ export function TeamPage() {
       {payload && tab && (
         <>
           {!payload.meta.audited && <DataWarning />}
-          <TeamSummary payload={payload} />
+          <TeamStats sellers={payload.by_seller.filter((seller) => seller.total > 0).length}
+                     intelligence={value.error ? null : value.data} />
+          <TeamSummary payload={payload} onPick={(state) => {
+            scrollToList.current = true;
+            setQuery({ visao: "oportunidades", grupo: state });
+          }} />
           <Tabs value={view} onValueChange={(next) => setQuery({ visao: next === "oportunidades" ? next : null })}
                 className="gap-6">
             <TabsList variant="line" aria-label={TEAM.views.label} className="w-full self-center sm:w-fit">
@@ -116,7 +132,6 @@ export function TeamPage() {
                 <EmptyState text={pipelineEmptyText(payload.empty)} />
               ) : (
                 <>
-                  <PortfolioSummary payload={payload} counts={false} />
                   <ListFiltersBar filters={filters} onChange={changeFilters} products={productsIn(payload.groups)} />
                   <ListFiltersStatus filters={filters} shown={groups.reduce((sum, g) => sum + g.items.length, 0)}
                                      total={payload.summary.total} />
@@ -125,9 +140,13 @@ export function TeamPage() {
                     groups={groups}
                     tab={tab}
                     onTab={(state) => setQuery({ grupo: state })}
-                    selected={selected}
-                    onSelect={setSelected}
+                    expanded={rows.expanded}
+                    onToggle={rows.toggle}
+                    renderPanel={(item) => (
+                      <ReasonPanel item={item} meta={payload.meta} onClose={() => rows.close(item.opportunity_id)} />
+                    )}
                     limits={payload.meta}
+                    ordering={payload.ordering}
                     filtered={hasFilters(filters)}
                     showSeller
                   />
@@ -135,7 +154,6 @@ export function TeamPage() {
               )}
             </TabsContent>
           </Tabs>
-          <ReasonSheet items={openGroup?.items ?? []} selected={selected} onSelect={setSelected} meta={payload.meta} />
         </>
       )}
     </div>

@@ -297,6 +297,42 @@ def seller_product_matrix(f: Frames, products: List[str]) -> Payload:
     return {"products": columns, "rows": rows}
 
 
+# Cruzamentos de "quem compra o quê e quem atende quem": linhas, colunas e a coluna de cada um nas fechadas.
+# O cliente traz setor e país da sede; o vendedor traz o escritório. Sem taxa por célula (a mesma regra da matriz).
+CROSSTABS = (
+    ("account_product", "account", "product", "account", "product"),
+    ("sector_product", "sector", "product", "sector", "product"),
+    ("seller_sector", "seller", "sector", "sales_agent", "sector"),
+    ("sector_office", "sector", "office", "sector", "regional_office"),
+    ("location_office", "location", "office", "location", "regional_office"),
+)
+
+
+def crosstab(f: Frames, products: List[str], spec: Tuple[str, str, str, str, str]) -> Payload:
+    """Fechadas por linha e coluna, com a fatia de cada coluna nas fechadas da linha. Vendedores: todos da equipe do
+    recorte, em ordem alfabética (nunca um ranking); o resto, do que mais fechou ao que menos fechou."""
+    ident, row_dim, col_dim, row_col, col_col = spec
+    closed = f.closed.dropna(subset=[row_col, col_col])
+    if col_dim == codes.DIM_PRODUCT:
+        columns = [p for p in products if p in set(closed[col_col])]
+    else:
+        columns = sorted(set(closed[col_col]))
+    counts = closed.groupby([row_col, col_col]).size()
+    totals = closed.groupby(row_col).size()
+    keys = set(totals.index)
+    people = row_dim == codes.DIM_SELLER
+    if people:
+        keys |= set(f.teams["sales_agent"])
+    ordered = sorted(keys) if people else sorted(keys, key=lambda k: (-int(totals[k]), k))
+    rows = []
+    for key in ordered:
+        total = int(totals.get(key, 0))
+        cells = [{"key": c, "closed": int(counts.get((key, c), 0)),
+                  "share": _ratio(int(counts.get((key, c), 0)), total)} for c in columns]
+        rows.append({"key": key, "closed": total, "cells": cells})
+    return {"id": ident, "row_dimension": row_dim, "column_dimension": col_dim, "columns": columns, "rows": rows}
+
+
 def cycle_bands(f: Frames, ctx: triage.Context) -> List[Payload]:
     """Fechadas por faixa de ciclo: as bordas fixas abaixo de L1, depois L1 e L2 do as_of (os mesmos
     limites da regra), para a última faixa ser exatamente a de Acompanhar."""
@@ -492,6 +528,7 @@ def payload(dataset: Dataset, filters: Optional[Filters] = None,
         "findings": findings(f, breakdowns, history, products, filters),
         "breakdowns": breakdowns,
         "matrix": seller_product_matrix(f, products),
+        "crosstabs": [crosstab(f, products, spec) for spec in CROSSTABS],
         "cycle_bands": cycle_bands(f, ctx),
         "monthly": monthly(f, (first, last)),
     }

@@ -3,12 +3,14 @@ import { describe, expect, test } from "vitest";
 
 import {
   BRAND, DATA_WARNING, DIMENSION_LABELS, EVIDENCE, EVIDENCE_LANGUAGES, EVIDENCE_TEXT, GROUP_LABELS, INTELLIGENCE,
-  METRIC_LABELS, NAV, OUTCOME_LABELS, PAGES, PEOPLE_DRIVERS_NOTE, RANKER_DESCRIPTIONS, RANKER_LABELS,
+  METRIC_LABELS, NAV, OUTCOME_LABELS, PAGES, PEOPLE_DRIVERS_NOTE, RANKER_DESCRIPTIONS, RANKER_LABELS, RANKER_SHORT,
   RANKER_TECH_DESCRIPTIONS, ROLE_LABELS, RULES, TECH_COLUMNS, TEAM, UI, accountWarning, actionText, bandRange,
   bandCountText, bandTitle, chanceText, clientText, dataLabel, dealsEmptyText, diagnosticText, driversText, errorText, findingText,
-  emptyGroupsText, groupDescription, groupZeroNote, groupEmptyText, historyEmptyText, legendText, metricText, missingShort, pipelineEmptyText,
-  ageContextText, reasonText, segmentLabel, sizeLabel, summaryCounts, tieNote, tieText, suggestionText, suggestionsFor, valueLabel,
+  emptyGroupsText, groupDescription, groupOrderShort, groupRange, groupShort, groupZeroNote, groupEmptyText, historyEmptyText, legendText, metricText, missingShort, pipelineEmptyText,
+  CHANCE_LABELS, DRIVER_SHORT, chanceSupport, diagnosticHeadline, diagnosticStepShort, findingHeadline, spreadText,
+  ageContextText, reasonText, startAction, startReason, startReasonShort, segmentLabel, sizeLabel, summaryCounts, tieNote, tieText, suggestionText, suggestionsFor, valueLabel,
 } from "@/copy/pt-BR";
+import { GROUP_VISUAL } from "@/copy/visual";
 import type { ChanceTest, Evidence, Intelligence, Meta, RevenueDrivers, Rules } from "@/lib/contract";
 import type { Item } from "@/lib/contract";
 import {
@@ -23,6 +25,7 @@ import {
 } from "./fixtures";
 
 // A lista do núcleo (leadscorer/policy.py, FORBIDDEN_TERMS), exportada como fixture: uma lista só.
+const CLOSED_LOST = /^perdidas?$|fechadas perdidas|nas perdidas|ganhas e perdidas/g;
 const VOCABULARY = load("vocabulary") as { forbidden_terms: string[]; match: "word_start" };
 /** Começo de palavra: "parad" pega "paradas", mas não "comparado" (o \b do JS só conhece ASCII). */
 const startsAWord = (term: string) => new RegExp(`(?<![\\p{L}\\p{N}_])${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "u");
@@ -53,20 +56,31 @@ const CONTRACT = {
 const pages: Intelligence[] = INTELLIGENCE_PAGES.map(intelligence);
 
 /** Os textos da Inteligência montados a partir dos códigos e params de uma resposta. */
+const headlineTexts = (h: { metrics: { value: string; label: string }[]; chips?: string[] }): string[] =>
+  [...h.metrics.flatMap((m) => [m.value, m.label]), ...(h.chips ?? [])];
+
 function intelligenceTexts(page: Intelligence): string[] {
   const texts: string[] = [INTELLIGENCE.dataLabel(page.meta)];
-  for (const d of page.diagnostics) texts.push(...Object.values(diagnosticText(d)));
+  for (const d of page.diagnostics) {
+    texts.push(...Object.values(diagnosticText(d)), diagnosticStepShort(d), ...headlineTexts(diagnosticHeadline(d)));
+  }
   for (const f of page.findings) {
     const { title, body } = findingText(f);
-    texts.push(title, body);
+    texts.push(title, body, ...headlineTexts(findingHeadline(f)));
   }
+  texts.push(...Object.values(CHANCE_LABELS), ...Object.values(DRIVER_SHORT));
   for (const b of page.breakdowns) {
+    texts.push(chanceSupport(b.dimension, b.chance), ...(b.drivers ? [spreadText(b.dimension, b.drivers)] : []));
     texts.push(chanceText(b.dimension, b.chance), ...(b.drivers ? [driversText(b.dimension, b.drivers)] : []),
       ...b.segments.map((seg) => segmentLabel(b.dimension, seg.key, page.options.sizes)),
       ...METRICS.map((m) => metricText(m, null)));
   }
   texts.push(...page.options.sizes.map((band) => sizeLabel(band, page.options.sizes)));
   const { history, open } = page;
+  texts.push(INTELLIGENCE.kpis.revenueShort(history.revenue),
+    ...(history.median_lost_cycle_days === null ? [] : [INTELLIGENCE.kpis.lostCycleShort(history.median_lost_cycle_days)]),
+    ...(history.win_rate ? [INTELLIGENCE.kpis.winRateChip(history.win_rate.low, history.win_rate.high)] : []),
+    INTELLIGENCE.open.titleCount(open.summary.total));
   texts.push(INTELLIGENCE.kpis.revenueHelp(history.revenue), INTELLIGENCE.kpis.wonOf(history.closed),
     INTELLIGENCE.open.count(open.summary.total), INTELLIGENCE.open.listValue(open.list_value));
   if (history.win_rate) texts.push(INTELLIGENCE.kpis.winRateRange(history.win_rate.low, history.win_rate.high));
@@ -79,6 +93,13 @@ function intelligenceTexts(page: Intelligence): string[] {
   for (const row of page.matrix.rows) {
     texts.push(...row.cells.map((c) => INTELLIGENCE.matrix.cell(c.closed, c.mix_share)),
       ...row.cells.map((c) => INTELLIGENCE.matrix.cellLabel(row.seller, c.product)));
+  }
+  for (const table of page.crosstabs) {
+    for (const row of table.rows) {
+      texts.push(...row.cells.map((c) => INTELLIGENCE.crosstab.cell(c.closed, c.share)),
+        ...row.cells.map((c) => INTELLIGENCE.crosstab.cellLabel(row.key, c.key)));
+    }
+    texts.push(...table.columns.map((column) => INTELLIGENCE.crosstab.columnHelp(column)));
   }
   return texts;
 }
@@ -93,7 +114,7 @@ const strings = (value: unknown): string[] =>
 /** Todo texto que a tela monta a partir das fixtures. */
 function renderedTexts(): string[] {
   const texts: string[] = [...strings([GROUP_LABELS, BRAND, NAV, PAGES, ROLE_LABELS, UI, TEAM, RANKER_LABELS,
-    RANKER_DESCRIPTIONS, RANKER_TECH_DESCRIPTIONS, EVIDENCE, EVIDENCE_LANGUAGES, EVIDENCE_TEXT, TECH_COLUMNS, RULES,
+    RANKER_DESCRIPTIONS, RANKER_SHORT, RANKER_TECH_DESCRIPTIONS, EVIDENCE, EVIDENCE_LANGUAGES, EVIDENCE_TEXT, TECH_COLUMNS, RULES,
     INTELLIGENCE, DIMENSION_LABELS, METRIC_LABELS, OUTCOME_LABELS]), DATA_WARNING, PEOPLE_DRIVERS_NOTE,
     ...assistedTexts()];
   for (const page of pages) texts.push(...intelligenceTexts(page));
@@ -115,22 +136,38 @@ function renderedTexts(): string[] {
     texts.push(text.question(design.top_k, design.horizon_days), text.headline(design.top_k),
       text.columns.value(design.top_k), text.columns.delta(design.top_k), text.how(design),
       text.method(design.cuts.length, design.cuts[0], design.cuts[design.cuts.length - 1], design.horizon_days),
-      ...[...evidence.rankers, ...evidence.without_no_outcome].flatMap((r) => (r.delta_val ? [text.delta(r.delta_val)] : [])));
+      ...Object.values(text.methodStats(design)),
+      ...[...evidence.rankers, ...evidence.without_no_outcome].flatMap((r) => (r.delta_val ? [text.delta(r.delta_val),
+        text.deltaShort(r.delta_val), text.deltaRange(r.delta_val), text.rangeHelp(r.delta_val)] : [])));
   }
-  for (const text of Object.values(EVIDENCE_TEXT)) texts.push(text.verdict(evidence.without_no_outcome_verdict));
+  for (const text of Object.values(EVIDENCE_TEXT)) {
+    const verdicts = [evidence.without_no_outcome_verdict,
+      { code: "reference_ahead", ranker: "list_price_only", delta: { value: -0.012, low: -0.02, high: -0.004 } },
+      { code: "inconclusive", ranker: null, delta: null }] as Evidence["without_no_outcome_verdict"][];
+    for (const verdict of verdicts) {
+      texts.push(text.verdict(verdict), text.verdictTitle(verdict), ...(text.verdictBody(verdict) ? [text.verdictBody(verdict)!] : []));
+    }
+    texts.push(text.howHelp(design), ...text.howStats(design).flatMap((stat) => [stat.label, ...(stat.value ? [stat.value] : [])]));
+  }
   texts.push(TECH_COLUMNS.hits(design.top_k), TECH_COLUMNS.lift(design.top_k), EVIDENCE.outOf(6, 7),
     RULES.wonLimit(rules.meta.won_cycle_limit_days, rules.meta.cycle_percentile),
     RULES.longestLimit(rules.meta.cycle_limit_days), ...rules.value_bands.map(bandRange),
     ...rules.value_bands.map((b) => bandTitle(b.band)));
   texts.push(groupZeroNote("focar", 0, rules.meta)!, UI.seeGroup(GROUP_LABELS.revisar), UI.moreInTab(3, GROUP_LABELS.focar), UI.whyHereFor("EPP"),
-    UI.position(1, 5), UI.ageDays(10), UI.ofTotal(2089), UI.pagination.page(2), UI.pagination.range(26, 50, 1291),
-    UI.startWithTie(tieText(3, "GTX Plus Pro", 5482)));
+    UI.closeAnalysis, UI.chartClickHint, UI.sort.next(null), UI.sort.next("asc"), UI.sort.next("desc"),
+    UI.ageDays(10), UI.ofTotal(2089), UI.pagination.page(2), UI.pagination.range(26, 50, 1291),
+    UI.startWithTie(tieText(3, "GTX Plus Pro", 5482)), UI.tieChip(13, "GTX Plus Pro", 5482),
+    ...Object.values(GROUP_LABELS).map(UI.startHeadline));
   for (const p of pipelines) {
     texts.push(legendText(p.ordering), dataLabel(p.meta), accountWarning(p.summary.without_account, p.summary.total));
-    texts.push(...p.groups.map((g) => groupDescription(g.state, p.meta)));
+    texts.push(...p.groups.map((g) => groupDescription(g.state, p.meta)), groupOrderShort(p.ordering),
+      ...p.groups.flatMap((g) => [groupShort(g.state, p.meta), groupRange(g.state, p.meta)]));
     if (p.empty) texts.push(pipelineEmptyText(p.empty));
     for (const g of p.groups) {
       if (g.empty) texts.push(groupEmptyText(g.empty));
+      if (g.empty?.code === "start_with_group") {
+        texts.push(startReason(g.empty), startAction(g.empty), startReasonShort(g.empty, g.state));
+      }
       if (g.next_action) texts.push(actionText(g.next_action));
     }
   }
@@ -172,10 +209,19 @@ describe("cobertura: todo código do contrato tem texto", () => {
   });
   test("grupos", () => {
     expect(Object.keys(GROUP_LABELS).sort()).toEqual([...CONTRACT.groups].sort());
+    // Ícone e cor de apresentação para todo grupo do contrato; a cor de gráfico é sempre um token de preenchimento.
+    expect(Object.keys(GROUP_VISUAL).sort()).toEqual([...CONTRACT.groups].sort());
+    for (const [state, visual] of Object.entries(GROUP_VISUAL)) {
+      expect(visual.fill).toBe(`var(--status-${state.replace("_", "-")}-fill)`);
+      expect(new Set(Object.values(GROUP_VISUAL).map((v) => v.icon)).size).toBe(CONTRACT.groups.length);
+    }
   });
   test("estratégias do backtest: rótulo e descrição para cada código", () => {
     expect(Object.keys(RANKER_LABELS).sort()).toEqual([...CONTRACT.rankers].sort());
     expect(Object.keys(RANKER_DESCRIPTIONS).sort()).toEqual([...CONTRACT.rankers].sort());
+    expect(Object.keys(RANKER_SHORT).sort()).toEqual([...CONTRACT.rankers].sort());
+    // A descrição curta cabe na coluna: até 8 palavras.
+    for (const text of Object.values(RANKER_SHORT)) expect(text.split(/\s+/).length, text).toBeLessThanOrEqual(8);
     expect(Object.keys(RANKER_TECH_DESCRIPTIONS).sort()).toEqual([...CONTRACT.rankers].sort());
     expect((load("evidence") as Evidence).rankers.map((r) => r.code).sort()).toEqual([...CONTRACT.rankers].sort());
   });
@@ -196,13 +242,19 @@ describe("cobertura: todo código do contrato tem texto", () => {
   test("nenhum texto sai com valor faltando", () => {
     for (const text of renderedTexts()) expect(text).not.toMatch(/undefined|null|NaN|\[object/);
   });
+  test("nenhum texto usa ponto e vírgula: a frase termina em ponto, ou usa \"mas\" para a condição", () => {
+    for (const text of renderedTexts()) expect(text, text).not.toContain(";");
+  });
 });
 
 test("vocabulário: nenhum termo proibido; faixa sempre como valor de tabela", () => {
   expect(VOCABULARY.match).toBe("word_start");
   for (const text of renderedTexts()) {
     const lowered = text.toLowerCase();
-    for (const term of VOCABULARY.forbidden_terms) expect(lowered, `${term} em "${text}"`).not.toMatch(startsAWord(term));
+    // "Perdida" só como o resultado factual de uma negociação já fechada sem venda (nunca para uma aberta): o rótulo
+    // sozinho, "fechadas perdidas", "nas perdidas" ou "ganhas e perdidas". Fora dessas formas, a palavra segue proibida.
+    const checked = lowered.replace(CLOSED_LOST, "");
+    for (const term of VOCABULARY.forbidden_terms) expect(checked, `${term} em "${text}"`).not.toMatch(startsAWord(term));
     for (const match of text.matchAll(BAND_WORD)) {
       expect(lowered.slice(0, match.index).endsWith("de tabela "), text).toBe(true);
     }
@@ -212,6 +264,8 @@ test("vocabulário: nenhum termo proibido; faixa sempre como valor de tabela", (
 test("vocabulário por começo de palavra, como no núcleo", () => {
   const hits = (text: string) => VOCABULARY.forbidden_terms.some((term) => startsAWord(term).test(text.toLowerCase()));
   expect(hits("Comparado à regra atual, separadas por grupo.")).toBe(false);
+  expect(hits("A negociação aberta está perdida".replace(CLOSED_LOST, ""))).toBe(true);
+  expect(hits("As fechadas perdidas".replace(CLOSED_LOST, ""))).toBe(false);
   for (const text of ["Negociação parada", "prazo de 106 dias", "Venceu ontem", "Atrasadas", "chance zero", "inativa"]) {
     expect(hits(text), text).toBe(true);
   }
@@ -221,7 +275,9 @@ test("todo número de uma frase de grupo vem do meta", () => {
   for (const p of pipelines) {
     const allowed = new Set([p.meta.won_cycle_limit_days, p.meta.cycle_limit_days, p.meta.cycle_percentile].map(String));
     for (const g of p.groups) {
-      for (const number of groupDescription(g.state, p.meta).match(NUMBER) ?? []) expect(allowed).toContain(number);
+      for (const text of [groupDescription(g.state, p.meta), groupShort(g.state, p.meta), groupRange(g.state, p.meta)]) {
+        for (const number of text.match(NUMBER) ?? []) expect(allowed, text).toContain(number);
+      }
     }
   }
 });
@@ -266,17 +322,20 @@ const withoutForms = (text: string, params: unknown) =>
 test("inteligência: todo número de diagnóstico, descoberta, acaso e decomposição vem dos params", () => {
   for (const page of pages) {
     for (const d of page.diagnostics) {
-      for (const line of Object.values(diagnosticText(d))) {
+      for (const line of [...Object.values(diagnosticText(d)), diagnosticStepShort(d), ...headlineTexts(diagnosticHeadline(d))]) {
         expect(withoutForms(line, d.params), line).not.toMatch(/\d/);
       }
     }
     for (const f of page.findings) {
       const { title, body } = findingText(f);
       expect(withoutForms(`${title} ${body}`, f.params), body).not.toMatch(/\d/);
+      for (const line of headlineTexts(findingHeadline(f))) expect(withoutForms(line, f.params), line).not.toMatch(/\d/);
     }
     for (const b of page.breakdowns) {
       expect(withoutForms(chanceText(b.dimension, b.chance), b.chance)).not.toMatch(/\d/);
+      expect(withoutForms(chanceSupport(b.dimension, b.chance), b.chance)).not.toMatch(/\d/);
       if (b.drivers) expect(withoutForms(driversText(b.dimension, b.drivers), b.drivers)).not.toMatch(/\d/);
+      if (b.drivers) expect(withoutForms(spreadText(b.dimension, b.drivers), b.drivers)).not.toMatch(/\d/);
     }
   }
 });
@@ -301,7 +360,7 @@ describe("textos de referência", () => {
   test("motivos e próximo passo dos três grupos de idade", () => {
     const epp = itemOf("pipeline-ana-alfa", "EPP");
     expect(epp.reasons.map(reasonText)).toEqual([
-      "Focar porque está aberta há 10 dias; 90% das vendas ganhas fecharam em até 100 dias.",
+      "Focar porque está aberta há 10 dias. Entre as vendas ganhas, 90% fecharam em até 100 dias.",
       "Valor de tabela 5.482 (valor de tabela alto): preço de catálogo do GTX Plus Pro, não valor negociado.",
     ]);
     // Sem conta registrada: a verificação cita o andamento e a conta, não uma ação comercial.
@@ -322,8 +381,8 @@ describe("textos de referência", () => {
       "Verifique no CRM se a negociação com Acme continua: o tempo aberta não prova que ela terminou.");
     expect(UI.limitsNote).toBe(
       "Como o pipeline só apresenta datas, produto e preço de tabela: não apresenta último contato, ligações, " +
-        "reuniões nem e-mails, a base não registra atividades, estágio nem contatos; por isso o Rankio indica " +
-        "possibilidades para diferentes cenários de negociação, não uma certeza de próximo passo.");
+        "reuniões nem e-mails. A base não registra atividades, estágio nem contatos. Por isso o Rankio indica " +
+        "possibilidades para diferentes cenários de negociação, mas não uma certeza de próximo passo.");
   });
 
   test("Qualificar e Completar", () => {
@@ -343,8 +402,8 @@ describe("textos de referência", () => {
 
   test("carteira, grupos vazios e avisos", () => {
     const ana = sellerPipeline("pipeline-ana-alfa");
-    expect(legendText(ana.ordering)).toBe("Ordem: Focar → Qualificar → Acompanhar → Confirmar → Completar; em cada " +
-      "grupo, maior valor de tabela primeiro; a idade aparece, mas não muda a ordem.");
+    expect(legendText(ana.ordering)).toBe("Ordem: Focar → Qualificar → Acompanhar → Confirmar → Completar. Em cada " +
+      "grupo, maior valor de tabela primeiro. A idade aparece, mas não muda a ordem.");
     expect(dataLabel(ana.meta)).toBe("Dados até 31/12/2017");
     expect(accountWarning(ana.summary.without_account, ana.summary.total)).toBe("5 de 8 sem cliente registrado");
     expect(summaryCounts(ana)).toBe("5 Focar + 2 Acompanhar + 1 Confirmar");
@@ -353,13 +412,18 @@ describe("textos de referência", () => {
     expect(groupEmptyText(sellerPipeline("pipeline-bruno-beta").groups[0].empty!)).toBe(
       "Nenhuma negociação em andamento. Comece por Qualificar: verifique no CRM se já houve engajamento e registre a " +
         "data.");
+    const davi = sellerPipeline("pipeline-edges-davi-delta").groups[0];
+    if (davi.empty?.code === "start_with_group") {
+      expect([startReasonShort(davi.empty, davi.state), startAction(davi.empty)]).toEqual([
+        "Focar vazio: nenhuma aberta há até 100 dias.", "Consulte no CRM o último registro de cada uma."]);
+    }
     expect(groupEmptyText(sellerPipeline("pipeline-edges-davi-delta").groups[0].empty!)).toBe(
       "Nenhuma aberta há até 100 dias. Comece por Acompanhar: consulte no CRM o último registro de cada uma.");
     expect(groupEmptyText(sellerPipeline("pipeline-edges-eva-epsilon").groups[0].empty!)).toBe(
       "Todas as negociações em andamento estão abertas há mais de 138 dias. Comece por Confirmar: verifique no CRM " +
         "quais seguem ativas.");
     expect(pipelineEmptyText(sellerPipeline("pipeline-carla-gama").empty!)).toBe(
-      "Nenhuma oportunidade aberta para este vendedor. A base não registra nenhuma aberta no nome dele; se isso não era " +
+      "Nenhuma oportunidade aberta para este vendedor. A base não registra nenhuma aberta no nome dele. Se isso não era " +
         "esperado, confira o cadastro no CRM.");
     expect(clientText(itemOf("pipeline-ana-alfa", "E138"))).toBe("sem cliente registrado");
     expect(valueLabel("médio")).toBe("valor de tabela médio");
@@ -379,12 +443,13 @@ describe("textos de referência", () => {
       "Falta produto, preço de tabela ou data de engajamento no CRM.",
     ]);
     expect(ROLE_LABELS).toEqual({ group: "Por que está neste grupo", order: "Por que nesta posição" });
+    expect(UI.tieChip(13, "GTX Plus Pro", 5482)).toBe("13 empatadas · GTX Plus Pro · 5.482");
     expect(UI.startWithTie(tieText(3, "GTX Plus Pro", 5482))).toBe(
       "Comece por qualquer uma destas 3 oportunidades empatadas (GTX Plus Pro, 5.482):");
     expect([UI.ofTotal(2089), UI.pagination.range(26, 50, 1291)]).toEqual(["de 2.089 abertas", "26–50 de 1.291"]);
     expect([RULES.wonLimit(106, 90), RULES.longestLimit(138)]).toEqual([
       "90% das vendas ganhas fecharam em até 106 dias. Até esse tempo, a negociação fica em Focar.",
-      "A venda mais longa já fechada levou 138 dias. Entre os dois limites, a negociação fica em Acompanhar; acima, " +
+      "A venda mais longa já fechada levou 138 dias. Entre os dois limites, a negociação fica em Acompanhar. Acima, " +
         "em Confirmar."]);
   });
 
@@ -399,8 +464,15 @@ describe("textos de referência", () => {
 
   test("evidência em linguagem de negócio: pontos em palavras, sem jargão", () => {
     const { negocio, tecnica } = EVIDENCE_TEXT;
-    expect(negocio.question(10, 90)).toBe(
-      "Se cada vendedor trabalhasse as 10 primeiras da lista, quanto do valor vendido nos 90 dias seguintes estaria nelas?");
+    expect(negocio.question(10, 90)).toBe("Quanto do valor vendido em 90 dias estava nas 10 primeiras?");
+    // Número primeiro, palavra depois: a diferença curta com sinal, a faixa curta e a faixa em frase (popover).
+    const behindRef = { value: -0.327, low: -0.368, high: -0.287 };
+    expect([negocio.deltaShort(behindRef), negocio.deltaRange(behindRef)]).toEqual(["−32,7 pontos", "entre −36,8 e −28,7"]);
+    expect(negocio.deltaShort({ value: 0.01, low: 0.003, high: 0.019 })).toBe("+1,0 ponto");
+    expect(negocio.deltaShort({ value: 0, low: -0.001, high: 0.002 })).toBe("Igual");
+    expect(negocio.rangeHelp({ value: -0.046, low: -0.068, high: -0.025 })).toBe(
+      "A diferença real deve ficar entre 2,5 e 6,8 pontos a menos.");
+    expect([tecnica.deltaShort(behindRef), tecnica.deltaRange(behindRef)]).toEqual(["−32,7 pp", "−36,8 pp a −28,7 pp"]);
     expect(negocio.delta({ value: -0.046, low: -0.068, high: -0.025 })).toBe(
       "4,6 pontos a menos que a regra atual (a diferença real deve ficar entre 2,5 e 6,8 pontos a menos)");
     expect(negocio.delta({ value: 0.015, low: 0.002, high: 0.027 })).toBe(
@@ -418,10 +490,24 @@ describe("textos de referência", () => {
       "ser um efeito de como a base foi montada.");
     expect(tecnica.verdict(behind)).toBe("\"Só valor de tabela\": Δ +1,0 pp (IC95%: +0,3 pp a +1,9 pp) contra a regra " +
       "servida. A vantagem da regra servida depende das negociações sem desfecho.");
+    // O veredito curto do alerta, para os três códigos; a frase inteira continua no detalhe.
+    expect([negocio.verdictTitle(behind), negocio.verdictBody(behind)]).toEqual([
+      "Sem as que nunca fecharam, \"Só valor de tabela\" fica 1,0 ponto à frente.",
+      "A vantagem da regra atual vem dessas negociações."]);
+    const ahead = { code: "reference_ahead", ranker: "list_price_only", delta: { value: -0.012, low: -0.02, high: -0.004 } } as const;
+    expect([negocio.verdictTitle(ahead), negocio.verdictBody(ahead)]).toEqual([
+      "Mesmo sem as que nunca fecharam, a regra atual fica à frente.", "A mais próxima é \"Só valor de tabela\": −1,2 ponto."]);
+    const inconclusive = { code: "inconclusive", ranker: null, delta: null } as const;
+    expect([negocio.verdictTitle(inconclusive), negocio.verdictBody(inconclusive)]).toEqual([
+      "Sem as que nunca fecharam, a diferença é pequena demais para ser confiável.", null]);
+    expect(negocio.limitsShort).toHaveLength(negocio.limits.length);
+    expect(tecnica.limitsShort).toHaveLength(tecnica.limits.length);
     expect(negocio.verdict({ code: "inconclusive", ranker: null, delta: null })).toBe(
       "Sem elas, a diferença entre a regra atual e as outras é pequena demais para ser confiável.");
     // A linguagem de negócio não usa siglas nem jargão estatístico.
-    const business = [...strings(negocio), ...Object.values(RANKER_DESCRIPTIONS), negocio.question(10, 90),
+    const business = [...strings(negocio), ...Object.values(RANKER_DESCRIPTIONS), ...Object.values(RANKER_SHORT),
+      negocio.deltaShort(behindRef), negocio.deltaRange(behindRef), negocio.rangeHelp(behindRef), negocio.question(10, 90),
+      negocio.verdictTitle(behind), negocio.verdictBody(behind)!, negocio.verdictTitle(ahead), negocio.verdictBody(ahead)!,
       negocio.headline(10), negocio.columns.value(10), negocio.columns.delta(10), negocio.verdict(behind)];
     for (const line of business) expect(line, line).not.toMatch(/\bpp\b|IC95%|AUC|Val@|P@|Lift|bootstrap|oráculo|margem de erro|acaso|ticket|\bmix\b/i);
   });
@@ -448,11 +534,11 @@ describe("textos de referência da inteligência", () => {
         "carteira fica menor e o que sobra é real.",
     });
     expect(byCode.open_without_account.body).toBe("3 de 6 abertas (50,0%) não têm cliente. Nas 121 fechadas, todas " +
-      "têm cliente; por isso a base não permite saber se a ausência do cliente diz algo sobre o desfecho.");
+      "têm cliente. Por isso a base não permite saber se a ausência do cliente diz algo sobre o desfecho.");
     expect(byCode.sellers_without_opportunities.body).toBe(
       "Fabio Zeta está no cadastro da equipe, mas sem nenhuma oportunidade no CRM.");
     expect(byCode.quarter_end_outcome_mix.body).toBe("No último mês de cada trimestre, 100,0% das 64 fechadas são " +
-      "ganhas; nos outros meses, 0,0% das 57.");
+      "ganhas. Nos outros meses, 0,0% das 57.");
     expect(byCode.engagement_inflow_drop.body).toBe(
       "0 em nov/2017 e 1 em dez/2017, contra o ritmo de 9,4 por mês de jun/2017 a out/2017.");
   });
@@ -461,7 +547,7 @@ describe("textos de referência da inteligência", () => {
     const sellers: RevenueDrivers = { segments_used: 30, spread_ratio: 9.34, volume_share: 0.614719,
       conversion_share: -0.013776, ticket_share: 0.399058, main: ["volume", "ticket"], negligible: ["conversion"] };
     expect(driversText("seller", sellers)).toBe("A receita varia 9,3 vezes entre 30 vendedores. Quanto da diferença " +
-      "cada fator explica: volume de fechadas, 61,5%; receita por venda (depende dos produtos vendidos), 39,9%; taxa de ganho, quase " +
+      "cada fator explica: volume de fechadas, 61,5%. Receita por venda (depende dos produtos vendidos), 39,9%. Taxa de ganho, quase " +
       "nada. A diferença vem sobretudo do volume de fechadas e da receita por venda (depende dos produtos vendidos).");
     const offsetting: RevenueDrivers = { segments_used: 5, spread_ratio: 3.2, volume_share: -0.303, conversion_share: -0.084,
       ticket_share: 1.387, main: ["ticket"], negligible: [] };

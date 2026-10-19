@@ -40,8 +40,16 @@
   --status-nao-pontuavel: #5b6577;
   --status-nao-pontuavel-bg: #eceef2;
 
+  /* Preenchimento de gráficos e barras por grupo: objeto não textual, contraste ≥ 3:1 sobre card e fundo. */
+  --status-focar-fill: #6370e8;
+  --status-qualificar-fill: #0a8aa8;
+  --status-acompanhar-fill: #8b5cf6;
+  --status-revisar-fill: #c2680a;
+  --status-nao-pontuavel-fill: #7b8597;
+
   --chart-1: #8091fa;
   --chart-2: #5b6577;
+  --chart-3: #7b8597;
 
   /* Intensidade da matriz vendedor × produto: o número da célula fica sempre escrito por cima. */
   --heat-1: #f3f4fe;
@@ -82,8 +90,15 @@
   --status-nao-pontuavel: #a3aebd;
   --status-nao-pontuavel-bg: #27344b;
 
+  --status-focar-fill: #8091fa;
+  --status-qualificar-fill: #2bb3cc;
+  --status-acompanhar-fill: #a78bfa;
+  --status-revisar-fill: #f59e0b;
+  --status-nao-pontuavel-fill: #7c889b;
+
   --chart-1: #8091fa;
   --chart-2: #a3aebd;
+  --chart-3: #7c889b;
 
   --heat-1: #222e45;
   --heat-2: #2a3758;
@@ -125,11 +140,17 @@
   --color-status-qualificar-bg: var(--status-qualificar-bg);
   --color-status-nao-pontuavel: var(--status-nao-pontuavel);
   --color-status-nao-pontuavel-bg: var(--status-nao-pontuavel-bg);
+  --color-status-focar-fill: var(--status-focar-fill);
+  --color-status-qualificar-fill: var(--status-qualificar-fill);
+  --color-status-acompanhar-fill: var(--status-acompanhar-fill);
+  --color-status-revisar-fill: var(--status-revisar-fill);
+  --color-status-nao-pontuavel-fill: var(--status-nao-pontuavel-fill);
   --color-warning: var(--status-revisar);
   --color-warning-bg: var(--status-revisar-bg);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
   --color-heat-1: var(--heat-1);
   --color-heat-2: var(--heat-2);
   --color-heat-3: var(--heat-3);

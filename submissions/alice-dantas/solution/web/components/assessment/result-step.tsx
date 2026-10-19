@@ -1,15 +1,21 @@
 "use client";
 
+import { CircleCheck, Info } from "lucide-react";
 import { useState } from "react";
 
+import { IconTile } from "@/components/app/icon-tile";
+import { InfoPopover } from "@/components/app/info-popover";
 import { Button } from "@/components/ui/button";
-import { SheetFooter } from "@/components/ui/sheet";
 import { ASSISTED, summaryText } from "@/copy/assisted";
 import type { Assessments } from "@/lib/assisted/use-assessments";
 import { emptyAssessment } from "@/lib/assisted/model";
 import { evaluate, move, rank } from "@/lib/assisted/policy";
 import type { Item } from "@/lib/contract";
+import { cn } from "@/lib/utils";
 
+import { ASSESSMENT_CTA } from "./cta";
+
+import { AssessmentFooter, FOOTER_BUTTON } from "./assessment-footer";
 import { ComparisonTable } from "./comparison-table";
 import { ResultCard } from "./result-card";
 
@@ -54,10 +60,13 @@ export function ResultStep({ ids, items, store, seller, asOf, single, onEdit, on
 
   return (
     <>
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-        <div className="flex flex-col gap-1">
-          <h3 className="text-base font-semibold">{single ? ASSISTED.result.single : ASSISTED.result.title}</h3>
-          <p className="text-sm text-muted-foreground">{ASSISTED.result.intro}</p>
+      <div className="relative flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5 [&>*]:shrink-0">
+        <div className="flex items-start gap-3">
+          <IconTile icon={CircleCheck} tone="bg-accent text-primary-strong" size="lg" className="rounded-full" />
+          <div className="flex flex-col gap-1">
+            <h3 className="text-lg font-semibold">{single ? ASSISTED.result.single : ASSISTED.result.title}</h3>
+            <p className="text-sm text-muted-foreground">{ASSISTED.result.intro}</p>
+          </div>
         </div>
 
         {ranking.pending.length > 0 && (
@@ -115,16 +124,19 @@ export function ResultStep({ ids, items, store, seller, asOf, single, onEdit, on
           </section>
         )}
 
-        <p className="text-xs leading-relaxed text-muted-foreground">{ASSISTED.disclaimer}</p>
-        <p className="text-xs leading-relaxed text-muted-foreground">{ASSISTED.localNote}</p>
+        <p className="flex items-center gap-1.5 text-xs leading-relaxed text-muted-foreground">
+          <Info aria-hidden className="size-3.5 shrink-0" />
+          <span>{ASSISTED.disclaimer}</span>
+          <InfoPopover label={ASSISTED.result.localNoteLabel}>{ASSISTED.localNote}</InfoPopover>
+        </p>
         {store.unsaved && <p className="text-xs text-destructive">{ASSISTED.unsaved}</p>}
       </div>
-      <SheetFooter className="flex-row items-center justify-between border-t">
-        <Button variant="outline" size="sm" onClick={copy}>
+      <AssessmentFooter>
+        <Button variant="secondary" className={FOOTER_BUTTON} onClick={copy}>
           {copied ? ASSISTED.result.copied : ASSISTED.result.copy}
         </Button>
-        <Button variant="ghost" size="sm" onClick={onClose}>{ASSISTED.close}</Button>
-      </SheetFooter>
+        <Button className={cn(ASSESSMENT_CTA, FOOTER_BUTTON)} onClick={onClose}>{ASSISTED.close}</Button>
+      </AssessmentFooter>
     </>
   );
 }

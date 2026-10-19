@@ -38,8 +38,18 @@ const PAIRS = [
   ["foreground", "heat-1"], ["foreground", "heat-2"], ["foreground", "heat-3"], ["foreground", "heat-4"],
 ] as const;
 
+// Objetos não textuais (barras, segmentos, ícones grandes): ≥ 3 : 1 sobre o card e o fundo (WCAG 1.4.11).
+const NON_TEXT = [
+  "status-focar-fill", "status-qualificar-fill", "status-acompanhar-fill", "status-revisar-fill",
+  "status-nao-pontuavel-fill", "chart-3",
+].flatMap((fill) => [[fill, "card"], [fill, "background"]] as const);
+
 describe.each([[":root", "claro"], [".dark", "escuro"]])("tema %s (%s)", (selector) => {
   const theme = tokens(selector);
+  test.each(NON_TEXT)("preenchimento %s sobre %s", (fill, background) => {
+    expect(theme[fill], `--${fill}`).toBeDefined();
+    expect(contrast(theme[fill], theme[background])).toBeGreaterThanOrEqual(3);
+  });
   test.each(PAIRS)("%s sobre %s", (text, background) => {
     expect(theme[text], `--${text}`).toBeDefined();
     expect(theme[background], `--${background}`).toBeDefined();

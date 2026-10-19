@@ -2,9 +2,11 @@
 
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 
+import { HelpHead } from "@/components/app/help-head";
+import { ChartTip, tipRow } from "@/components/app/chart-tip";
 import { type ChartConfig, ChartContainer, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { INTELLIGENCE, UI } from "@/copy/pt-BR";
 import type { Intelligence } from "@/lib/contract";
 import { formatInt, formatMonth, formatPct } from "@/lib/format";
@@ -18,7 +20,7 @@ const CHART = "hidden aspect-auto w-full px-6 md:flex";
  * mensal de entrada e de fechamentos. Os gráficos são decorativos; as tabelas trazem os mesmos números. */
 export function TimeResults({ payload }: { payload: Pick<Intelligence, "cycle_bands" | "monthly" | "meta"> }) {
   const config = { engaged: { label: text.chartLabel } } satisfies ChartConfig;
-  // Ganhas e sem venda empilhadas por faixa: mostra onde as fechadas sem venda se concentram.
+  // Ganhas e perdidas empilhadas por faixa: mostra onde as fechadas perdidas se concentram.
   const bandsConfig = {
     won: { label: text.columns.won, color: "var(--chart-1)" },
     lost: { label: text.columns.lost, color: "var(--chart-2)" },
@@ -39,6 +41,8 @@ export function TimeResults({ payload }: { payload: Pick<Intelligence, "cycle_ba
               <BarChart data={bands} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
                 <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
                 <YAxis hide />
+                <ChartTip render={(value, name) => tipRow(name === "won" ? "var(--chart-1)" : "var(--chart-2)",
+                  name === "won" ? text.columns.won : text.columns.lost, formatInt(value))} />
                 <Bar dataKey="won" stackId="desfecho" fill="var(--color-won)" isAnimationActive={false} />
                 <Bar dataKey="lost" stackId="desfecho" fill="var(--color-lost)" fillOpacity={0.45} radius={[3, 3, 0, 0]}
                      isAnimationActive={false} />
@@ -48,10 +52,10 @@ export function TimeResults({ payload }: { payload: Pick<Intelligence, "cycle_ba
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-6">{text.columns.band}</TableHead>
-                  <TableHead className="text-right">{text.columns.won}</TableHead>
-                  <TableHead className="text-right">{text.columns.lost}</TableHead>
-                  <TableHead className="pr-6 text-right">{text.columns.rate}</TableHead>
+                  <HelpHead label={text.columns.band} help={text.columnHelp.band} className="pl-6" />
+                  <HelpHead label={text.columns.won} help={text.columnHelp.won} className="text-right" />
+                  <HelpHead label={text.columns.lost} help={text.columnHelp.lost} className="text-right" />
+                  <HelpHead label={text.columns.rate} help={text.columnHelp.rate} className="pr-6 text-right" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -79,16 +83,17 @@ export function TimeResults({ payload }: { payload: Pick<Intelligence, "cycle_ba
               <BarChart data={months} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
                 <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} interval="preserveStartEnd" />
                 <YAxis hide />
+                <ChartTip render={(value) => tipRow("var(--chart-1)", text.monthColumns.engaged, formatInt(value))} />
                 <Bar dataKey="engaged" fill="var(--chart-1)" radius={3} isAnimationActive={false} />
               </BarChart>
             </ChartContainer>
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-6">{text.monthColumns.month}</TableHead>
-                  <TableHead className="text-right">{text.monthColumns.engaged}</TableHead>
-                  <TableHead className="text-right">{text.monthColumns.won}</TableHead>
-                  <TableHead className="pr-6 text-right">{text.monthColumns.lost}</TableHead>
+                  <HelpHead label={text.monthColumns.month} help={text.monthHelp.month} className="pl-6" />
+                  <HelpHead label={text.monthColumns.engaged} help={text.monthHelp.engaged} className="text-right" />
+                  <HelpHead label={text.monthColumns.won} help={text.monthHelp.won} className="text-right" />
+                  <HelpHead label={text.monthColumns.lost} help={text.monthHelp.lost} className="pr-6 text-right" />
                 </TableRow>
               </TableHeader>
               <TableBody>

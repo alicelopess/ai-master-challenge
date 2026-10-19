@@ -11,7 +11,7 @@ export const TODAY = "2017-12-31";
 
 const FULL: Answers = {
   interest: "replied", timing: "within_30", need: "confirmed", urgency: "concrete", budget: "confirmed",
-  authority: "access", progress: "dated",
+  authority: "access", progress: "within_7",
 };
 const REST: Answers = { timing: "no_forecast", urgency: "none", budget: "none" };
 const ALL_UNKNOWN = Object.fromEntries(DIMENSIONS.map((d) => [d, "unknown"])) as Answers;
@@ -20,12 +20,12 @@ type Sample = { name: string; answers: Answers; extra?: Partial<Assessment> };
 
 /** Uma avaliação para cada caminho da política. */
 export const SAMPLES: Sample[] = [
-  { name: "due", answers: FULL, extra: { actionDate: TODAY } },
-  { name: "past", answers: FULL, extra: { actionDate: "2017-12-28" } },
-  { name: "future", answers: { ...FULL, authority: "no_access" }, extra: { actionDate: "2018-02-01" } },
+  { name: "due", answers: FULL },
+  { name: "future", answers: { ...FULL, authority: "no_access", progress: "within_30" } },
   { name: "organize", answers: { ...FULL, progress: "undated" } },
   { name: "continuity", answers: { ...FULL, ...REST, progress: "none", authority: "no_access" } },
   { name: "qualification", answers: { ...FULL, ...REST, interest: "no_reply", progress: "none", authority: "not_identified" } },
+  { name: "qualification-access", answers: { ...FULL, authority: "access", progress: "within_30" } },
   { name: "qualification-open", answers: { ...FULL, ...REST, need: "investigating", progress: "none", authority: "not_identified" } },
   { name: "resume", answers: { ...FULL, ...REST, interest: "no_reply", need: "investigating", progress: "none" } },
   { name: "need", answers: { ...FULL, ...REST, need: "none", progress: "none" } },
@@ -56,7 +56,7 @@ export function assistedTexts(): string[] {
     ASSISTED.ask.answered(4), ASSISTED.ask.form("X"), ASSISTED.result.partialBody(["A", "B"]),
     ASSISTED.result.position(2, true), ASSISTED.result.position(1, false), ASSISTED.result.unknownBody("Orçamento"),
     ASSISTED.result.assessedOn("31/12/2017"), ASSISTED.result.up("X"), ASSISTED.result.down("X"),
-    ASSISTED.mark.done(72, CATEGORY_LABELS.define_continuity),
+    ASSISTED.mark.done(CATEGORY_LABELS.define_continuity), ASSISTED.result.pointsOf(15, 20),
   );
   for (const evaluation of all) {
     texts.push(whyText(evaluation), markText(evaluation), ...evaluation.breakdown.map(breakdownText),

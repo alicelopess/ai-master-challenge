@@ -486,6 +486,27 @@ class SellerProductMatrix(Contract):
     rows: List[MatrixRow]
 
 
+class CrosstabCell(Contract):
+    key: str
+    closed: int
+    share: Optional[float] = Field(description="Fatia desta coluna nas fechadas da linha.")
+
+
+class CrosstabRow(Contract):
+    key: str
+    closed: int
+    cells: List[CrosstabCell]
+
+
+class Crosstab(Contract):
+    """Quem compra o quê e quem atende quem: fechadas por linha e coluna. Sem taxa por célula."""
+    id: Literal["account_product", "sector_product", "seller_sector", "sector_office", "location_office"]
+    row_dimension: Literal["account", "sector", "seller", "location"]
+    column_dimension: Literal["product", "sector", "office"]
+    columns: List[str] = Field(description="Produtos do maior preço ao menor; setores e escritórios em ordem alfabética.")
+    rows: List[CrosstabRow] = Field(description="Vendedores em ordem alfabética (nunca um ranking); o resto por fechadas.")
+
+
 class CycleBand(Contract):
     low: int
     high: int = Field(description="As duas últimas bordas são L1 e L2 do meta.")
@@ -691,6 +712,7 @@ class Intelligence(Contract):
     findings: List[Finding] = Field(description="Só as que valem no recorte, na ordem da tela.")
     breakdowns: List[Breakdown] = Field(description="Um por dimensão, na ordem das dimensões.")
     matrix: SellerProductMatrix
+    crosstabs: List[Crosstab]
     cycle_bands: List[CycleBand]
     monthly: List[MonthPoint]
 

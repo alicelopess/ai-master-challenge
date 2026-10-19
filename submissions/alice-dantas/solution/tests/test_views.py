@@ -8,8 +8,8 @@ from leadscorer.__main__ import main
 from conftest import EDGE_TABLES, write_raw
 
 LEGEND = (
-    "Ordem: Focar → Qualificar → Acompanhar → Confirmar → Completar; em cada grupo, maior "
-    "valor de tabela primeiro; a idade aparece, mas não muda a ordem."
+    "Ordem: Focar → Qualificar → Acompanhar → Confirmar → Completar. Em cada grupo, maior "
+    "valor de tabela primeiro. A idade aparece, mas não muda a ordem."
 )
 
 

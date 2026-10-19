@@ -1,27 +1,39 @@
 "use client";
 
 import { Filter, List, type LucideIcon } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 
+import { InfoPopover } from "@/components/app/info-popover";
+import { SortableHead } from "@/components/app/sortable-head";
 import { TablePagination } from "@/components/app/table-pagination";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  DIMENSION_LABELS, INTELLIGENCE, METRIC_LABELS, PEOPLE_DRIVERS_NOTE, UI, chanceText, driversText,
+  CHANCE_LABELS, DIMENSION_LABELS, DIMENSION_PLURALS, INTELLIGENCE, METRIC_LABELS, UI, chanceShort, chanceSupport, chanceText,
+  countryLabel, driversText, sectorLabel, spreadText,
   segmentLabel, sizeLabel,
 } from "@/copy/pt-BR";
+import { CONCEPT_ICONS } from "@/copy/visual";
 import type { Breakdown, IntelligenceFilter, Segment, SizeBand } from "@/lib/contract";
 import { formatCompact, formatInt, formatPct, formatWhole } from "@/lib/format";
 import { METRICS, type Dimension, type MetricKey, metricValue } from "@/lib/intelligence";
 import { PAGE_SIZE } from "@/lib/pagination";
+import { useSort } from "@/lib/sort";
 import { cn } from "@/lib/utils";
 
 import { BreakdownChart } from "./breakdown-chart";
+import { DriverBar } from "./driver-bar";
+
+const Compare = CONCEPT_ICONS.compare;
 
 const text = INTELLIGENCE.explore;
+type Column = "name" | "sector" | "location" | "size" | "products" | "sellers" | "closed" | "won" | "lost" | "winRate" | "ticket" |
+  "revenue" | "share" | "open";
 const CHART_ROWS = 10;
 
 type Props = {
@@ -76,10 +88,27 @@ export function BreakdownExplorer({ breakdowns, sizes, dimension, metric, onDime
   const [page, setPage] = useState(1);
   const people = breakdown.order === "alphabetical";
   const isAccount = breakdown.dimension === "account";
-  const rows = breakdown.segments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const label = (segment: Segment) => segmentLabel(breakdown.dimension, segment.key, sizes);
+  const accessors = useMemo<Record<Column, (segment: Segment) => string | number | null>>(() => ({
+    name: (s) => segmentLabel(breakdown.dimension, s.key, sizes),
+    sector: (s) => (s.profile?.sector ? sectorLabel(s.profile.sector) : null),
+    location: (s) => (s.profile?.location ? countryLabel(s.profile.location) : null),
+    size: (s) => s.profile?.size ?? null,
+    products: (s) => s.profile?.products_bought ?? null,
+    sellers: (s) => s.profile?.sellers ?? null,
+    closed: (s) => s.history.closed,
+    won: (s) => s.history.won,
+    lost: (s) => s.history.lost,
+    winRate: (s) => s.history.win_rate?.value ?? null,
+    ticket: (s) => s.history.ticket,
+    revenue: (s) => s.history.revenue,
+    share: (s) => s.revenue_share,
+    open: (s) => s.open,
+  }), [breakdown.dimension, sizes]);
+  const { sorted, state, toggle } = useSort(breakdown.segments, accessors, () => setPage(1));
+  const rows = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const chartRows = breakdown.segments.filter((s) => s.key !== null).slice(0, CHART_ROWS)
-    .map((s) => ({ label: label(s), value: metricValue(s.history, metric) }));
+    .map((s) => ({ key: s.key, label: label(s), value: metricValue(s.history, metric) }));
   const dimensions = breakdowns.map((b) => b.dimension);
   const sizeOf = (key: string | null) => {
     const band = sizes.find((b) => b.key === key);
@@ -102,7 +131,8 @@ export function BreakdownExplorer({ breakdowns, sizes, dimension, metric, onDime
         <CardContent className="flex flex-col gap-4 px-0">
           {!people && chartRows.length > 1 && (
             <div className="hidden flex-col gap-1 px-6 md:flex">
-              <BreakdownChart rows={chartRows} metric={metric} className="h-72" />
+              <BreakdownChart rows={chartRows} metric={metric} className="h-72"
+                              onSelect={(key) => onDeals({ [breakdown.dimension]: key })} />
               <p className="text-xs text-muted-foreground">{text.chartNote}</p>
             </div>
           )}
@@ -113,18 +143,23 @@ export function BreakdownExplorer({ breakdowns, sizes, dimension, metric, onDime
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="pl-6">{DIMENSION_LABELS[breakdown.dimension]}</TableHead>
-                    {isAccount && <TableHead>{text.columns.sector}</TableHead>}
-                    {isAccount && <TableHead>{text.columns.location}</TableHead>}
-                    {isAccount && <TableHead>{text.columns.size}</TableHead>}
-                    {isAccount && <TableHead className="text-right">{text.columns.products}</TableHead>}
-                    {isAccount && <TableHead className="text-right">{text.columns.sellers}</TableHead>}
-                    <TableHead className="text-right">{text.columns.closed}</TableHead>
-                    <TableHead className="text-right">{text.columns.winRate}</TableHead>
-                    <TableHead className="text-right">{text.columns.ticket}</TableHead>
-                    <TableHead className="text-right">{text.columns.revenue}</TableHead>
-                    <TableHead className="text-right">{text.columns.share}</TableHead>
-                    <TableHead className="text-right">{text.columns.open}</TableHead>
+                    <SortableHead column="name" state={state} onSort={toggle} className="pl-6"
+                                  help={text.columnHelp.name(DIMENSION_LABELS[breakdown.dimension])}>
+                      {DIMENSION_LABELS[breakdown.dimension]}
+                    </SortableHead>
+                    {isAccount && <SortableHead column="sector" state={state} onSort={toggle} help={text.columnHelp.sector}>{text.columns.sector}</SortableHead>}
+                    {isAccount && <SortableHead column="location" state={state} onSort={toggle} help={text.columnHelp.location}>{text.columns.location}</SortableHead>}
+                    {isAccount && <SortableHead column="size" state={state} onSort={toggle} help={text.columnHelp.size}>{text.columns.size}</SortableHead>}
+                    {isAccount && <SortableHead column="products" state={state} onSort={toggle} help={text.columnHelp.products} numeric>{text.columns.products}</SortableHead>}
+                    {isAccount && <SortableHead column="sellers" state={state} onSort={toggle} help={text.columnHelp.sellers} numeric>{text.columns.sellers}</SortableHead>}
+                    <SortableHead column="closed" state={state} onSort={toggle} help={text.columnHelp.closed} numeric>{text.columns.closed}</SortableHead>
+                    <SortableHead column="won" state={state} onSort={toggle} help={text.columnHelp.won} numeric>{text.columns.won}</SortableHead>
+                    <SortableHead column="lost" state={state} onSort={toggle} help={text.columnHelp.lost} numeric>{text.columns.lost}</SortableHead>
+                    <SortableHead column="winRate" state={state} onSort={toggle} help={text.columnHelp.winRate} numeric>{text.columns.winRate}</SortableHead>
+                    <SortableHead column="ticket" state={state} onSort={toggle} help={text.columnHelp.ticket} numeric>{text.columns.ticket}</SortableHead>
+                    <SortableHead column="revenue" state={state} onSort={toggle} help={text.columnHelp.revenue} numeric>{text.columns.revenue}</SortableHead>
+                    <SortableHead column="share" state={state} onSort={toggle} help={text.columnHelp.share} numeric>{text.columns.share}</SortableHead>
+                    <SortableHead column="open" state={state} onSort={toggle} help={text.columnHelp.open} numeric>{text.columns.open}</SortableHead>
                     <TableHead className="pr-6 text-right">{text.columns.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -137,8 +172,8 @@ export function BreakdownExplorer({ breakdowns, sizes, dimension, metric, onDime
                         <TableCell className={cn("pl-6 font-medium", segment.key === null && "text-muted-foreground")}>
                           {name}
                         </TableCell>
-                        {isAccount && <TableCell>{profile?.sector ?? UI.empty}</TableCell>}
-                        {isAccount && <TableCell>{profile?.location ?? UI.empty}</TableCell>}
+                        {isAccount && <TableCell>{profile?.sector ? sectorLabel(profile.sector) : UI.empty}</TableCell>}
+                        {isAccount && <TableCell>{profile?.location ? countryLabel(profile.location) : UI.empty}</TableCell>}
                         {isAccount && <TableCell className="whitespace-nowrap">{sizeOf(profile?.size ?? null)}</TableCell>}
                         {isAccount && (
                           <TableCell className="text-right tabular-nums">
@@ -147,6 +182,8 @@ export function BreakdownExplorer({ breakdowns, sizes, dimension, metric, onDime
                         )}
                         {isAccount && <TableCell className="text-right tabular-nums">{profile ? profile.sellers : UI.empty}</TableCell>}
                         <TableCell className="text-right tabular-nums">{formatInt(history.closed)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatInt(history.won)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatInt(history.lost)}</TableCell>
                         <TableCell className="text-right tabular-nums">
                           {history.win_rate ? (
                             <span className="flex flex-col items-end">
@@ -180,11 +217,42 @@ export function BreakdownExplorer({ breakdowns, sizes, dimension, metric, onDime
             </>
           )}
         </CardContent>
-        {/* As leituras vêm depois dos números: o acaso, a decomposição e a regra das pessoas. */}
-        <CardFooter className="flex-col items-start gap-1 border-t pb-6 text-sm text-pretty text-muted-foreground">
-          <p>{chanceText(breakdown.dimension, breakdown.chance)}</p>
-          {breakdown.drivers && <p>{driversText(breakdown.dimension, breakdown.drivers)}</p>}
-          {people && <p>{breakdown.drivers ? `${PEOPLE_DRIVERS_NOTE} ` : ""}{text.peopleNote}</p>}
+        {/* As leituras vêm depois dos números, em dois blocos: a diferença é real? e de onde vem a receita. */}
+        <CardFooter className="flex-col items-stretch gap-3 border-t pb-6 text-sm">
+          <div className={cn("grid gap-3", breakdown.drivers && "lg:grid-cols-2")}>
+            <div className="flex flex-col gap-2 rounded-xl border bg-muted/40 p-4">
+              <p className="flex items-center gap-1 font-medium">
+                {text.reality.title(DIMENSION_PLURALS[breakdown.dimension])}
+                <InfoPopover label={text.reality.label}>{chanceText(breakdown.dimension, breakdown.chance)}</InfoPopover>
+              </p>
+              <Badge variant={breakdown.chance.verdict === "beyond_chance" ? "secondary" : "outline"} className="w-fit">
+                <Compare data-icon="inline-start" aria-hidden />
+                {CHANCE_LABELS[breakdown.chance.verdict]}
+              </Badge>
+              <p className="text-muted-foreground">{chanceShort(breakdown.chance)}</p>
+              <p className="text-xs text-muted-foreground tabular-nums">{chanceSupport(breakdown.dimension, breakdown.chance)}</p>
+            </div>
+            {breakdown.drivers && (
+              <div className="flex flex-col gap-2 rounded-xl border bg-muted/40 p-4">
+                <p className="flex items-center gap-1 font-medium">
+                  {text.sources.title}
+                  <InfoPopover label={text.sources.label}>{driversText(breakdown.dimension, breakdown.drivers)}</InfoPopover>
+                </p>
+                <p className="tabular-nums">{spreadText(breakdown.dimension, breakdown.drivers)}</p>
+                <p className="text-xs text-muted-foreground">{text.sources.caption}</p>
+                <DriverBar drivers={breakdown.drivers} />
+              </div>
+            )}
+          </div>
+          {people && <p className="text-xs text-pretty text-muted-foreground">{text.peopleNote}</p>}
+          {isAccount && (
+            <p className="text-xs text-pretty text-muted-foreground">
+              {text.accountNote}{" "}
+              <Link href="/como-funciona#nao-usa" className="font-medium text-primary-strong underline underline-offset-4">
+                {text.accountNoteSee}
+              </Link>
+            </p>
+          )}
         </CardFooter>
       </Card>
     </section>

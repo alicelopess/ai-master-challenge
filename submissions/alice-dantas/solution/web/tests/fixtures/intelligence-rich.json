@@ -1463,6 +1463,544 @@
       }
     ]
   },
+  "crosstabs": [
+    {
+      "id": "account_product",
+      "row_dimension": "account",
+      "column_dimension": "product",
+      "columns": [
+        "Alfa Pro",
+        "Beta Plus",
+        "Gama Basic",
+        "Delta Mini"
+      ],
+      "rows": [
+        {
+          "key": "Cliente 1",
+          "closed": 17,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 5,
+              "share": 0.294118
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 4,
+              "share": 0.235294
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 4,
+              "share": 0.235294
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 4,
+              "share": 0.235294
+            }
+          ]
+        },
+        {
+          "key": "Cliente 2",
+          "closed": 16,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 4,
+              "share": 0.25
+            }
+          ]
+        },
+        {
+          "key": "Cliente 3",
+          "closed": 16,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 4,
+              "share": 0.25
+            }
+          ]
+        },
+        {
+          "key": "Cliente 4",
+          "closed": 16,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 4,
+              "share": 0.25
+            }
+          ]
+        },
+        {
+          "key": "Cliente 5",
+          "closed": 16,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 4,
+              "share": 0.25
+            }
+          ]
+        },
+        {
+          "key": "Cliente 6",
+          "closed": 16,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 4,
+              "share": 0.25
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 4,
+              "share": 0.25
+            }
+          ]
+        },
+        {
+          "key": "Cliente 7",
+          "closed": 12,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 3,
+              "share": 0.25
+            }
+          ]
+        },
+        {
+          "key": "Cliente 8",
+          "closed": 12,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 3,
+              "share": 0.25
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_product",
+      "row_dimension": "sector",
+      "column_dimension": "product",
+      "columns": [
+        "Alfa Pro",
+        "Beta Plus",
+        "Gama Basic",
+        "Delta Mini"
+      ],
+      "rows": [
+        {
+          "key": "retail",
+          "closed": 97,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 25,
+              "share": 0.257732
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 24,
+              "share": 0.247423
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 24,
+              "share": 0.247423
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 24,
+              "share": 0.247423
+            }
+          ]
+        },
+        {
+          "key": "finance",
+          "closed": 12,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 3,
+              "share": 0.25
+            }
+          ]
+        },
+        {
+          "key": "medical",
+          "closed": 12,
+          "cells": [
+            {
+              "key": "Alfa Pro",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Beta Plus",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Gama Basic",
+              "closed": 3,
+              "share": 0.25
+            },
+            {
+              "key": "Delta Mini",
+              "closed": 3,
+              "share": 0.25
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seller_sector",
+      "row_dimension": "seller",
+      "column_dimension": "sector",
+      "columns": [
+        "finance",
+        "medical",
+        "retail"
+      ],
+      "rows": [
+        {
+          "key": "Ana Alfa",
+          "closed": 25,
+          "cells": [
+            {
+              "key": "finance",
+              "closed": 0,
+              "share": 0.0
+            },
+            {
+              "key": "medical",
+              "closed": 0,
+              "share": 0.0
+            },
+            {
+              "key": "retail",
+              "closed": 25,
+              "share": 1.0
+            }
+          ]
+        },
+        {
+          "key": "Bruno Beta",
+          "closed": 24,
+          "cells": [
+            {
+              "key": "finance",
+              "closed": 4,
+              "share": 0.166667
+            },
+            {
+              "key": "medical",
+              "closed": 4,
+              "share": 0.166667
+            },
+            {
+              "key": "retail",
+              "closed": 16,
+              "share": 0.666667
+            }
+          ]
+        },
+        {
+          "key": "Carla Gama",
+          "closed": 24,
+          "cells": [
+            {
+              "key": "finance",
+              "closed": 4,
+              "share": 0.166667
+            },
+            {
+              "key": "medical",
+              "closed": 4,
+              "share": 0.166667
+            },
+            {
+              "key": "retail",
+              "closed": 16,
+              "share": 0.666667
+            }
+          ]
+        },
+        {
+          "key": "Davi Delta",
+          "closed": 24,
+          "cells": [
+            {
+              "key": "finance",
+              "closed": 4,
+              "share": 0.166667
+            },
+            {
+              "key": "medical",
+              "closed": 4,
+              "share": 0.166667
+            },
+            {
+              "key": "retail",
+              "closed": 16,
+              "share": 0.666667
+            }
+          ]
+        },
+        {
+          "key": "Eva Epsilon",
+          "closed": 24,
+          "cells": [
+            {
+              "key": "finance",
+              "closed": 0,
+              "share": 0.0
+            },
+            {
+              "key": "medical",
+              "closed": 0,
+              "share": 0.0
+            },
+            {
+              "key": "retail",
+              "closed": 24,
+              "share": 1.0
+            }
+          ]
+        },
+        {
+          "key": "Fabio Zeta",
+          "closed": 0,
+          "cells": [
+            {
+              "key": "finance",
+              "closed": 0,
+              "share": null
+            },
+            {
+              "key": "medical",
+              "closed": 0,
+              "share": null
+            },
+            {
+              "key": "retail",
+              "closed": 0,
+              "share": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_office",
+      "row_dimension": "sector",
+      "column_dimension": "office",
+      "columns": [
+        "Central",
+        "East"
+      ],
+      "rows": [
+        {
+          "key": "retail",
+          "closed": 97,
+          "cells": [
+            {
+              "key": "Central",
+              "closed": 41,
+              "share": 0.42268
+            },
+            {
+              "key": "East",
+              "closed": 56,
+              "share": 0.57732
+            }
+          ]
+        },
+        {
+          "key": "finance",
+          "closed": 12,
+          "cells": [
+            {
+              "key": "Central",
+              "closed": 4,
+              "share": 0.333333
+            },
+            {
+              "key": "East",
+              "closed": 8,
+              "share": 0.666667
+            }
+          ]
+        },
+        {
+          "key": "medical",
+          "closed": 12,
+          "cells": [
+            {
+              "key": "Central",
+              "closed": 4,
+              "share": 0.333333
+            },
+            {
+              "key": "East",
+              "closed": 8,
+              "share": 0.666667
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "location_office",
+      "row_dimension": "location",
+      "column_dimension": "office",
+      "columns": [
+        "Central",
+        "East"
+      ],
+      "rows": [
+        {
+          "key": "United States",
+          "closed": 121,
+          "cells": [
+            {
+              "key": "Central",
+              "closed": 49,
+              "share": 0.404959
+            },
+            {
+              "key": "East",
+              "closed": 72,
+              "share": 0.595041
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "cycle_bands": [
     {
       "low": 0,

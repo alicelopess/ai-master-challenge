@@ -57,7 +57,7 @@ function DealsTable({ deals, outcome }: { deals: Deal[]; outcome: DealOutcome })
           <TableHead className="text-right" title={outcome === "lost" ? text.valueHelp : undefined}>
             {outcome === "won" ? text.columns.value : text.columns.price}
           </TableHead>
-          {isOpen && <TableHead>{text.columns.group}</TableHead>}
+          <TableHead>{isOpen ? text.columns.group : text.columns.result}</TableHead>
           <TableHead>{isOpen ? text.columns.engaged : text.columns.closed}</TableHead>
           <TableHead className="pr-4 text-right">{isOpen ? text.columns.age : text.columns.cycle}</TableHead>
         </TableRow>
@@ -83,9 +83,11 @@ function DealsTable({ deals, outcome }: { deals: Deal[]; outcome: DealOutcome })
               <TableCell>{deal.product ?? UI.noProduct}</TableCell>
               <TableCell className={deal.account ? undefined : "text-muted-foreground"}>{deal.account ?? NO_ACCOUNT}</TableCell>
               <TableCell className="text-right tabular-nums">{value === null ? UI.empty : formatInt(value)}</TableCell>
-              {isOpen && (
-                <TableCell>{deal.group && <Badge variant={deal.group}>{GROUP_LABELS[deal.group]}</Badge>}</TableCell>
-              )}
+              <TableCell>
+                {isOpen
+                  ? deal.group && <Badge variant={deal.group}>{GROUP_LABELS[deal.group]}</Badge>
+                  : <Badge variant={outcome}>{text.result[outcome]}</Badge>}
+              </TableCell>
               <TableCell className="tabular-nums">{date ? formatDate(date) : UI.empty}</TableCell>
               <TableCell className="pr-4 text-right tabular-nums">{days === null ? UI.empty : UI.ageDays(days)}</TableCell>
             </TableRow>

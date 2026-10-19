@@ -813,6 +813,239 @@
       }
     ]
   },
+  "crosstabs": [
+    {
+      "id": "account_product",
+      "row_dimension": "account",
+      "column_dimension": "product",
+      "columns": [
+        "GTX Pro",
+        "GTX Basic",
+        "MG Special"
+      ],
+      "rows": [
+        {
+          "key": "Acme",
+          "closed": 2,
+          "cells": [
+            {
+              "key": "GTX Pro",
+              "closed": 1,
+              "share": 0.5
+            },
+            {
+              "key": "GTX Basic",
+              "closed": 0,
+              "share": 0.0
+            },
+            {
+              "key": "MG Special",
+              "closed": 1,
+              "share": 0.5
+            }
+          ]
+        },
+        {
+          "key": "Beta Corp",
+          "closed": 1,
+          "cells": [
+            {
+              "key": "GTX Pro",
+              "closed": 0,
+              "share": 0.0
+            },
+            {
+              "key": "GTX Basic",
+              "closed": 1,
+              "share": 1.0
+            },
+            {
+              "key": "MG Special",
+              "closed": 0,
+              "share": 0.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_product",
+      "row_dimension": "sector",
+      "column_dimension": "product",
+      "columns": [
+        "GTX Pro",
+        "GTX Basic",
+        "MG Special"
+      ],
+      "rows": [
+        {
+          "key": "technology",
+          "closed": 2,
+          "cells": [
+            {
+              "key": "GTX Pro",
+              "closed": 1,
+              "share": 0.5
+            },
+            {
+              "key": "GTX Basic",
+              "closed": 0,
+              "share": 0.0
+            },
+            {
+              "key": "MG Special",
+              "closed": 1,
+              "share": 0.5
+            }
+          ]
+        },
+        {
+          "key": "retail",
+          "closed": 1,
+          "cells": [
+            {
+              "key": "GTX Pro",
+              "closed": 0,
+              "share": 0.0
+            },
+            {
+              "key": "GTX Basic",
+              "closed": 1,
+              "share": 1.0
+            },
+            {
+              "key": "MG Special",
+              "closed": 0,
+              "share": 0.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seller_sector",
+      "row_dimension": "seller",
+      "column_dimension": "sector",
+      "columns": [
+        "retail",
+        "technology"
+      ],
+      "rows": [
+        {
+          "key": "Ana Alfa",
+          "closed": 1,
+          "cells": [
+            {
+              "key": "retail",
+              "closed": 0,
+              "share": 0.0
+            },
+            {
+              "key": "technology",
+              "closed": 1,
+              "share": 1.0
+            }
+          ]
+        },
+        {
+          "key": "Bruno Beta",
+          "closed": 2,
+          "cells": [
+            {
+              "key": "retail",
+              "closed": 1,
+              "share": 0.5
+            },
+            {
+              "key": "technology",
+              "closed": 1,
+              "share": 0.5
+            }
+          ]
+        },
+        {
+          "key": "Carla Gama",
+          "closed": 0,
+          "cells": [
+            {
+              "key": "retail",
+              "closed": 0,
+              "share": null
+            },
+            {
+              "key": "technology",
+              "closed": 0,
+              "share": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_office",
+      "row_dimension": "sector",
+      "column_dimension": "office",
+      "columns": [
+        "Central"
+      ],
+      "rows": [
+        {
+          "key": "technology",
+          "closed": 2,
+          "cells": [
+            {
+              "key": "Central",
+              "closed": 2,
+              "share": 1.0
+            }
+          ]
+        },
+        {
+          "key": "retail",
+          "closed": 1,
+          "cells": [
+            {
+              "key": "Central",
+              "closed": 1,
+              "share": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "location_office",
+      "row_dimension": "location",
+      "column_dimension": "office",
+      "columns": [
+        "Central"
+      ],
+      "rows": [
+        {
+          "key": "Philippines",
+          "closed": 2,
+          "cells": [
+            {
+              "key": "Central",
+              "closed": 2,
+              "share": 1.0
+            }
+          ]
+        },
+        {
+          "key": "United States",
+          "closed": 1,
+          "cells": [
+            {
+              "key": "Central",
+              "closed": 1,
+              "share": 1.0
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "cycle_bands": [
     {
       "low": 0,

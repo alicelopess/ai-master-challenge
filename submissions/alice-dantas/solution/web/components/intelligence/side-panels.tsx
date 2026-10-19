@@ -1,8 +1,9 @@
 "use client";
 
-import { X } from "lucide-react";
+import { CalendarX, CircleSlash, Database, Info, Scale, X, type LucideIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -12,6 +13,7 @@ import type { IntelligenceFilter } from "@/lib/contract";
 import { formatInt } from "@/lib/format";
 import type { DealOutcome, Dimension } from "@/lib/intelligence";
 
+import { CrmGapsCard } from "./crm-gaps-card";
 import { DiagnosticsList } from "./diagnostics-list";
 import { FindingsList } from "./findings-list";
 
@@ -63,6 +65,7 @@ export function AnalysesPanel({ open, onClose, diagnostics, findings, filter, on
   const count = (n: number) => <Badge variant="secondary" className="tabular-nums">{formatInt(n)}</Badge>;
   return (
     <SidePanel open={open} onClose={onClose} title={text.title} description={text.help}>
+      <CrmGapsCard />
       <Tabs value={tab} onValueChange={setTab} className="gap-4">
         <TabsList aria-label={text.tabsLabel}>
           <TabsTrigger value="processo">{text.process}{count(diagnostics.length)}</TabsTrigger>
@@ -80,24 +83,43 @@ export function AnalysesPanel({ open, onClose, diagnostics, findings, filter, on
   );
 }
 
-function ListSection({ title, lines }: { title: string; lines: readonly string[] }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">{title}</h3>
-      <ul className="flex list-disc flex-col gap-2 pl-4 text-sm text-muted-foreground">
-        {lines.map((line) => <li key={line}>{line}</li>)}
-      </ul>
-    </section>
-  );
-}
+const LIMIT_ICONS: LucideIcon[] = [CircleSlash, Scale, CalendarX, Database];
 
-/** "Como funciona": o que cada número quer dizer, como explorar e o que a página não faz. */
+/** "Como funciona": cada definição numa entrada do accordion (o texto fica no DOM, fechado), como explorar e o que a
+ * página não faz, com ícone. */
 export function GuidePanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { guide, reading } = INTELLIGENCE;
+  const entries = [
+    ...reading.definitions.map((line, index) => ({ title: reading.definitionTitles[index] ?? line, line })),
+    { title: reading.exploreTitle, line: guide.explore },
+  ];
   return (
     <SidePanel open={open} onClose={onClose} title={guide.title} description={guide.help}>
-      <ListSection title={reading.title} lines={[...reading.definitions, guide.explore]} />
-      <ListSection title={reading.limitsTitle} lines={reading.limits} />
+      <section className="flex flex-col gap-1">
+        <h3 className="text-sm font-semibold">{reading.title}</h3>
+        <Accordion type="multiple">
+          {entries.map((entry) => (
+            <AccordionItem key={entry.title} value={entry.title}>
+              <AccordionTrigger>{entry.title}</AccordionTrigger>
+              <AccordionContent forceMount className="text-muted-foreground">{entry.line}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </section>
+      <section className="flex flex-col gap-2">
+        <h3 className="text-sm font-semibold">{reading.limitsTitle}</h3>
+        <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
+          {reading.limits.map((line, index) => {
+            const Icon = LIMIT_ICONS[index] ?? Info;
+            return (
+              <li key={line} className="flex items-start gap-2">
+                <Icon aria-hidden className="mt-0.5 size-4 shrink-0" />
+                <span>{line}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
     </SidePanel>
   );
 }

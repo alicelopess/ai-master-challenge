@@ -1,7 +1,7 @@
 // Política assistida v1 (ADR-010): função pura das respostas do vendedor. Mesmas respostas, mesmo resultado. Não toca na
 // classificação nem na ordem oficial: devolve um resultado à parte, que a tela rotula como declarado pelo vendedor.
 import {
-  DIMENSIONS, OPTIONS, POINTS, UNKNOWN_LIMIT, WEIGHTS, WINDOW_DAYS, type Assessment, type CategoryCode, type ConflictCode,
+  DIMENSIONS, OPTIONS, POINTS, UNKNOWN_LIMIT, WEIGHTS, type Assessment, type CategoryCode, type ConflictCode,
   type Dimension, type Note,
 } from "./model";
 
@@ -15,8 +15,6 @@ export type Evaluation = {
   /** Confirmados + o máximo das dimensões em "Não sei": até onde a pontuação pode ir se elas se confirmarem. */
   potential: number;
   breakdown: { dimension: Dimension; answer: string | null; points: number; weight: number }[];
-  /** A data da ação combinada, quando o vendedor a informou. */
-  actionDate: string | null;
   /** Dimensões respondidas com "Não sei". */
   unknown: Dimension[];
   /** Dimensões ainda sem resposta. */
@@ -29,18 +27,13 @@ export type Evaluation = {
   aside: boolean;
 };
 
-/** Soma dias a uma data AAAA-MM-DD (em UTC, sem fuso). */
-export function addDays(date: string, days: number): string {
-  const [y, m, d] = date.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-}
-
-const isDate = (value: string | null): value is string => value !== null && /^\d{4}-\d{2}-\d{2}$/.test(value);
+/** Respostas de "próxima ação" que dizem que existe uma ação combinada. */
+const HAS_ACTION: string[] = ["within_7", "within_30", "later", "undated"];
 
 export function conflictsOf(assessment: Assessment): ConflictCode[] {
   const { interest, progress, need } = assessment.answers;
   const found: ConflictCode[] = [];
-  if (interest === "no_contact" && (progress === "dated" || progress === "undated")) found.push("no_contact_with_action");
+  if (interest === "no_contact" && HAS_ACTION.includes(progress as string)) found.push("no_contact_with_action");
   if (interest === "no_contact" && need === "confirmed") found.push("no_contact_with_need");
   return found.filter((code) => !assessment.confirmedConflicts.includes(code));
 }
@@ -59,10 +52,8 @@ export function evaluate(assessment: Assessment, today: string): Evaluation {
   const potential = confirmed + unknown.reduce((sum, dimension) => sum + WEIGHTS[dimension], 0);
   const conflicts = conflictsOf(assessment);
   const status: Status = conflicts.length ? "conflict" : missing.length ? "incomplete" : "complete";
-  const date = answers.progress === "dated" && isDate(assessment.actionDate) ? assessment.actionDate : null;
   const base = {
     opportunityId: assessment.opportunityId, status, confirmed, potential, breakdown, unknown, missing, conflicts,
-    actionDate: date,
   };
 
   if (status === "incomplete") return { ...base, category: null, notes: [], aside: false };
@@ -72,13 +63,14 @@ export function evaluate(assessment: Assessment, today: string): Evaluation {
   let category: CategoryCode;
   if (status === "conflict") {
     category = "review_answers";
-  } else if (date !== null && date <= addDays(today, WINDOW_DAYS)) {
+  } else if (progress === "within_7") {
     category = "commitment_due";
-    if (date < today) notes.push({ code: "past_commitment", date });
-  } else if (progress === "undated" || progress === "dated") {
-    // Com data depois da janela: não é urgente, a categoria vem das outras respostas.
-    if (date !== null) notes.push({ code: "future_commitment", date });
-    category = progress === "undated" || date === null ? "commitment_to_organize" : classify();
+  } else if (progress === "undated") {
+    category = "commitment_to_organize";
+  } else if (progress === "within_30" || progress === "later") {
+    // Depois da janela de 7 dias: não é urgente, a categoria vem das outras respostas.
+    notes.push({ code: "future_commitment" });
+    category = classify();
   } else {
     category = classify();
   }

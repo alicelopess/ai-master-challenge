@@ -1394,6 +1394,126 @@
         ],
         "title": "CoverageParams"
       },
+      "Crosstab": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "account_product",
+              "sector_product",
+              "seller_sector",
+              "sector_office",
+              "location_office"
+            ],
+            "title": "Id"
+          },
+          "row_dimension": {
+            "type": "string",
+            "enum": [
+              "account",
+              "sector",
+              "seller",
+              "location"
+            ],
+            "title": "Row Dimension"
+          },
+          "column_dimension": {
+            "type": "string",
+            "enum": [
+              "product",
+              "sector",
+              "office"
+            ],
+            "title": "Column Dimension"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns",
+            "description": "Produtos do maior preço ao menor; setores e escritórios em ordem alfabética."
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CrosstabRow"
+            },
+            "type": "array",
+            "title": "Rows",
+            "description": "Vendedores em ordem alfabética (nunca um ranking); o resto por fechadas."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "row_dimension",
+          "column_dimension",
+          "columns",
+          "rows"
+        ],
+        "title": "Crosstab",
+        "description": "Quem compra o quê e quem atende quem: fechadas por linha e coluna. Sem taxa por célula."
+      },
+      "CrosstabCell": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share",
+            "description": "Fatia desta coluna nas fechadas da linha."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "closed",
+          "share"
+        ],
+        "title": "CrosstabCell"
+      },
+      "CrosstabRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/CrosstabCell"
+            },
+            "type": "array",
+            "title": "Cells"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "closed",
+          "cells"
+        ],
+        "title": "CrosstabRow"
+      },
       "CycleBand": {
         "properties": {
           "low": {
@@ -2381,6 +2501,13 @@
           "matrix": {
             "$ref": "#/components/schemas/SellerProductMatrix"
           },
+          "crosstabs": {
+            "items": {
+              "$ref": "#/components/schemas/Crosstab"
+            },
+            "type": "array",
+            "title": "Crosstabs"
+          },
           "cycle_bands": {
             "items": {
               "$ref": "#/components/schemas/CycleBand"
@@ -2410,6 +2537,7 @@
           "findings",
           "breakdowns",
           "matrix",
+          "crosstabs",
           "cycle_bands",
           "monthly"
         ],

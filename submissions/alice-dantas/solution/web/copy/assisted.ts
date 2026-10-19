@@ -77,8 +77,10 @@ export const ANSWER_LABELS: Labels = {
     unknown: "Não sei",
   },
   progress: {
-    dated: "Sim, existe uma ação combinada, com data",
-    undated: "Sim, existe uma ação combinada, sem data",
+    within_7: "Sim, para os próximos 7 dias",
+    within_30: "Sim, para o próximo mês (de 8 a 30 dias)",
+    later: "Sim, para daqui a mais de 30 dias",
+    undated: "Sim, mas sem período combinado",
     none: "Não existe uma próxima ação combinada",
     unknown: "Não sei",
   },
@@ -95,7 +97,10 @@ export const ANSWER_SHORT: Labels = {
   urgency: { concrete: "Razão concreta", possible: "Possível", none: "Sem razão", unknown: "Não sei" },
   budget: { confirmed: "Confirmado", needs_approval: "Depende de aprovação", none: "Sem orçamento", unknown: "Não sei" },
   authority: { access: "Com acesso", no_access: "Sem acesso", not_identified: "Não identificado", unknown: "Não sei" },
-  progress: { dated: "Com data", undated: "Sem data", none: "Não existe", unknown: "Não sei" },
+  progress: {
+    within_7: "Até 7 dias", within_30: "8 a 30 dias", later: "Mais de 30 dias", undated: "Sem período", none: "Não existe",
+    unknown: "Não sei",
+  },
 };
 
 export const answerLabel = (dimension: Dimension, answer: string | null, short = false): string =>
@@ -137,18 +142,25 @@ const list = (items: string[]): string => items.join(", ");
 export function whyText(evaluation: Evaluation): string {
   switch (evaluation.category) {
     case "commitment_due":
-      return evaluation.actionDate && evaluation.notes.some((n) => n.code === "past_commitment")
-        ? `Você informou uma ação combinada para ${formatDate(evaluation.actionDate)}, data anterior à dos dados.`
-        : `Você informou uma ação combinada${evaluation.actionDate ? ` para ${formatDate(evaluation.actionDate)}` : ""}, ` +
-          `dentro dos próximos ${WINDOW_DAYS} dias.`;
+      return `Você informou uma ação combinada para os próximos ${WINDOW_DAYS} dias.`;
     case "commitment_to_organize":
-      return "Você informou uma ação combinada, mas sem data.";
+      return "Você informou uma ação combinada, mas sem período definido.";
     case "define_continuity":
       return "O cliente respondeu recentemente e confirmou a necessidade, mas não há próxima ação combinada.";
-    case "advance_qualification":
-      return evaluation.breakdown.find((row) => row.dimension === "need")?.answer === "confirmed"
-        ? "A necessidade está confirmada, mas ainda não há acesso à pessoa que decide."
-        : "Há diálogo ou necessidade em andamento, mas ainda nem tudo está confirmado.";
+    case "advance_qualification": {
+      const answerOf = (dimension: string) => evaluation.breakdown.find((row) => row.dimension === dimension)?.answer;
+      if (answerOf("need") === "confirmed") {
+        const authority = answerOf("authority");
+        if (authority === "no_access" || authority === "not_identified") {
+          return "A necessidade está confirmada, mas ainda não há acesso à pessoa que decide.";
+        }
+        // Necessidade confirmada e decisor ao alcance: o que falta é a ação para os próximos dias.
+        if (authority === "access") {
+          return `A necessidade está confirmada e há acesso a quem decide, mas não há ação combinada para os próximos ${WINDOW_DAYS} dias.`;
+        }
+      }
+      return "Há diálogo ou necessidade em andamento, mas ainda nem tudo está confirmado.";
+    }
     case "resume_or_reassess":
       return "Não houve resposta recente do cliente e não há ação combinada.";
     case "investigate_first":
@@ -164,10 +176,8 @@ export function whyText(evaluation: Evaluation): string {
 
 export function noteText(note: Note): string {
   switch (note.code) {
-    case "past_commitment":
-      return "A data da ação combinada é anterior à dos dados: verifique a situação deste compromisso.";
     case "future_commitment":
-      return `Há uma ação combinada para ${formatDate(note.date ?? "")}, além dos próximos ${WINDOW_DAYS} dias.`;
+      return `Há uma ação combinada, mas para além dos próximos ${WINDOW_DAYS} dias.`;
     case "authority_gap":
       return "Ainda não há acesso à pessoa que decide.";
   }
@@ -186,25 +196,30 @@ export const ASSISTED = {
   pointsLabel: "Pontos de qualificação declarada",
   points: (confirmed: number) => `${confirmed} de ${TOTAL} pontos`,
   potential: (potential: number) => `até ${potential} se o que você não sabe se confirmar`,
-  disclaimer: "Pesos iniciais, a validar. Baseado nas suas respostas; não é previsão de fechamento.",
+  disclaimer: "Pesos iniciais, a validar. Baseado nas suas respostas, mas não é previsão de fechamento.",
   localNote:
     "As respostas ficam só neste navegador: não vão ao servidor nem ao CRM e somem se você limpar os dados do navegador.",
   unsaved: "Este navegador não guardou as respostas: elas valem até você fechar a página.",
   close: "Fechar",
   card: {
-    hint: "Use o que você sabe sobre as negociações para compará-las.",
-    button: "Avaliar estas oportunidades",
+    hint: "Compare as empatadas com o que você sabe.",
+    button: "Avaliar empatadas",
     note: "Não muda a ordem oficial da Carteira.",
+    orderedBy: "Ordem pela sua avaliação",
   },
   single: {
     title: "Priorização assistida",
     hint: "Responda 7 perguntas sobre o que você sabe desta negociação. O resultado fica só neste navegador e não " +
       "muda a ordem da Carteira.",
-    button: "Avaliar esta oportunidade",
+    button: "Avaliar com o que você sabe",
     edit: "Rever avaliação",
+  },
+  dialog: {
+    step: (step: number, total: number) => `Etapa ${step} de ${total}`,
   },
   sheet: {
     setDescription: "Compare oportunidades empatadas com o que você sabe sobre cada negociação.",
+    pickedDescription: "Compare as oportunidades que você marcou com o que sabe sobre cada negociação.",
     singleDescription: "O que você sabe sobre esta negociação.",
   },
   select: {
@@ -216,6 +231,17 @@ export const ASSISTED = {
     next: "Continuar",
     listLabel: "Oportunidades empatadas",
   },
+  selection: {
+    head: "Selecionar",
+    row: (id: string) => `Selecionar ${id} para priorizar`,
+    barLabel: "Oportunidades selecionadas para priorizar",
+    counter: (n: number) => (n === 1 ? "1 selecionada" : `${n} selecionadas`),
+    needMore: "Marque ao menos 2 para comparar.",
+    full: "Máximo de 5 por vez.",
+    ready: "Priorize a ordem entre elas.",
+    action: "Priorizar",
+    clear: "Limpar",
+  },
   ask: {
     progress: (index: number, total: number) => `Oportunidade ${index} de ${total}`,
     answered: (n: number) => `${n} de ${DIMENSIONS.length} respondidas`,
@@ -223,8 +249,9 @@ export const ASSISTED = {
     skip: "Pular por agora",
     next: "Salvar e seguir",
     finish: "Ver resultado",
-    dateLabel: "Data da ação combinada (opcional)",
     form: (id: string) => `Perguntas sobre ${id}`,
+    questionTag: (n: number) => `Pergunta ${String(n).padStart(2, "0")}`,
+    chooseOne: "Escolha só uma resposta",
   },
   conflict: {
     title: "Respostas que se contradizem",
@@ -252,6 +279,8 @@ export const ASSISTED = {
     unknownBody: (names: string) => `Você respondeu “Não sei” em: ${names}.`,
     todo: "O que fazer agora",
     breakdown: "Pontos por pergunta",
+    pointsOf: (points: number, weight: number) => `${points} de ${weight}`,
+    localNoteLabel: "Onde ficam as respostas",
     assessedOn: (date: string) => `Avaliada em ${date}`,
     recalculated: "Recalculada com a política atual.",
     edit: "Editar respostas",
@@ -273,7 +302,9 @@ export const ASSISTED = {
     cancel: "Cancelar",
   },
   mark: {
-    done: (points: number, label: string) => `Avaliada · ${points} pontos · ${label}`,
+    // A3 (decisão da dona): o selo na lista não leva os pontos, para não parecer nota por oportunidade; os pontos
+    // ficam só no painel da assistida.
+    done: (label: string) => `Avaliada · ${label}`,
     aside: "Avaliada · investigar primeiro",
     pending: "Avaliação incompleta",
     conflict: "Revisar respostas",
@@ -285,7 +316,7 @@ export function markText(evaluation: Evaluation): string {
   if (evaluation.status === "conflict") return ASSISTED.mark.conflict;
   if (evaluation.status === "incomplete") return ASSISTED.mark.pending;
   if (evaluation.aside) return ASSISTED.mark.aside;
-  return ASSISTED.mark.done(evaluation.confirmed, CATEGORY_LABELS[evaluation.category!]);
+  return ASSISTED.mark.done(CATEGORY_LABELS[evaluation.category!]);
 }
 
 type SummaryInput = {

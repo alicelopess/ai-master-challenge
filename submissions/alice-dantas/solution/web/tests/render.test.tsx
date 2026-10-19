@@ -17,11 +17,12 @@ import Home from "@/app/page";
 import {
   CONTRACT_ERROR, DIMENSION_LABELS, EVIDENCE, EVIDENCE_TEXT, GROUP_LABELS, INTELLIGENCE, NAV, RANKER_LABELS,
   ROLE_LABELS, RULES, TECH_COLUMNS, TEAM, UI, actionText, bandRange, bandTitle, diagnosticText, groupZeroNote, errorText,
-  ageContextText, findingText, groupDescription, groupEmptyText, historyEmptyText, pipelineEmptyText, reasonText,
-  suggestionText, suggestionsFor, tieNote, tieText,
+  ageContextText, findingText, groupDescription, groupEmptyText, groupOrderShort, groupRange, groupShort, historyEmptyText, pipelineEmptyText, reasonText,
+  sectorLabel, startAction, startReason, startReasonShort, smallSampleNote, suggestionText, suggestionsFor, tieNote, tieText,
 } from "@/copy/pt-BR";
-import type { Evidence, Rules, SellerPipeline, TeamPipeline } from "@/lib/contract";
-import { formatCompact, formatPct, formatPp } from "@/lib/format";
+import type { Evidence, Intelligence, Rules, SellerPipeline, TeamPipeline } from "@/lib/contract";
+import { formatCompact, formatInt, formatPct, formatPp } from "@/lib/format";
+import { resetProductSamples } from "@/lib/product-sample";
 
 import { navigation } from "./navigation";
 import { errors, intelligence, intelligenceDeals, load, sellerPipeline, teamPipeline } from "./fixtures";
@@ -103,7 +104,9 @@ describe("carteira", () => {
     expect(screen.getAllByText(actionText(payload.groups[0].next_action!)).length).toBeGreaterThan(0);
     expect((await tab(GROUP_LABELS.focar)).getAttribute("aria-selected")).toBe("true");
     for (const group of payload.groups) expect(await tab(GROUP_LABELS[group.state])).toBeTruthy();
-    expect(screen.getByText(groupDescription("focar", payload.meta))).toBeTruthy();
+    // Acima da tabela, a faixa curta do grupo (a definição inteira fica em Como funciona).
+    expect(screen.getByText(groupShort("focar", payload.meta))).toBeTruthy();
+    expect(screen.queryByText(groupDescription("focar", payload.meta))).toBeNull();
     expect(window.localStorage.getItem("rankio.vendedor")).toBe("Ana Alfa");
   });
 
@@ -139,7 +142,13 @@ describe("carteira", () => {
     const focar = sellerPipeline("pipeline-bruno-beta").groups[0];
     expect(focar.empty?.code).toBe("start_with_group");
     expect((await tab(GROUP_LABELS.qualificar)).getAttribute("aria-selected")).toBe("true");
-    expect(screen.getByText(groupEmptyText(focar.empty!))).toBeTruthy();
+    // O cartão diz por onde começar no título; a ação e o motivo (o mesmo texto de groupEmptyText) vêm embaixo.
+    const start = focar.empty as Extract<typeof focar.empty, { code: "start_with_group" }>;
+    expect(screen.getByText(UI.startHeadline(GROUP_LABELS.qualificar))).toBeTruthy();
+    expect(screen.getByText(startAction(start))).toBeTruthy();
+    expect(screen.getByText(startReasonShort(start, focar.state))).toBeTruthy();
+    expect(groupEmptyText(start)).toBe(`${startReason(start)} Comece por ${GROUP_LABELS.qualificar}: ` +
+      `${startAction(start).charAt(0).toLowerCase()}${startAction(start).slice(1)}`);
   });
 
   test("a aba fica na URL", async () => {
@@ -164,34 +173,86 @@ describe("carteira", () => {
     navigation.go("/carteira?vendedor=Ana%20Alfa");
     stubApi(() => ok(payload));
     render(<PortfolioPage />);
-    const tie = UI.startWithTie(tieText(2, "GTX Basic", 550));
-    const card = (await screen.findByText(tie)).closest("[data-slot=card]") as HTMLElement;
+    // O empate vira um chip (produto e valor uma vez só), e os itens ficam iguais entre si, sem numeração.
+    const card = (await screen.findByText(UI.tieChip(2, "GTX Basic", 550))).closest("[data-slot=card]") as HTMLElement;
     expect(within(card).getByRole("button", { name: /^E050/ })).toBeTruthy();
     expect(within(card).getByRole("button", { name: /^E100/ })).toBeTruthy();
     expect(within(card).queryByRole("button", { name: /^EPP/ })).toBeNull();
+    expect(within(card).getByRole("button", { name: /^E050/ }).textContent).not.toMatch(/GTX Basic|550/);
+    fireEvent.click(within(card).getByRole("button", { name: UI.tieHelpLabel }));
+    expect(await screen.findByText(UI.tieHelp)).toBeTruthy();
   });
 
-  test("por que está aqui: motivos por papel, próximo passo, Anterior/Próxima e Esc", async () => {
+  test("produto com poucas vendas fechadas: a análise avisa; produto com histórico grande, não", async () => {
+    resetProductSamples();
+    const [first, second] = sellerPipeline("pipeline-ana-alfa").groups[0].items;
+    expect(first.product).not.toBe(second.product);
+    const history = structuredClone(load("intelligence-rich")) as Intelligence;
+    const segments = history.breakdowns.find((breakdown) => breakdown.dimension === "product")!.segments;
+    segments[0] = { ...segments[0], key: first.product!, history: { ...segments[0].history, closed: 25, won: 15 } };
+    segments[1] = { ...segments[1], key: second.product!, history: { ...segments[1].history, closed: 500, won: 300 } };
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi((url) => (url.includes("/api/intelligence") ? ok(history) : bySeller(url)));
+    render(<PortfolioPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(first.opportunity_id) }));
+    const panel = await screen.findByRole("region", { name: UI.whyHereFor(first.opportunity_id) });
+    expect(await within(panel).findByText(smallSampleNote(first.product!, 25, 15))).toBeTruthy();
+    // Só informa: o texto do motivo da posição continua o mesmo.
+    for (const reason of first.reasons) expect(within(panel).getByText(reasonText(reason))).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: UI.whyHereFor(second.opportunity_id) }));
+    const other = await screen.findByRole("region", { name: UI.whyHereFor(second.opportunity_id) });
+    await waitFor(() => expect(within(other).getByText(UI.limitsShort)).toBeTruthy());
+    expect(within(other).queryByText(/vendas fechadas do/)).toBeNull();
+  });
+
+  test("por que está aqui: a análise abre na própria linha, várias ao mesmo tempo, sem painel lateral", async () => {
     navigation.go("/carteira?vendedor=Ana%20Alfa");
     stubApi(bySeller);
     render(<PortfolioPage />);
     const [first, second] = sellerPipeline("pipeline-ana-alfa").groups[0].items;
-    fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(first.opportunity_id) }));
+    const open = await screen.findByRole("button", { name: UI.whyHereFor(first.opportunity_id) });
+    expect(open.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(open);
 
-    const sheet = await screen.findByRole("dialog", { name: UI.whyHere });
-    for (const role of new Set(first.reasons.map((r) => r.role))) expect(within(sheet).getByText(ROLE_LABELS[role])).toBeTruthy();
-    for (const reason of first.reasons) expect(within(sheet).getByText(reasonText(reason))).toBeTruthy();
-    expect(within(sheet).getByText(actionText(first.next_action))).toBeTruthy();
+    const panel = await screen.findByRole("region", { name: UI.whyHereFor(first.opportunity_id) });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(open.getAttribute("aria-expanded")).toBe("true");
+    // A análise fica dentro da tabela, logo abaixo da linha da oportunidade.
+    const row = open.closest("tr") as HTMLElement;
+    expect(row.nextElementSibling?.contains(panel)).toBe(true);
+    for (const role of new Set(first.reasons.map((r) => r.role))) expect(within(panel).getByText(ROLE_LABELS[role])).toBeTruthy();
+    for (const reason of first.reasons) expect(within(panel).getByText(reasonText(reason))).toBeTruthy();
+    expect(within(panel).getByText(actionText(first.next_action))).toBeTruthy();
     expect(first.reasons).toHaveLength(2);  // só o que decidiu: grupo e ordem
-    expect(within(sheet).getByText(UI.limitsNote)).toBeTruthy();
-    expect(within(sheet).getByText(UI.position(1, 5))).toBeTruthy();
+    // C4: a linha curta fica visível; o aviso inteiro, fechado em "O que ele não vê" (no DOM).
+    expect(within(panel).getByText(UI.limitsShort)).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: UI.blindSpotButton })).toBeTruthy();
+    expect(within(panel).getByText(UI.limitsNote)).toBeTruthy();
 
-    fireEvent.click(within(sheet).getByRole("button", { name: UI.next }));
-    expect(within(sheet).getByText(new RegExp(`^${second.opportunity_id} ·`))).toBeTruthy();
-    expect(within(sheet).getByText(UI.position(2, 5))).toBeTruthy();
+    // A de baixo abre sem fechar a primeira: dá para comparar as duas.
+    fireEvent.click(screen.getByRole("button", { name: UI.whyHereFor(second.opportunity_id) }));
+    expect(await screen.findByRole("region", { name: UI.whyHereFor(second.opportunity_id) })).toBeTruthy();
+    expect(screen.getByRole("region", { name: UI.whyHereFor(first.opportunity_id) })).toBeTruthy();
 
-    fireEvent.keyDown(sheet, { key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    // Recolher fecha só a que foi pedida; clicar na linha também alterna.
+    fireEvent.click(within(panel).getByRole("button", { name: UI.closeAnalysis }));
+    await waitFor(() => expect(screen.queryByRole("region", { name: UI.whyHereFor(first.opportunity_id) })).toBeNull());
+    expect(screen.getByRole("region", { name: UI.whyHereFor(second.opportunity_id) })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: UI.whyHereFor(second.opportunity_id) }));
+    await waitFor(() => expect(screen.queryByRole("region", { name: UI.whyHereFor(second.opportunity_id) })).toBeNull());
+  });
+
+  test("o cartão do topo abre a análise na lista", async () => {
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(bySeller);
+    render(<PortfolioPage />);
+    const first = sellerPipeline("pipeline-ana-alfa").groups[0].items[0];
+    const card = (await screen.findByText(UI.nextStepTitle)).closest("[data-slot=card]") as HTMLElement;
+    fireEvent.click(within(card).getByRole("button", { name: new RegExp(`^${first.opportunity_id}`) }));
+    expect(await screen.findByRole("region", { name: UI.whyHereFor(first.opportunity_id) })).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   test("o painel traz o contexto histórico da idade, sem contagem nem urgência", async () => {
@@ -201,8 +262,9 @@ describe("carteira", () => {
     const { groups, meta } = sellerPipeline("pipeline-ana-alfa");
     const item = groups[0].items[0];
     fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(item.opportunity_id) }));
-    const sheet = await screen.findByRole("dialog", { name: UI.whyHere });
+    const sheet = await screen.findByRole("region", { name: UI.whyHereFor(item.opportunity_id) });
     expect(within(sheet).getByText(UI.ageContextTitle)).toBeTruthy();
+    expect(within(sheet).getByRole("button", { name: UI.ageContextShort })).toBeTruthy();  // C4: fechado em "Ver detalhe"
     expect(within(sheet).getByText(ageContextText(item.age_days!, meta))).toBeTruthy();
     expect(within(sheet).getByText(UI.ageContextNote)).toBeTruthy();
     expect(within(sheet).getByText(UI.nextStep)).toBeTruthy();
@@ -219,7 +281,7 @@ describe("carteira", () => {
     const cells = new Set(buttons.map((b) => (b.closest("td") as HTMLElement).className));
     expect(cells.size).toBe(1);
     fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(tied.opportunity_id) }));
-    const sheet = await screen.findByRole("dialog", { name: UI.whyHere });
+    const sheet = await screen.findByRole("region", { name: UI.whyHereFor(tied.opportunity_id) });
     expect(within(sheet).getByText(tieNote(tied)!)).toBeTruthy();
     expect(tieNote(sellerPipeline("pipeline-ana-alfa").groups[0].items[0])).toBeNull();
   });
@@ -235,7 +297,14 @@ describe("carteira", () => {
     const guide = await screen.findByText(UI.groupGuide.title);
     const box = guide.parentElement as HTMLElement;
     expect(within(box).getAllByRole("term").map((t) => t.textContent)).toEqual(groups.map((g) => GROUP_LABELS[g.state]));
-    for (const group of groups) expect(within(box).getByText(groupDescription(group.state, limits))).toBeTruthy();
+    // A frase curta e o chip do limite (números do meta); a definição inteira fica em Como funciona.
+    for (const group of groups) {
+      expect(within(box).getByText(groupShort(group.state, limits))).toBeTruthy();
+      expect(within(box).getByText(groupRange(group.state, limits))).toBeTruthy();
+    }
+    // A ordem dentro do grupo fica visível no rodapé, e as regras completas estão a um link.
+    expect(within(box).getByText(groupOrderShort(sellerPipeline("pipeline-ana-alfa").ordering))).toBeTruthy();
+    expect(within(box).queryByRole("link")).toBeNull();  // sem atalho repetido: as regras têm a própria página
   });
 
   test("as abas seguem a ordem Focar, Qualificar, Acompanhar, Confirmar, Completar", async () => {
@@ -253,17 +322,18 @@ describe("carteira", () => {
     render(<PortfolioPage />);
     const item = sellerPipeline("pipeline-ana-alfa").groups[0].items[0];  // sem conta registrada
     fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(item.opportunity_id) }));
-    const sheet = await screen.findByRole("dialog", { name: UI.whyHere });
+    const sheet = await screen.findByRole("region", { name: UI.whyHereFor(item.opportunity_id) });
     const box = within(sheet).getByRole("region", { name: UI.suggestionsTitle });
     expect(within(box).getByText(UI.suggestionsIntro)).toBeTruthy();
     for (const suggestion of suggestionsFor(item)) expect(within(box).getByText(suggestionText(suggestion))).toBeTruthy();
     expect(within(box).getByText(/^Se a conta não está registrada:/)).toBeTruthy();
     expect(within(sheet).getByText(UI.limitsNote)).toBeTruthy();
     // Com conta registrada, a sugestão da conta ausente não aparece.
-    fireEvent.click(within(sheet).getByRole("button", { name: UI.next }));
     const withAccount = sellerPipeline("pipeline-ana-alfa").groups[0].items[1];
     expect(withAccount.account).not.toBeNull();
-    expect(within(sheet).queryByText(/^Se a conta não está registrada:/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: UI.whyHereFor(withAccount.opportunity_id) }));
+    const other = await screen.findByRole("region", { name: UI.whyHereFor(withAccount.opportunity_id) });
+    expect(within(other).queryByText(/^Se a conta não está registrada:/)).toBeNull();
   });
 
   test("busca e filtros: a lista, a contagem e a URL; limpar volta tudo", async () => {
@@ -320,7 +390,12 @@ describe("equipe", () => {
     render(<TeamPage />);
     const payload = teamPipeline("team-all");
     const summary = await screen.findByRole("region", { name: UI.teamSummaryLabel });
-    expect(within(summary).getAllByText(UI.ofTotal(payload.summary.total)).length).toBe(payload.groups.length);
+    // Um cartão com o total e uma legenda por grupo (na ordem da API), cada uma com a contagem da API e sem %.
+    expect(within(summary).getByText(formatInt(payload.summary.total))).toBeTruthy();
+    const legend = within(summary).getAllByRole("button").filter((b) => Object.values(GROUP_LABELS).some((l) => b.textContent?.startsWith(l)));
+    expect(legend.map((b) => b.textContent?.match(/^\D+/)?.[0])).toEqual(payload.ordering.group_order.map((s) => GROUP_LABELS[s]));
+    payload.ordering.group_order.forEach((state, i) => expect(legend[i].textContent).toContain(formatInt(payload.summary[state])));
+    expect(summary.textContent).not.toMatch(/%/);
     expect(fetch.mock.calls.some(([url]) => String(url).endsWith("/api/pipeline?manager=Mara+Um"))).toBe(true);
 
     // Abaixo dos números, uma aba por análise, com a contagem; abre em "Por vendedor".
@@ -330,11 +405,19 @@ describe("equipe", () => {
     expect(sellersTab.getAttribute("aria-selected")).toBe("true");
     expect(sellersTab.textContent).toContain(String(payload.by_seller.length));
     expect(itemsTab.textContent).toContain(String(payload.summary.total));
+    // O cartão "Vendedores · com carteira aberta" conta só quem tem oportunidade aberta; a aba lista todos.
+    const withOpen = payload.by_seller.filter((seller) => seller.total > 0).length;
+    expect(withOpen).toBeLessThan(payload.by_seller.length);
+    const stats = screen.getByRole("region", { name: TEAM.stats.label });
+    const sellersCard = within(stats).getByText(TEAM.stats.sellers).closest("[data-slot=card]") as HTMLElement;
+    expect(sellersCard.textContent).toContain(formatInt(withOpen));
+    expect(sellersCard.textContent).toContain(TEAM.stats.sellersHelp);
     expect(screen.queryByRole("tablist", { name: UI.groupsLabel })).toBeNull();
     // As colunas por vendedor seguem a ordem de grupos da API.
     const bySeller = screen.getByText(TEAM.bySellerHelp).closest("[data-slot=card]") as HTMLElement;
-    const headers = within(bySeller).getAllByRole("columnheader").map((cell) => cell.textContent);
-    expect(headers.filter((h) => Object.values(GROUP_LABELS).includes(h ?? ""))).toEqual(
+    const headers = within(bySeller).getAllByRole("columnheader").map((cell) => cell.textContent ?? "");
+    const labels = Object.values(GROUP_LABELS);
+    expect(headers.filter((h) => labels.some((l) => h.startsWith(l))).map((h) => labels.find((l) => h.startsWith(l)))).toEqual(
       payload.ordering.group_order.map((state) => GROUP_LABELS[state]));
 
     // A escolha vai para a URL e só a análise aberta fica na tela (sem rolagem longa).
@@ -342,6 +425,12 @@ describe("equipe", () => {
     expect(navigation.params.get("visao")).toBe("oportunidades");
     expect(await screen.findByRole("tablist", { name: UI.groupsLabel })).toBeTruthy();
     expect(screen.getAllByRole("columnheader", { name: UI.columns.seller })).toHaveLength(1);
+    // Como na Carteira: sem legenda nem nota de cliente entre as abas e a tabela; só a faixa curta do grupo.
+    for (const gone of [/^Ordem:/, /^Nota:/]) expect(screen.queryByText(gone)).toBeNull();
+
+    // Cada grupo da legenda leva à lista já no grupo.
+    fireEvent.click(legend[legend.length - 1]);
+    expect(navigation.params.get("grupo")).toBe(payload.ordering.group_order[legend.length - 1]);
 
     fireEvent.click(screen.getByRole("button", { name: UI.filters.clear }));
     expect(navigation.params.get("gerente")).toBeNull();
@@ -391,9 +480,9 @@ describe("equipe", () => {
     const { groups, meta } = sellerPipeline("pipeline-ana-alfa");
     const ids = () => screen.getAllByRole("button", { name: /^Por que .* está aqui$/ })
       .map((button) => button.textContent);
-    const view = (selected: string | null) => (
-      <GroupTabs groups={groups} tab="focar" onTab={() => {}} selected={selected} onSelect={() => {}}
-                 limits={meta} pageSize={2} />);
+    const view = (reveal: { id: string } | null) => (
+      <GroupTabs groups={groups} tab="focar" onTab={() => {}} expanded={[]} onToggle={() => {}}
+                 renderPanel={() => null} reveal={reveal} limits={meta} pageSize={2} />);
     const { rerender } = render(view(null));
     const all = groups[0].items.map((item) => item.opportunity_id);
     expect(ids()).toEqual(all.slice(0, 2));
@@ -404,25 +493,38 @@ describe("equipe", () => {
     expect(screen.getByRole("link", { name: UI.pagination.next }).getAttribute("aria-disabled")).toBe("true");
     act(() => fireEvent.click(screen.getByRole("link", { name: UI.pagination.previous })));
     expect(ids()).toEqual(all.slice(2, 4));
-    // Anterior e Próxima no painel podem passar da página: a tabela acompanha a oportunidade aberta.
-    rerender(<TooltipProvider>{view(all[0])}</TooltipProvider>);
+    // Abrir uma oportunidade de fora da lista (o cartão do topo) pode passar da página: a tabela vai até ela.
+    rerender(<TooltipProvider>{view({ id: all[0] })}</TooltipProvider>);
     expect(ids()).toEqual(all.slice(0, 2));
   });
 });
 
 describe("equipe por vendedor", () => {
-  test("todo vendedor do filtro, na ordem da API, com link para a carteira e sem ordenação", async () => {
+  test("todo vendedor do filtro, na ordem da API, com link para a carteira; as colunas ordenam e voltam", async () => {
     stubApi(() => ok(load("team-all")));
     navigation.go("/equipe");
     render(<TeamPage />);
     const table = (await screen.findByText(TEAM.bySellerHelp)).closest("[data-slot=card]") as HTMLElement;
     const rows = (load("team-all") as TeamPipeline).by_seller;
-    const links = within(table).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual(rows.map((row) => row.seller));
-    expect(links[0].getAttribute("href")).toBe(`/carteira?vendedor=${encodeURIComponent(rows[0].seller)}`);
-    // O único botão da tabela copia; nenhum ordena.
-    expect(within(table).queryAllByRole("button").map((button) => button.textContent)).toEqual([TEAM.copyTable]);
+    const names = () => within(table).getAllByRole("link").map((link) => link.textContent);
+    expect(names()).toEqual(rows.map((row) => row.seller));
+    expect(within(table).getAllByRole("link")[0].getAttribute("href")).toBe(`/carteira?vendedor=${encodeURIComponent(rows[0].seller)}`);
     expect(screen.getByRole("link", { name: TEAM.seeEvidence }).getAttribute("href")).toBe("/evidencia");
+
+    // Cada coluna é um botão que ordena: crescente, decrescente e, no terceiro clique, a ordem da API.
+    const head = within(table).getByRole("columnheader", { name: new RegExp(`^${TEAM.total}`) });
+    expect(head.getAttribute("aria-sort")).toBe("none");
+    const byTotal = (dir: 1 | -1) => [...rows].sort((a, b) => (a.total - b.total) * dir).map((row) => row.total);
+    const totals = () => within(table).getAllByRole("row").slice(1).map((row) => Number(row.querySelectorAll("td")[1].textContent!.replace(/\D/g, "")));
+    fireEvent.click(within(head).getByRole("button"));
+    expect(head.getAttribute("aria-sort")).toBe("ascending");
+    expect(totals()).toEqual(byTotal(1).slice(0, totals().length));
+    fireEvent.click(within(head).getByRole("button"));
+    expect(head.getAttribute("aria-sort")).toBe("descending");
+    expect(totals()).toEqual(byTotal(-1).slice(0, totals().length));
+    fireEvent.click(within(head).getByRole("button"));
+    expect(head.getAttribute("aria-sort")).toBe("none");
+    expect(names()).toEqual(rows.map((row) => row.seller).slice(0, names().length));
   });
 
   test("filtro sem vendedores: a aba mostra a mensagem, sem tabela vazia", async () => {
@@ -456,7 +558,12 @@ describe("evidência", () => {
     for (const ranker of rankers) {
       const row = within(detail).getByText(RANKER_LABELS[ranker.code]).closest("tr") as HTMLElement;
       expect(within(row).getByText(formatPct(ranker.val_at_k))).toBeTruthy();
-      if (ranker.delta_val) expect(within(row).getByText(text.delta(ranker.delta_val))).toBeTruthy();
+      if (ranker.delta_val) {
+        // A frase inteira fica para o leitor de tela; na tela, a diferença curta e a faixa.
+        expect(within(row).getByText(text.delta(ranker.delta_val)).className).toContain("sr-only");
+        expect(within(row).getByText(text.deltaShort(ranker.delta_val))).toBeTruthy();
+        expect(within(row).getByText(text.deltaRange(ranker.delta_val))).toBeTruthy();
+      }
     }
     // Sem jargão: nenhuma coluna técnica, nenhum "pp" nem "IC95%".
     expect(within(detail).queryByText(TECH_COLUMNS.auc)).toBeNull();
@@ -502,7 +609,7 @@ describe("como funciona", () => {
     render(<RulesPage />);
     const rules = load("rules") as Rules;
     for (const state of rules.ordering.group_order) {
-      expect(await screen.findByText(groupDescription(state, rules.meta))).toBeTruthy();
+      expect(await screen.findByText(groupShort(state, rules.meta))).toBeTruthy();
     }
     for (const band of rules.value_bands) {
       const row = screen.getByText(bandTitle(band.band)).closest("tr") as HTMLElement;
@@ -560,10 +667,10 @@ describe("inteligência", () => {
     expect(screen.getByText(INTELLIGENCE.open.excluded(excluded))).toBeTruthy();
     // O recorte ativo fica à vista, um chip por filtro, e o botão mostra quantos são.
     const chips = screen.getByRole("group", { name: INTELLIGENCE.filters.activeLabel });
-    expect(within(chips).getByText(INTELLIGENCE.filters.chip(DIMENSION_LABELS.office, "East"))).toBeTruthy();
+    expect(within(chips).getByText(INTELLIGENCE.filters.chip(DIMENSION_LABELS.office, "Leste"))).toBeTruthy();
     expect(screen.getByRole("button", { name: new RegExp(`^${INTELLIGENCE.filters.button}\\s*2$`) })).toBeTruthy();
     fireEvent.click(within(chips).getByRole("button", {
-      name: INTELLIGENCE.filters.remove(DIMENSION_LABELS.sector, "retail") }));
+      name: INTELLIGENCE.filters.remove(DIMENSION_LABELS.sector, "Varejo") }));
     expect(navigation.params.get("setor")).toBeNull();
     expect(navigation.params.get("escritorio")).toBe("East");
     fireEvent.click(within(chips).getByRole("button", { name: UI.filters.clear }));
@@ -596,6 +703,46 @@ describe("inteligência", () => {
     const names = within(card).getAllByRole("row").slice(1).map((row) => row.querySelector("td")?.textContent);
     expect(names).toEqual(sellers.map((s) => s.key));
     expect(names).toEqual([...names].sort());
+  });
+
+  test("a tabela mostra ganhas e perdidas ao lado das fechadas, e o setor aparece em português", async () => {
+    intelApi();
+    navigation.go("/inteligencia?ver=sector");
+    render(<IntelligencePage />);
+    const sectors = intelligence("intelligence-rich").breakdowns.find((b) => b.dimension === "sector")!.segments;
+    const card = (await screen.findAllByText(DIMENSION_LABELS.sector)).map((el) => el.closest("[data-slot=card]"))
+      .find((el) => el?.querySelector("table")) as HTMLElement;
+    const headers = within(card).getAllByRole("columnheader").map((h) => h.textContent ?? "");
+    const closed = headers.findIndex((h) => h.startsWith(INTELLIGENCE.explore.columns.closed));
+    expect(headers[closed + 1]).toMatch(new RegExp(`^${INTELLIGENCE.explore.columns.won}`));
+    expect(headers[closed + 2]).toMatch(new RegExp(`^${INTELLIGENCE.explore.columns.lost}`));
+    const first = sectors.find((s) => s.key !== null)!;
+    const row = within(card).getAllByRole("row")[1];
+    const cells = within(row).getAllByRole("cell").map((c) => c.textContent);
+    expect(cells[0]).toBe(sectorLabel(first.key!));
+    expect(cells[closed]).toBe(formatInt(first.history.closed));
+    expect(cells[closed + 1]).toBe(formatInt(first.history.won));
+    expect(cells[closed + 2]).toBe(formatInt(first.history.lost));
+  });
+
+  test("cruzamentos: o seletor traz os seis e cada um mantém a soma da linha", async () => {
+    intelApi();
+    navigation.go("/inteligencia");
+    render(<IntelligencePage />);
+    const picker = await screen.findByRole("combobox", { name: INTELLIGENCE.crosstab.viewBy });
+    expect(picker.textContent).toBe(INTELLIGENCE.crosstab.tables.seller_product.option);
+    fireEvent.keyDown(picker, { key: "ArrowDown" });
+    const options = (await screen.findAllByRole("option")).map((option) => option.textContent);
+    expect(options).toEqual(Object.values(INTELLIGENCE.crosstab.tables).map((table) => table.option));
+    fireEvent.click(screen.getByRole("option", { name: INTELLIGENCE.crosstab.tables.sector_product.option }));
+    await waitFor(() => expect(document.getElementById("cruzamento")?.textContent)
+      .toBe(INTELLIGENCE.crosstab.tables.sector_product.title));
+    const table = document.getElementById("cruzamento")!.closest("[data-slot=card]") as HTMLElement;
+    const crosstab = intelligence("intelligence-rich").crosstabs.find((c) => c.id === "sector_product")!;
+    const row = crosstab.rows[0];
+    const cells = within(within(table).getAllByRole("row")[1]).getAllByRole("cell").map((c) => c.textContent);
+    expect(cells[0]).toBe(sectorLabel(row.key));
+    expect(cells[cells.length - 1]).toBe(formatInt(row.closed));
   });
 
   test("detalhamento: a linha abre as negociações com o recorte somado, e o diagnóstico abre o grupo", async () => {

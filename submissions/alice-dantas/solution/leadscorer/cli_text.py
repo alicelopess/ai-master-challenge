@@ -35,7 +35,7 @@ NOTE = "Nota"
 NEXT_STEP = "O que verificar agora"
 WHY_HERE = "Por que está aqui"
 COLUMNS = ("ID", "Produto", "Cliente", "Preço", "Início da negociação", "Idade")
-DATA_WARNING = ("Atenção: dados diferentes da versão auditada; os números conferidos "
+DATA_WARNING = ("Atenção: dados diferentes da versão auditada. Os números conferidos "
                 "no PRD deixam de ser garantidos.")
 
 # Ajuda dos comandos e rótulo de erro (a mensagem do erro vem do núcleo, para quem opera).
@@ -76,8 +76,8 @@ def value_label(band: str) -> str:
 # Os limites aparecem como fato do histórico, nunca como prazo.
 REASONS: Dict[str, Callable[[Params], str]] = {
     codes.AGE_WITHIN_WON_CYCLE: lambda p: (
-        f"{GROUP_LABELS['focar']} porque está aberta há {p['age_days']} dias; {p['percentile']}% das vendas "
-        f"ganhas fecharam em até {p['won_cycle_limit_days']} dias."),
+        f"{GROUP_LABELS['focar']} porque está aberta há {p['age_days']} dias. Entre as vendas ganhas, {p['percentile']}% "
+        f"fecharam em até {p['won_cycle_limit_days']} dias."),
     codes.AGE_ABOVE_WON_CYCLE: lambda p: (
         f"{GROUP_LABELS['acompanhar']} porque está aberta há {p['age_days']} dias: mais do que {p['percentile']}% "
         f"das vendas ganhas levaram ({p['won_cycle_limit_days']} d), sem passar da venda mais longa já fechada "
@@ -96,8 +96,8 @@ REASONS: Dict[str, Callable[[Params], str]] = {
 }
 # O que o sistema não vê: dito uma vez no "Por que está aqui", não como motivo.
 LIMITS_NOTE = ("Como o pipeline só apresenta datas, produto e preço de tabela: não apresenta último contato, ligações, "
-               "reuniões nem e-mails, a base não registra atividades, estágio nem contatos; por isso o Rankio indica "
-               "possibilidades para diferentes cenários de negociação, não uma certeza de próximo passo.")
+               "reuniões nem e-mails. A base não registra atividades, estágio nem contatos. Por isso o Rankio indica "
+               "possibilidades para diferentes cenários de negociação, mas não uma certeza de próximo passo.")
 
 # Sugestões de negociação: possibilidades para contextos que a base não registra, por grupo (as mesmas da tela).
 # Não são derivadas dos dados da oportunidade nem preveem resultado.
@@ -227,8 +227,8 @@ def legend_text(ordering: Dict[str, Any]) -> str:
     groups = " → ".join(GROUP_LABELS[key] for key in ordering["group_order"])
     if ordering["within_group"] != KNOWN_WITHIN_GROUP:
         return f"Ordem: {groups}."
-    age = "" if ordering["age_affects_order"] else "; a idade aparece, mas não muda a ordem"
-    return f"Ordem: {groups}; em cada grupo, maior valor de tabela primeiro{age}."
+    age = "" if ordering["age_affects_order"] else " A idade aparece, mas não muda a ordem."
+    return f"Ordem: {groups}. Em cada grupo, maior valor de tabela primeiro.{age}"
 
 
 def data_label(meta: Dict[str, Any]) -> str:
@@ -263,7 +263,7 @@ def client_text(item: Dict[str, Any]) -> str:
 
 # Contexto histórico da idade (ADR-008): só descreve as vendas que fecharam, sem dizer o que fazer nem prever.
 AGE_CONTEXT_TITLE = "Idade no contexto do histórico"
-AGE_CONTEXT_NOTE = "Isso descreve as vendas que fecharam; não diz o que acontece com esta negociação."
+AGE_CONTEXT_NOTE = "Isso descreve as vendas que fecharam, mas não diz o que acontece com esta negociação."
 
 
 def age_context(age_days: Optional[int], meta: Dict[str, Any]) -> Optional[str]:
@@ -279,7 +279,7 @@ def tie_note(entry: Dict[str, Any]) -> Optional[str]:
     if entry["tie_size"] < 2 or entry["sales_price"] is None:
         return None
     others = entry["tie_size"] - 1
-    return (f"Empata com {others} {'outra' if others == 1 else 'outras'} do mesmo produto e valor de tabela; a "
+    return (f"Empata com {others} {'outra' if others == 1 else 'outras'} do mesmo produto e valor de tabela. A "
             "ordem entre elas é só pelo código.")
 
 

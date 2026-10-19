@@ -27,14 +27,14 @@ function cleanAssessment(id: string, raw: unknown): Assessment | null {
   if (!isRecord(raw) || !isRecord(raw.answers)) return null;
   const answers: Answers = {};
   for (const dimension of DIMENSIONS) {
-    const value = raw.answers[dimension];
+    // Avaliações antigas tinham "com data": a data se perdeu, então viram "sem prazo".
+    const value = dimension === "progress" && raw.answers[dimension] === "dated" ? "undated" : raw.answers[dimension];
     if (isOption(dimension, value)) (answers as Record<string, unknown>)[dimension] = value;
   }
-  const actionDate = typeof raw.actionDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw.actionDate) ? raw.actionDate : null;
   const confirmed = Array.isArray(raw.confirmedConflicts)
     ? raw.confirmedConflicts.filter((code): code is ConflictCode => CONFLICTS.includes(code as ConflictCode)) : [];
   return {
-    opportunityId: id, answers, actionDate, confirmedConflicts: confirmed,
+    opportunityId: id, answers, confirmedConflicts: confirmed,
     assessedAt: typeof raw.assessedAt === "string" ? raw.assessedAt : new Date(0).toISOString(),
     policyVersion: typeof raw.policyVersion === "string" ? raw.policyVersion : POLICY_VERSION,
     version: typeof raw.version === "number" ? raw.version : ASSESSMENT_VERSION,

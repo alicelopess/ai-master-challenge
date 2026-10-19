@@ -511,6 +511,74 @@
       }
     ]
   },
+  "crosstabs": [
+    {
+      "id": "account_product",
+      "row_dimension": "account",
+      "column_dimension": "product",
+      "columns": [],
+      "rows": []
+    },
+    {
+      "id": "sector_product",
+      "row_dimension": "sector",
+      "column_dimension": "product",
+      "columns": [],
+      "rows": []
+    },
+    {
+      "id": "seller_sector",
+      "row_dimension": "seller",
+      "column_dimension": "sector",
+      "columns": [],
+      "rows": [
+        {
+          "key": "Ana Alfa",
+          "closed": 0,
+          "cells": []
+        },
+        {
+          "key": "Bruno Beta",
+          "closed": 0,
+          "cells": []
+        },
+        {
+          "key": "Carla Gama",
+          "closed": 0,
+          "cells": []
+        },
+        {
+          "key": "Davi Delta",
+          "closed": 0,
+          "cells": []
+        },
+        {
+          "key": "Eva Epsilon",
+          "closed": 0,
+          "cells": []
+        },
+        {
+          "key": "Fabio Zeta",
+          "closed": 0,
+          "cells": []
+        }
+      ]
+    },
+    {
+      "id": "sector_office",
+      "row_dimension": "sector",
+      "column_dimension": "office",
+      "columns": [],
+      "rows": []
+    },
+    {
+      "id": "location_office",
+      "row_dimension": "location",
+      "column_dimension": "office",
+      "columns": [],
+      "rows": []
+    }
+  ],
   "cycle_bands": [
     {
       "low": 0,

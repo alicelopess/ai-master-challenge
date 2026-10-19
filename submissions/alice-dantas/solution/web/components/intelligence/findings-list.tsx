@@ -1,14 +1,22 @@
 "use client";
 
-import { MoveDown } from "lucide-react";
+import { ChartColumn, MoveDown } from "lucide-react";
 
+import { MoreDetails } from "@/components/app/more-details";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { INTELLIGENCE, findingText, type Finding } from "@/copy/pt-BR";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  INTELLIGENCE, PEOPLE_DIMENSIONS, PEOPLE_DRIVERS_NOTE, findingHeadline, findingText, type Finding,
+} from "@/copy/pt-BR";
+import { CONCEPT_ICONS } from "@/copy/visual";
 import type { Dimension } from "@/lib/intelligence";
 
+import { DriverBar } from "./driver-bar";
+import { HeadlineMetrics } from "./headline-metrics";
+
 const text = INTELLIGENCE.findings;
+const KIND_ICONS = { descriptive: ChartColumn, statistical: CONCEPT_ICONS.compare } as const;
 
 /** O recorte em que cada descoberta pode ser conferida, quando há um. */
 function findingDimension(finding: Finding): Dimension | null {
@@ -24,8 +32,8 @@ function findingDimension(finding: Finding): Dimension | null {
   }
 }
 
-/** O que os resultados mostram: descobertas de regras fixas, com o tipo de cada uma. Fica no painel
- * "Ver análises"; o botão leva ao recorte em que a descoberta pode ser conferida. */
+/** O que os resultados mostram: número protagonista e, na decomposição, a barra de três fatores; o texto inteiro
+ * fica em "Ver detalhe". Fica no painel "Ver análises"; o botão leva ao recorte em que a descoberta pode ser conferida. */
 export function FindingsList({ findings, onViewBy, onJump }: {
   findings: Finding[]; onViewBy: (d: Dimension) => void; onJump: (section: string) => void;
 }) {
@@ -36,13 +44,25 @@ export function FindingsList({ findings, onViewBy, onJump }: {
       {findings.map((finding, index) => {
         const { title, body, kind } = findingText(finding);
         const dimension = findingDimension(finding);
+        const KindIcon = KIND_ICONS[kind];
+        const people = finding.code === "revenue_gap_drivers" && PEOPLE_DIMENSIONS.includes(finding.params.dimension);
         return (
           <Card key={`${finding.code}-${index}`} size="sm">
             <CardHeader>
-              <Badge variant={kind === "statistical" ? "secondary" : "outline"}>{text.kinds[kind]}</Badge>
-              <CardTitle className="font-semibold">{title}</CardTitle>
-              <CardDescription className="text-pretty">{body}</CardDescription>
+              <Badge variant={kind === "statistical" ? "secondary" : "outline"}>
+                <KindIcon data-icon="inline-start" aria-hidden />
+                {text.kinds[kind]}
+              </Badge>
+              <CardTitle className="font-semibold text-pretty">{title}</CardTitle>
             </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <HeadlineMetrics headline={findingHeadline(finding)} />
+              {finding.code === "revenue_gap_drivers" && <DriverBar drivers={finding.params.drivers} />}
+              {people && <p className="text-xs text-muted-foreground">{PEOPLE_DRIVERS_NOTE}</p>}
+              <MoreDetails label={INTELLIGENCE.process.detail}>
+                <p className="text-sm text-pretty text-muted-foreground">{body}</p>
+              </MoreDetails>
+            </CardContent>
             {(dimension || finding.code === "fast_losses") && (
               <CardFooter>
                 {dimension ? (

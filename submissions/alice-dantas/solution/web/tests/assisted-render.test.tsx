@@ -7,7 +7,7 @@ import { SelectStep } from "@/components/assessment/select-step";
 import { PortfolioPage } from "@/components/portfolio/portfolio-page";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ANSWER_LABELS, ASSISTED, CATEGORY_LABELS, QUESTIONS } from "@/copy/assisted";
-import { UI, tieText } from "@/copy/pt-BR";
+import { UI } from "@/copy/pt-BR";
 import type { Answers, Dimension } from "@/lib/assisted/model";
 import type { Item, SellerPipeline } from "@/lib/contract";
 
@@ -54,7 +54,7 @@ async function openTieSheet() {
   navigation.go("/carteira?vendedor=Ana%20Alfa");
   const fetch = stubApi(tiedPipeline());
   render(<PortfolioPage />);
-  const card = (await screen.findByText(UI.startWithTie(tieText(2, "GTX Basic", 550)))).closest("[data-slot=card]") as HTMLElement;
+  const card = (await screen.findByText(UI.tieChip(2, "GTX Basic", 550))).closest("[data-slot=card]") as HTMLElement;
   fireEvent.click(within(card).getByRole("button", { name: ASSISTED.card.button }));
   const sheet = await screen.findByRole("dialog", { name: ASSISTED.title });
   return { fetch, sheet, card };
@@ -114,7 +114,7 @@ describe("do cartão ao resultado", () => {
 
     // Nenhuma chamada além da API de leitura que a tela já usa.
     for (const [url, init] of fetch.mock.calls as unknown as [string, RequestInit | undefined][]) {
-      expect(url).toMatch(/\/api\/(sellers|meta)/);
+      expect(url).toMatch(/\/api\/(sellers|meta|intelligence)/);
       expect(init?.method ?? "GET").toBe("GET");
     }
 
@@ -123,7 +123,7 @@ describe("do cartão ao resultado", () => {
     expect(Object.keys(stored.assessments["Ana Alfa"]).sort()).toEqual(["E050", "E100"]);
     fireEvent.click(screen.getByRole("button", { name: ASSISTED.close, hidden: true }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: ASSISTED.title })).toBeNull());
-    expect(screen.getAllByText(ASSISTED.mark.done(95, CATEGORY_LABELS.define_continuity)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(ASSISTED.mark.done(CATEGORY_LABELS.define_continuity)).length).toBeGreaterThan(0);
     expect(screen.getAllByText(ASSISTED.mark.aside).length).toBeGreaterThan(0);
   });
 
@@ -173,7 +173,9 @@ describe("do cartão ao resultado", () => {
       answer(FULL_NO_ACTION);
       next();
     }
-    expect(await screen.findAllByText(ASSISTED.result.position(1, true))).toHaveLength(2);
+    // Duas no modal e duas no cartão do topo, que passa a mostrar a ordem pela avaliação.
+    expect(await screen.findAllByText(ASSISTED.result.position(1, true))).toHaveLength(4);
+    expect(screen.getByText(ASSISTED.card.orderedBy)).toBeTruthy();
   });
 
   test("se o navegador não guarda, a avaliação segue e avisa", async () => {
@@ -188,6 +190,38 @@ describe("do cartão ao resultado", () => {
     next();
     expect(await screen.findByText(ASSISTED.unsaved)).toBeTruthy();
     vi.restoreAllMocks();
+  });
+});
+
+describe("marcar na lista", () => {
+  async function openList() {
+    navigation.go("/carteira?vendedor=Ana%20Alfa");
+    stubApi(tiedPipeline());
+    render(<PortfolioPage />);
+    await screen.findByText(UI.tieChip(2, "GTX Basic", 550));
+    return screen.getAllByRole("checkbox", { name: /para priorizar$/ }) as HTMLElement[];
+  }
+
+  test("a barra pede 2, marcar não abre a análise e Priorizar vai direto às perguntas", async () => {
+    const boxes = await openList();
+    expect(screen.queryByRole("region", { name: ASSISTED.selection.barLabel })).toBeNull();
+    fireEvent.click(boxes[0]);
+    const bar = screen.getByRole("region", { name: ASSISTED.selection.barLabel });
+    expect(within(bar).getByText(ASSISTED.selection.counter(1))).toBeTruthy();
+    expect((within(bar).getByRole("button", { name: ASSISTED.selection.action }) as HTMLButtonElement).disabled).toBe(true);
+    expect(document.querySelector("[data-state=selected]")).toBeNull();
+    fireEvent.click(boxes[1]);
+    fireEvent.click(within(bar).getByRole("button", { name: ASSISTED.selection.action }));
+    const dialog = await screen.findByRole("dialog", { name: ASSISTED.title });
+    expect(within(dialog).getByText(ASSISTED.dialog.step(1, 2))).toBeTruthy();
+    expect(within(dialog).queryByText(ASSISTED.select.title)).toBeNull();
+  });
+
+  test("Limpar desfaz a escolha", async () => {
+    const boxes = await openList();
+    fireEvent.click(boxes[0]);
+    fireEvent.click(screen.getByRole("button", { name: ASSISTED.selection.clear }));
+    expect(screen.queryByRole("region", { name: ASSISTED.selection.barLabel })).toBeNull();
   });
 });
 
@@ -229,7 +263,7 @@ describe("remover uma avaliação", () => {
     const first = (load("pipeline-ana-alfa") as SellerPipeline).groups[0].items[0];
     window.localStorage.setItem("rankio.avaliacoes.v1", JSON.stringify({
       assessments: { "Ana Alfa": { [first.opportunity_id]: {
-        opportunityId: first.opportunity_id, answers: FULL_NO_ACTION, actionDate: null, confirmedConflicts: [],
+        opportunityId: first.opportunity_id, answers: FULL_NO_ACTION, confirmedConflicts: [],
         assessedAt: "2018-01-02T10:00:00.000Z", policyVersion: "assisted-points-v1", version: 1 } } },
       orders: {},
     }));
@@ -237,12 +271,12 @@ describe("remover uma avaliação", () => {
     stubApi(structuredClone(load("pipeline-ana-alfa")) as SellerPipeline);
     render(<PortfolioPage />);
     fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(first.opportunity_id) }));
-    const reasons = await screen.findByRole("dialog", { name: UI.whyHere });
-    expect(within(reasons).getByText(ASSISTED.mark.done(95, CATEGORY_LABELS.define_continuity))).toBeTruthy();
+    const reasons = await screen.findByRole("region", { name: UI.whyHereFor(first.opportunity_id) });
+    expect(within(reasons).getByText(ASSISTED.mark.done(CATEGORY_LABELS.define_continuity))).toBeTruthy();
     fireEvent.click(within(reasons).getByRole("button", { name: ASSISTED.remove.label(first.opportunity_id) }));
     fireEvent.click(await screen.findByRole("button", { name: ASSISTED.remove.confirm }));
     await waitFor(() => expect(stored()).toEqual({}));
-    expect(screen.queryByText(ASSISTED.mark.done(95, CATEGORY_LABELS.define_continuity))).toBeNull();
+    expect(screen.queryByText(ASSISTED.mark.done(CATEGORY_LABELS.define_continuity))).toBeNull();
     expect(within(reasons).queryByRole("button", { name: ASSISTED.remove.label(first.opportunity_id) })).toBeNull();
   });
 });
@@ -268,14 +302,14 @@ describe("avaliar uma oportunidade só", () => {
     render(<PortfolioPage />);
     const first = (load("pipeline-ana-alfa") as SellerPipeline).groups[0].items[0];
     fireEvent.click(await screen.findByRole("button", { name: UI.whyHereFor(first.opportunity_id) }));
-    const reasons = await screen.findByRole("dialog", { name: UI.whyHere });
+    const reasons = await screen.findByRole("region", { name: UI.whyHereFor(first.opportunity_id) });
     fireEvent.click(within(reasons).getByRole("button", { name: ASSISTED.single.button }));
     const sheet = await screen.findByRole("dialog", { name: ASSISTED.title });
     expect(within(sheet).queryAllByRole("checkbox")).toHaveLength(0);
     expect(screen.queryByText(ASSISTED.ask.progress(1, 1))).toBeNull();
     answer(FULL_NO_ACTION);
     next();
-    expect(await screen.findByText(ASSISTED.points(95))).toBeTruthy();
+    expect((await screen.findAllByText(ASSISTED.points(95))).length).toBeGreaterThan(0);
   });
 });
 

@@ -4,7 +4,7 @@
 export const POLICY_VERSION = "assisted-points-v1";
 /** Versão do questionário gravado no navegador. */
 export const ASSESSMENT_VERSION = 1;
-/** Ação combinada até hoje + 7 dias (ou já anterior a hoje) conta como compromisso a cumprir. */
+/** Ação combinada para os próximos 7 dias conta como compromisso a cumprir. */
 export const WINDOW_DAYS = 7;
 /** Com tantas respostas "Não sei" (de 7), a oportunidade vai para o bloco à parte, sem posição. */
 export const UNKNOWN_LIMIT = 4;
@@ -23,7 +23,7 @@ export const OPTIONS = {
   urgency: ["concrete", "possible", "none", "unknown"],
   budget: ["confirmed", "needs_approval", "none", "unknown"],
   authority: ["access", "no_access", "not_identified", "unknown"],
-  progress: ["dated", "undated", "none", "unknown"],
+  progress: ["within_7", "within_30", "later", "undated", "none", "unknown"],
 } as const;
 export type AnswerOf<D extends Dimension> = (typeof OPTIONS)[D][number];
 export type Answers = { [D in Dimension]?: AnswerOf<D> };
@@ -41,7 +41,7 @@ export const POINTS: { [D in Dimension]: Record<AnswerOf<D>, number> } = {
   urgency: { concrete: 15, possible: 7, none: 0, unknown: 0 },
   budget: { confirmed: 15, needs_approval: 7, none: 0, unknown: 0 },
   authority: { access: 10, no_access: 5, not_identified: 0, unknown: 0 },
-  progress: { dated: 5, undated: 3, none: 0, unknown: 0 },
+  progress: { within_7: 5, within_30: 5, later: 4, undated: 3, none: 0, unknown: 0 },
 };
 
 export type ConflictCode = "no_contact_with_action" | "no_contact_with_need";
@@ -50,15 +50,13 @@ export type CategoryCode =
   | "review_answers" | "commitment_due" | "commitment_to_organize" | "define_continuity"
   | "advance_qualification" | "resume_or_reassess" | "investigate_first" | "qualify_need";
 
-export type NoteCode = "past_commitment" | "future_commitment" | "authority_gap";
-export type Note = { code: NoteCode; date?: string };
+export type NoteCode = "future_commitment" | "authority_gap";
+export type Note = { code: NoteCode };
 
 /** O que o vendedor declarou sobre uma oportunidade (é o que fica no navegador). */
 export type Assessment = {
   opportunityId: string;
   answers: Answers;
-  /** Só com `progress: "dated"` e se o vendedor quis informá-la (AAAA-MM-DD). */
-  actionDate: string | null;
   /** Contradições que o vendedor viu e disse estarem corretas. */
   confirmedConflicts: ConflictCode[];
   assessedAt: string;
@@ -68,7 +66,7 @@ export type Assessment = {
 
 export function emptyAssessment(opportunityId: string, now: Date = new Date()): Assessment {
   return {
-    opportunityId, answers: {}, actionDate: null, confirmedConflicts: [], assessedAt: now.toISOString(),
+    opportunityId, answers: {}, confirmedConflicts: [], assessedAt: now.toISOString(),
     policyVersion: POLICY_VERSION, version: ASSESSMENT_VERSION,
   };
 }

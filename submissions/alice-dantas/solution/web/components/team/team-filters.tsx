@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 
 import { FilterSelect } from "@/components/app/filter-select";
 import { Button } from "@/components/ui/button";
-import { UI } from "@/copy/pt-BR";
+import { UI, officeLabel } from "@/copy/pt-BR";
 
 type Props = {
   managers: string[];
@@ -21,7 +21,7 @@ export function TeamFilters({ managers, offices, manager, office, onChange }: Pr
       <FilterSelect label={UI.filters.manager} options={managers} value={manager}
                     onChange={(value) => onChange({ gerente: value })} />
       <FilterSelect label={UI.filters.office} options={offices} value={office}
-                    onChange={(value) => onChange({ escritorio: value })} />
+                    onChange={(value) => onChange({ escritorio: value })} optionLabel={officeLabel} />
       {(manager || office) && (
         <Button variant="ghost" className="w-fit" onClick={() => onChange({ gerente: null, escritorio: null })}>
           <X aria-hidden />

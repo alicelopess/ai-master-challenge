@@ -130,6 +130,26 @@ def test_matrix_is_the_seller_mix(page):
         assert not {"won", "win_rate", "revenue"} & set().union(*(c.keys() for c in row["cells"]))
 
 
+def test_crosstabs_split_each_row_without_a_rate(page):
+    assert [c["id"] for c in page["crosstabs"]] == [
+        "account_product", "sector_product", "seller_sector", "sector_office", "location_office"]
+    sellers = {s["key"]: s["history"]["closed"] for s in by_dimension(page, codes.DIM_SELLER)["segments"]}
+    for table in page["crosstabs"]:
+        assert len(table["columns"]) == len(set(table["columns"]))
+        for row in table["rows"]:
+            assert [c["key"] for c in row["cells"]] == table["columns"]
+            assert row["closed"] == sum(c["closed"] for c in row["cells"])
+            if row["closed"]:
+                assert math.isclose(sum(c["share"] for c in row["cells"]), 1, abs_tol=1e-3)
+            assert not {"won", "win_rate", "revenue"} & set().union(*(c.keys() for c in row["cells"]))
+        if table["row_dimension"] == "seller":
+            assert [r["key"] for r in table["rows"]] == sorted(sellers)
+            assert {r["key"]: r["closed"] for r in table["rows"]}.keys() == sellers.keys()
+        else:
+            closed = [r["closed"] for r in table["rows"]]
+            assert closed == sorted(closed, reverse=True)
+
+
 def test_cycle_bands_end_at_the_rule_limits(page):
     bands, meta = page["cycle_bands"], page["meta"]
     assert sum(b["won"] + b["lost"] for b in bands) == page["history"]["closed"]

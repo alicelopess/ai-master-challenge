@@ -81,7 +81,7 @@ def test_focar_acompanhar_and_revisar_reasons(raw_dir):
     focar = detail(dataset, "E100")
     assert focar["reasons"][0] == {"code": codes.AGE_WITHIN_WON_CYCLE, "role": codes.ROLE_GROUP, "params": {
         "age_days": 100, "won_cycle_limit_days": 100, "percentile": 90}}
-    assert texts(focar)[0] == "Focar porque está aberta há 100 dias; 90% das vendas ganhas fecharam em até 100 dias."
+    assert texts(focar)[0] == "Focar porque está aberta há 100 dias. Entre as vendas ganhas, 90% fecharam em até 100 dias."
     acompanhar = detail(dataset, "E138")
     assert acompanhar["reasons"][0] == {"code": codes.AGE_ABOVE_WON_CYCLE, "role": codes.ROLE_GROUP, "params": {
         "age_days": 138, "won_cycle_limit_days": 100, "cycle_limit_days": 138, "percentile": 90}}
@@ -139,7 +139,7 @@ def test_real_focar_panel_01XZ9CRY(real_dataset):  # AC-3.1
     entry = detail(real_dataset, "01XZ9CRY")
     assert entry["reasons"][0]["params"] == {"age_days": 104, "won_cycle_limit_days": 106, "percentile": 90}
     sentences = texts(entry)
-    assert sentences[0] == "Focar porque está aberta há 104 dias; 90% das vendas ganhas fecharam em até 106 dias."
+    assert sentences[0] == "Focar porque está aberta há 104 dias. Entre as vendas ganhas, 90% fecharam em até 106 dias."
     assert "valor de tabela 5.482 (valor de tabela alto)" in sentences[1].lower()
     assert len(sentences) == 2
     assert entry["next_action"] == {"code": codes.CHECK_STATUS, "params": {"has_account": True}}

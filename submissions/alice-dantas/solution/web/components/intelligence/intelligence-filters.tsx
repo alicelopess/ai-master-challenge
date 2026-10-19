@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger,
 } from "@/components/ui/popover";
-import { DIMENSION_LABELS, INTELLIGENCE, UI, sizeLabel } from "@/copy/pt-BR";
+import { DIMENSION_LABELS, INTELLIGENCE, UI, officeLabel, sectorLabel, sizeLabel } from "@/copy/pt-BR";
 import type { Intelligence, IntelligenceFilter, Seller, SizeBand } from "@/lib/contract";
 import { accountChoices, activeFilters, emptyFilter } from "@/lib/intelligence";
 import { filterOptions } from "@/lib/team";
@@ -45,10 +45,10 @@ export function IntelligenceFilters({ filter, options, sellers, onChange }: Prop
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" className="relative max-lg:size-9 max-lg:px-0">
           <SlidersHorizontal aria-hidden />
-          {text.button}
-          {active.length > 0 && <Badge variant="secondary" className="tabular-nums">{active.length}</Badge>}
+          <span className="max-lg:sr-only">{text.button}</span>
+          {active.length > 0 && <Badge variant="secondary" className="tabular-nums max-lg:absolute max-lg:-top-2 max-lg:-right-2 max-lg:h-4 max-lg:min-w-4 max-lg:px-1 max-lg:text-[0.625rem]">{active.length}</Badge>}
         </Button>
       </PopoverTrigger>
       {/* No celular, o painel respeita a margem de 16 px e rola sozinho se passar da altura da tela. */}
@@ -69,7 +69,8 @@ export function IntelligenceFilters({ filter, options, sellers, onChange }: Prop
           <FilterSelect label={DIMENSION_LABELS.office} options={team.offices} value={filter.office}
                         onChange={(office) => onChange({ office })} triggerClassName={FULL} />
           <FilterSelect label={DIMENSION_LABELS.sector} options={withValue(options?.sectors ?? [], filter.sector)}
-                        value={filter.sector} onChange={(sector) => onChange({ sector })} triggerClassName={FULL} />
+                        value={filter.sector} onChange={(sector) => onChange({ sector })} triggerClassName={FULL}
+                        optionLabel={sectorLabel} />
           <SearchCombobox label={DIMENSION_LABELS.account}
                           options={withValue(options ? accountChoices(options, filter.sector) : [], filter.account)}
                           value={filter.account} onChange={(account) => onChange({ account })} triggerClassName={FULL}
@@ -98,7 +99,9 @@ export function ActiveFilters({ filter, sizes, onChange }: {
   return (
     <div role="group" aria-label={text.activeLabel} className="flex flex-wrap items-center gap-2">
       {active.map((key) => {
-        const value = key === "size" ? sizeText(filter[key] as string, sizes) : (filter[key] as string);
+        const raw = filter[key] as string;
+        const value = key === "size" ? sizeText(raw, sizes) : key === "sector" ? sectorLabel(raw)
+          : key === "office" ? officeLabel(raw) : raw;
         return (
           <Button key={key} variant="secondary" size="sm" aria-label={text.remove(DIMENSION_LABELS[key], value)}
                   onClick={() => onChange({ [key]: null })}>

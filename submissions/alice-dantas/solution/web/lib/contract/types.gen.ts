@@ -405,6 +405,76 @@ export type CoverageParams = {
 };
 
 /**
+ * Crosstab
+ *
+ * Quem compra o quê e quem atende quem: fechadas por linha e coluna. Sem taxa por célula.
+ */
+export type Crosstab = {
+    /**
+     * Id
+     */
+    id: 'account_product' | 'sector_product' | 'seller_sector' | 'sector_office' | 'location_office';
+    /**
+     * Row Dimension
+     */
+    row_dimension: 'account' | 'sector' | 'seller' | 'location';
+    /**
+     * Column Dimension
+     */
+    column_dimension: 'product' | 'sector' | 'office';
+    /**
+     * Columns
+     *
+     * Produtos do maior preço ao menor; setores e escritórios em ordem alfabética.
+     */
+    columns: Array<string>;
+    /**
+     * Rows
+     *
+     * Vendedores em ordem alfabética (nunca um ranking); o resto por fechadas.
+     */
+    rows: Array<CrosstabRow>;
+};
+
+/**
+ * CrosstabCell
+ */
+export type CrosstabCell = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Closed
+     */
+    closed: number;
+    /**
+     * Share
+     *
+     * Fatia desta coluna nas fechadas da linha.
+     */
+    share: number | null;
+};
+
+/**
+ * CrosstabRow
+ */
+export type CrosstabRow = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Closed
+     */
+    closed: number;
+    /**
+     * Cells
+     */
+    cells: Array<CrosstabCell>;
+};
+
+/**
  * CycleBand
  */
 export type CycleBand = {
@@ -928,6 +998,10 @@ export type Intelligence = {
      */
     breakdowns: Array<Breakdown>;
     matrix: SellerProductMatrix;
+    /**
+     * Crosstabs
+     */
+    crosstabs: Array<Crosstab>;
     /**
      * Cycle Bands
      */
