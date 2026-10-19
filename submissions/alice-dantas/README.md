@@ -10,20 +10,24 @@
 
 ## Executive Summary
 
-Construí o **Rankio**, uma ferramenta que o vendedor abre na segunda de manhã, escolhe o próprio nome e vê o que abrir primeiro, com o motivo de cada posição em palavras simples e com o que os dados não sabem. Auditei os 8.800 registros do CRM e descobri que produto, vendedor e conta não separam quem ganha de quem perde (AUC perto de 0,5); por isso o Rankio não inventa uma "nota de chance": ele ordena por regras declaradas e diz com franqueza o que a base não enxerga. Para cobrir o que o CRM não registra, **o vendedor responde 7 perguntas rápidas e desempata as oportunidades empatadas com o que só ele sabe**, e **seis personas simuladas testaram a ferramenta** e apontaram o que corrigir antes de ela chegar a um vendedor de verdade. Minha principal recomendação é um piloto com grupo de controle: é a única forma de saber se a lista melhora o resultado.
+Construí o **Rankio**, uma ferramenta de priorização de oportunidades comerciais. A ideia é que o vendedor abra o sistema na segunda de manhã, escolha a primeira oportunidade da lista e trabalhe nela. Cada item da listagem possui o motivo da sua posição em palavras simples, evidenciando também o que os dados não foram capazes de fornecer. Auditei os 8.800 registros do CRM e descobri que produto, vendedor e conta não determinam potencial de fechamento (AUC perto de 0,5). Por isso, o Rankio não inventa uma "nota de score": ele ordena por regras declaradas e diz com franqueza o que a base não é capaz de determinar, pelas limitações dos dados. 
+
+Uma consequência da ausência de dados detalhados de negociação é que algumas oportunidades ficam empatadas na listagem. Para resolver esse problema, criei um sistema de priorização assistida, no qual **o vendedor seleciona algumas oportunidades, responde a 7 perguntas rápidas sobre a negociação de cada uma**, e a partir disso o score é realizado e os deals são reorganizados.
+
+Para garantir o cumprimento do briefing, **seis personas simuladas testaram a ferramenta** e apontaram o que corrigir antes de ela chegar a um vendedor de verdade.
 
 ---
 
 ## Solução
 
-O Rankio responde, em uma tela, à pergunta que a Head de RevOps fez no briefing: **"onde eu foco?"**
+O Rankio responde, em uma tela, à pergunta que a Head de RevOps fez no briefing: **"como priorizar os deals?"**
 
 | O que a Head de RevOps pediu | O que o Rankio entrega |
 | --- | --- |
 | "Gastam tempo demais em deals que não vão fechar" | As 1.291 abertas acima de 138 dias (a venda mais longa já fechada) ficam separadas em **Confirmar**, com a ação "verifique no CRM se ainda está ativa". O vendedor deixa de tratá-las como carteira viva. |
 | "Deixam oportunidades boas esfriar" | **Focar** reúne as abertas dentro do tempo em que 90% das vendas ganhas fecharam (até 106 dias), e **Acompanhar** as que já passaram disso. A idade aparece em cada linha. |
-| "Não um modelo no Jupyter que ninguém vai usar" | Uma aplicação que roda: API, tela e linha de comando, com a mesma lista nas três saídas. |
-| "Quero que o vendedor abra, veja o pipeline e saiba onde focar" | Escolher o nome, ver o cartão **"O que verificar agora"** e abrir qualquer posição para ler **"Por que está aqui"**, em cerca de 1 minuto. |
+| "Não um modelo no Jupyter que ninguém vai usar" | Uma aplicação que roda: Front-end em Next.js, API em FastAPI. |
+| "Quero que o vendedor abra, veja o pipeline e saiba onde focar" | A primeira tela é a carteira do vendedor. Ele escolher o nome, ve o cartão **"O que verificar agora"** e abre qualquer posição para ler **"Por que está aqui"**, em cerca de 1 minuto. |
 
 ### Por que isso resolve o desafio 003
 
@@ -40,7 +44,7 @@ As **cinco páginas** do Rankio, cada uma com a pergunta que responde:
 | Página | Para quem | Pergunta |
 | --- | --- | --- |
 | Carteira | Vendedor | Qual é o meu próximo passo? |
-| Equipe | Gestor e Head de RevOps | Onde está a carteira da equipe? |
+| Equipe | Gestor e Head de RevOps | Como a equipe está distribuida? |
 | Inteligência | Head de RevOps | Onde o processo pode melhorar? |
 | Evidência | Head de RevOps | A lista ajuda a escolher onde investir? |
 | Como funciona | Todos | Como a lista é montada? |
@@ -79,13 +83,12 @@ O que cuida para esse número não enganar:
 - **Nada é gravado no servidor.** As respostas ficam só no navegador do vendedor.
 - **É uma camada declarada, separada do scoring** ([ADR-010](./docs/architecture.md#adr-010)). A ordem oficial da Carteira não muda.
 - **Nunca aparece como chance de fechar.** Sem porcentagem, sem cor de temperatura, com o aviso fixo "pesos iniciais, a validar".
-- **Os pesos são hipóteses minhas**, e a tela diz isso. Quem valida é o piloto com vendedores reais.
 
 #### 2. Personas simuladas para validar a entrega
 
 **O problema.** Eu não tinha 35 vendedores à mão para testar a ferramenta antes de entregar. E o risco de quem constrói é achar tudo claro porque conhece tudo.
 
-**A saída.** Montei um teste com **seis agentes de IA independentes**, um por vez, cada um com papel e missão próprios, usando o Rankio no navegador **sem ver código, documentos nem o relato dos outros**:
+**A saída.** Montei um teste com **seis agentes de IA independentes**, um por vez, cada um com papel e missão próprios, usando o Rankio no navegador. Os agentes não tinham acesso a **ver código, documentos nem o relato dos outros**:
 
 | Persona | O que testou |
 | --- | --- |
@@ -240,8 +243,7 @@ Em ordem de prioridade:
 | Subagentes do Claude Code (general-purpose) | **As seis personas** que usaram o Rankio no navegador |
 | Navegador do app Claude Code | Ensaio das jornadas, conferência em 375, 768 e 1280 px nos dois temas e medição de contraste |
 | Busca na web | Técnicas de scoring em vendas, incerteza e calibração |
-| ChatGPT | Desenho do template do process log |
-| [Confirmar: outra IA] | Especificação funcional inicial da priorização assistida, que colei no meu prompt |
+| ChatGPT | Desenho do template do process log e otimização de prompts |
 
 ### Workflow
 

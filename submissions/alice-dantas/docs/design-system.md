@@ -178,18 +178,19 @@ A grade é de 4 px (escala padrão do Tailwind).
 | "Ver por" e métrica do gráfico | Select | `intelligence/BreakdownExplorer` |
 | Números do histórico | Card + Badge | `intelligence/HistorySummary` |
 | "Ver análises" (diagnósticos e descobertas) e "Como funciona" | Sheet + Tabs + Card + Button | `intelligence/AnalysesPanel`, `intelligence/GuidePanel`, `intelligence/DiagnosticsList`, `intelligence/FindingsList` |
-| Mix vendedor × produto | Table + Button | `intelligence/SellerProductMatrix` |
+| Cruzamentos (vendedor × produto, cliente × produto, setor × produto, vendedor × setor, setor e país × escritório) | Select + Table + Button | `intelligence/CrosstabExplorer` |
+| Título de coluna com ajuda | Tooltip (ordenável: `SortableHead help`; sem ordenação: `HelpHead`) | `app/SortableHead`, `app/HelpHead` |
 | Negociações por trás de um número | Sheet + Tabs + Table + Pagination | `intelligence/DealsSheet` |
 | Linguagem da Evidência (negócio ou técnica) | Select | `evidence/EvidencePage` |
 | Próximo passo, números, blocos de explicação | Card | `portfolio/NextStepCard`, `team/TeamSummary` |
 | Grupos da carteira | Tabs + Popover + Button | `portfolio/GroupTabs` (o botão "O que significa cada grupo?" ao lado das abas abre o `GroupGuide`) |
 | Listas | Table | `portfolio/ItemsTable` |
 | Páginas da tabela | Pagination | `app/TablePagination` |
-| "Por que está aqui" | Sheet + Separator + Button | `portfolio/ReasonSheet` |
-| Priorização assistida (escolher, responder, resultado) | Sheet + Checkbox + RadioGroup + Label + Input + Card + Table + Badge + Alert + Button | `assessment/AssessmentSheet` (`SelectStep`, `QuestionStep`, `ResultStep`, `ResultCard`, `ComparisonTable`) |
+| "Por que está aqui" | Table (linha que expande) + Collapsible + Button | `portfolio/ReasonPanel`, `portfolio/ItemsTable` |
+| Priorização assistida (escolher, responder, resultado) | Dialog + Checkbox + RadioGroup + Label + Input + Card + Table + Badge + Alert + Button | `assessment/AssessmentDialog` (`SelectStep`, `QuestionStep`, `ResultStep`, `ResultCard`, `ComparisonTable`) |
 | Ajuda de coluna | Tooltip | `portfolio/ItemsTable` |
 | Vazio, carregando, erro e aviso | Empty, Skeleton, Alert | Todas as páginas |
-| Gráficos da evidência e da Inteligência | Chart (Recharts) | `evidence/*`, `intelligence/BreakdownChart`, `intelligence/TimeResults` |
+| Gráficos da evidência e da Inteligência | Chart (Recharts) com `ChartTooltip` e `ChartTooltipContent` | `evidence/*`, `intelligence/BreakdownChart`, `intelligence/TimeResults` |
 
 ## 5. Padrões de página
 
@@ -214,20 +215,22 @@ A grade é de 4 px (escala padrão do Tailwind).
   - Listas longas são paginadas, nunca com rolagem infinita nem "Mostrar mais":
     - 25 linhas por página, com a faixa "26–50 de 1.291", página anterior, números com saltos e próxima;
     - no celular, só anterior, a página atual e próxima;
-    - quando o painel avança para um item de outra página, a tabela acompanha.
+    - quando o cartão do topo abre uma oportunidade de outra página, a tabela vai até ela.
   - Linhas de faixa e de empate separam blocos.
-  - A linha inteira abre a sheet, e o ID é o botão acessível.
+  - A linha inteira expande a análise logo abaixo, e o ID é o botão acessível (`aria-expanded`). Várias linhas ficam abertas ao mesmo tempo, para comparar uma com a de baixo.
   - Os números ficam à direita.
-- **Sheet "Por que está aqui":**
+- **Análise "Por que está aqui" (linha expandida):**
   - Os dois motivos, agrupados pelo `role` do contrato: o que decidiu o grupo e o que decidiu a posição. Abaixo, uma nota fixa do que o sistema não vê (ligações, reuniões, e-mails).
-  - Depois vem o próximo passo, com Anterior e Próxima na ordem do grupo, e "Copiar ID".
+  - O próximo passo abre a análise, em duas colunas a partir de telas largas; "Copiar ID" e "Recolher análise" ficam no pé.
+- **Priorização assistida:** janela (Dialog) arredondada com as etapas em traços no topo ("Etapa 2 de 3"), cada pergunta num cartão com as respostas como linhas selecionáveis (a resposta marcada ganha o círculo com visto) e rodapé fixo com Voltar e o botão principal em pílula.
 - **Estados:** carregando usa Skeleton; vazio usa Empty com o texto do código; erro usa Alert `destructive`; dados fora da versão auditada usam Alert `warning`.
 - **Gráficos:**
   - São complemento: os mesmos números ficam numa tabela visível, que é a versão para leitores de tela (o gráfico leva `aria-hidden`).
+  - Todos têm tooltip (`ChartTooltip` do shadcn, números em pt-BR). A barra do recorte na Inteligência abre as negociações; a da Evidência rola até a linha da estratégia; a barra de grupos da Equipe abre o grupo.
   - No cartão "A pergunta" da Evidência, os números ficam empilhados à esquerda e o gráfico ocupa a direita.
   - Abaixo de `md` o gráfico some, porque as barras ficariam curtas demais para ler.
   - A estratégia de referência usa `--chart-1`, e as demais `--chart-2`, mais apagadas.
-- **Tabelas de pessoas** (por vendedor): seguem a ordem da API, que é alfabética, e não têm controle de ordenação, para que a tela nunca vire um ranking. Na Inteligência, os recortes de pessoas (vendedor, gerente e escritório) também não têm gráfico nem índice por pessoa.
+- **Tabelas de pessoas** (por vendedor): abrem na ordem da API, que é alfabética, e o gerente pode ordenar por qualquer coluna (cabeçalho com `aria-sort`; três cliques voltam à ordem original). A ordem é só de consulta: nenhuma coluna pontua nem destaca pessoas. Na Inteligência, os recortes de pessoas (vendedor, gerente e escritório) também não têm gráfico nem índice por pessoa.
 - **Inteligência** ([ADR-007](./architecture.md#adr-007)):
   - **Os números vêm antes do texto.** O corpo da página só tem números, gráficos e tabelas: os quatro números do histórico, a carteira aberta num cartão à parte ("não é receita"), a exploração por recorte, o mix vendedor × produto e tempo e resultado. A leitura de cada tabela (acaso, decomposição, limites) fica logo abaixo dela, no rodapé do cartão.
   - **Três botões no cabeçalho:** "Filtros" abre um popover com os sete campos em duas colunas (uma no celular, com rolagem própria e margem de 16 px), e o recorte ativo fica à vista em chips, cada um tirando só o seu filtro; "Ver análises" abre um painel lateral com os diagnósticos do processo e as descobertas, em duas abas com contagem; "Como funciona" abre as definições e o que a página não faz. Do painel, "Ver negociações", "Ver por…" e "Ver o ritmo mensal" fecham o painel e levam ao lugar certo.
