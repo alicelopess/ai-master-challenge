@@ -1,12 +1,14 @@
 # Data Audit — Challenge 003 | Lead Scorer
 
-[↑ Voltar ao discovery](./discovery.md#etapa-3) · [Índice do discovery](./discovery.md#indice)
+[↑ Voltar ao discovery](./discovery.md#dados) · [Hipóteses do discovery](./discovery.md#hipoteses)
 
+> **Identificadores.** Os códigos V1 a V14 (testes), S1 a S22 (sinais) e D, M e O vêm da versão longa do discovery, preservada no histórico do git; neste documento cada um aparece com o nome.
+>
 > **Terminologia.** Este documento usa "envelhecido" para uma oportunidade aberta há mais tempo do que o maior ciclo fechado. O rótulo "zumbi", do plano V6, foi substituído porque a idade não prova abandono.
 
 **Status:** Auditoria executada  
 **Data:** 15/10/2026  
-**Etapa:** 3 | Data Discovery (insumo para a seção 3 do `discovery.md`)
+**Etapa:** 3 | Data Discovery (insumo para o `discovery.md`)
 **Script:** [solution/scripts/audit_data.py](../solution/scripts/audit_data.py)  
 **Saídas brutas:** `solution/data/processed/audit_results.json` e `audit_log.txt`
 
@@ -63,23 +65,16 @@ Abrimos os cinco arquivos do CRM e conferimos três coisas: se os dados estão �
 - **Antes de construir, é preciso perguntar** à Head de RevOps: quando a empresa é preenchida, por que tantos negócios passam de 138 dias abertos e o que significa "Lost".
 - **Mais dados mudariam o quadro:** registro de atividades e histórico de estágio são o que falta para medir "esfriamento", e hoje não existem.
 
-### Mini-glossário
+### Termos
 
-| Termo                      | Em português simples                                                                         |
-| -------------------------- | -------------------------------------------------------------------------------------------- |
-| Taxa de ganho (_win rate_) | De cada 100 negócios que terminaram, quantos foram ganhos. Aqui: 63.                         |
-| Ciclo                      | Dias entre começar a negociar e fechar.                                                      |
-| Vazamento (_leakage_)      | Usar, para prever algo, uma informação que só existe depois do resultado.                    |
-| Backtest                   | Simular o passado: treinar com o que se sabia até uma data e testar no que aconteceu depois. |
-| AUC                        | Nota de 0,5 a 1 de quão bem se separa quem ganha de quem perde. 0,5 = sorteio; 1 = perfeito. |
-| Truncamento                | O extrato só mostra parte da história, e isso distorce o que parece ser padrão.              |
+**Taxa de ganho:** de cada 100 negócios que terminaram, quantos foram ganhos (aqui, 63). **Ciclo:** dias entre começar a negociar e fechar. **Truncamento:** o extrato só mostra parte da história, e isso distorce o que parece ser padrão. Vazamento, backtest e AUC estão no [glossário do discovery](./discovery.md#glossario).
 
 ---
 
 <a id="a-2"></a>
 ## 2. Resultados técnicos
 
-**Premissa de data de corte.** O dataset não informa a data de extração. Adotou-se **2017-12-31** (maior `close_date`). Há sensibilidade na seção 2.8.
+**Premissa de data de corte.** O dataset não informa a data de extração. Adotou-se **2017-12-31** (maior `close_date`). A sensibilidade ao corte está na linha V6 da seção 2.10.
 
 <a id="a-2-1"></a>
 ### 2.1 Inventário (atividade 1)
@@ -279,6 +274,7 @@ AUC no teste, por corte:
 - **[FATO MEDIDO]** Em 100% dos casos, as contas do teste já apareciam no treino.
 - **[INTERPRETAÇÃO]** Com os campos disponíveis, **não há evidência de lift utilizável sobre a taxa global**: o melhor caso (AUC 0,56, Brier −0,003) é pequeno e instável. Com ~900 a 1.100 casos de teste, o experimento só detecta AUC acima de ~0,55; um efeito menor poderia existir e não foi visto.
 - **[INTERPRETAÇÃO]** O resultado vale para essas features, esse corte e essa técnica. Não descarta (a) features que não existem no dataset (atividade, histórico de estágio), (b) interações não testadas, (c) treino por _snapshots_ de idade.
+- **[INTERPRETAÇÃO]** **Esta sonda não é o backtest final.** Aqui o teste só inclui negócios que depois fecharam (ganhos ou perdidos). O backtest do Rankio (`scripts/backtest.py`, [relatório](../solution/data/processed/backtest_report.md)) inclui também as abertas que nunca fecham na base, e nele a idade separa mais (AUC médio de 0,604 na regra servida e de 0,616 em "mais nova primeiro"). A diferença vem da população: sem as que nunca fecham, a idade não tem direção estável (acima); com elas, as mais novas ganham mais em 90 dias porque as velhas quase nunca fecham. Por isso o README descreve a idade como um sinal que depende das negociações sem desfecho, não como preditor de ganho.
 - **[NÃO VERIFICÁVEL]** Comparação com o "feeling" atual: a priorização do vendedor não está registrada, então não há baseline humano para bater.
 
 **Viabilidade por abordagem (sem escolher arquitetura):**
@@ -302,7 +298,7 @@ AUC no teste, por corte:
 | V3 Datas coerentes                   | Executado                 | 0 inversões, 0 não parseáveis; corte adotado 2017-12-31; **nenhum fechamento antes de 2017-03-01**                  |
 | V4 Lost = limpeza de CRM?            | Parcial                   | Sem concentração em fim de mês (Lost 3,0%, Won 3,3%, esperado 3,3%); dispersão diária 1,27; mas fim de semana 28,4% |
 | V5 Ciclo por produto e resultado     | Executado                 | Mediana Won 47–69 d; Lost 12–34 d; P90 Won 102–116 d; máximo 138 d; bimodal                                         |
-| V6 Envelhecidos em Engaging                | Executado                 | **1.291 de 1.589 (81,2%)** acima de 138 d; 1.432 (90,1%) acima do P90 Won do próprio produto                        |
+| V6 Envelhecidos em Engaging          | Executado                 | **1.291 de 1.589 (81,2%)** acima de 138 d; 1.432 (90,1%) acima do P90 Won do próprio produto; com o corte no maior `engage_date` (2017-12-27), 1.238 (77,9%) |
 | V7 Sinal por segmento                | Executado                 | Nenhum segmento estático se distingue do acaso (qui-quadrado p entre 0,26 e 0,97)                                   |
 | V8 Vendedor domina variância?        | Executado (simples)       | Vendedor: ε² ajustado 0,0007; produto+vendedor R² aj. 0,0009                                                        |
 | V9 Preço como proxy                  | Executado                 | `close_value`/preço: média 0,996, dp 0,099; 95,9% dentro de ±20%; Pearson 0,9915                                    |
@@ -361,7 +357,7 @@ AUC no teste, por corte:
 | HD-07 | RevOps: baseline e retorno      | **Parcial** | Dá para congelar taxa de ganho (63,2%), ciclo e ticket, mas sem custo, margem, e com calendário instável                         |
 | HD-08 | CRM: campos e regras de estágio | **Sim**     | Completude por estágio, chaves, rótulos e datas foram mensurados                                                                 |
 
-> **Classificação canônica:** [discovery.md, 3.2](./discovery.md#sub-3-2). Em versões anteriores deste documento: HD-02 "Fraca"; HD-03 e HD-06 "Não"; HD-05 "Fraca". Os motivos da coluna "Por quê" não mudaram.
+> **Classificação canônica:** [discovery.md, seção 2](./discovery.md#hipoteses). Em versões anteriores deste documento: HD-02 "Fraca"; HD-03 e HD-06 "Não"; HD-05 "Fraca". Os motivos da coluna "Por quê" não mudaram.
 
 ---
 
@@ -460,6 +456,8 @@ python3 -m venv .venv
 | 2        | Falhou: `UnboundLocalError: first_close` | Variável usada antes de ser definida; corrigido                                                                                                 |
 | 3        | Exit 0                                   | Saída revisada                                                                                                                                  |
 | 4        | Exit 0                                   | Adicionado controle vendedor × mês; saída **idêntica** à execução 3 nas demais linhas (determinístico)                                          |
+
+O `check-data` confere os quatro CSVs que o Rankio lê (`accounts`, `products`, `sales_pipeline` e `sales_teams`); o `metadata.csv` só entrou na auditoria, para conferir as colunas.
 
 **Exploração prévia.** Antes do script, três perfis ad hoc foram rodados para decidir o que auditar. **Nenhum número deste relatório vem deles**; todos vêm do script.
 
