@@ -268,7 +268,7 @@ Entendi o problema antes de abrir qualquer ferramenta: tratei o briefing como pe
 
 O guia aceita narrativa escrita e git history, sozinhos ou combinados.
 
-- [x] Git history: 40 commits na branch `submission/alice-dantas`, só em `submissions/alice-dantas/` (`git log --reverse --oneline 85339bb^..HEAD`)
+- [x] Git history: 41 commits na branch `submission/alice-dantas`, só em `submissions/alice-dantas/` (`git log --reverse --oneline 85339bb^..HEAD`)
 - [x] Narrativa escrita: [process-log/PROCESS_LOG.md](./process-log/PROCESS_LOG.md)
 - [x] Capturas de tela da versão final, em 11 telas: [process-log/screenshots](./process-log/screenshots/)
 - [x] Outro: relatos das seis personas em [docs/testes-personas](./docs/testes-personas/)

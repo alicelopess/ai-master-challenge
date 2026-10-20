@@ -115,7 +115,7 @@ Nas interações seguintes (PL-019 a PL-021 e PL-023), defendi a estratégia con
 
 - **Uso da IA.** Pedi um PRD de no máximo duas páginas, com três P0 e critérios DADO/QUANDO/ENTÃO, sem reabrir o discovery. Em seguida, pedi um teste de mesa como vendedor e QA, limitado a três correções.
 - **O que saiu.** O teste achou três lacunas antes de qualquer código: faltava próximo passo para Focar, Qualificar e Focar vazio (os 6 vendedores sem Focar concentram 317 das 500 Prospecting); a regra de ordem não aparecia na tela; a tela não tinha critério de aceite. A IA reconheceu que criou a primeira ao condensar o PRD para caber nas duas páginas.
-- **Minhas decisões.** Manter os CSVs fora do PR, contra a recomendação da IA, e corrigir a premissa do prazo: as 4 a 6 h são estimativa, não restrição, o que eliminou o gatilho de corte de 2 h. Aprovei duas decisões do PRD: `as_of` mínimo e produto desconhecido como erro.
+- **Minhas decisões.** Manter os CSVs fora do repositório, contra a recomendação da IA, e corrigir a premissa do prazo: as 4 a 6 h são estimativa, não restrição, o que eliminou o gatilho de corte de 2 h. Aprovei duas decisões do PRD: `as_of` mínimo e produto desconhecido como erro.
 
 #### PL-026 — Plano de build em quatro specs (15/10, 23:13)
 
@@ -167,7 +167,7 @@ As decisões em que divergi da IA ou decidi sem a recomendação dela, no que ma
 3. **Tratar as limitações dos dados como requisitos de projeto**, e não pendências, e deixar o scoring para a Arquitetura em vez de executar T-A e T-B (PL-013, PL-014).
 4. **FastAPI + Next.js contra os três agentes**, e **não aceitar a convergência deles como prova** (PL-018 e PL-019).
 5. **Retirar a idade da ordenação** em vez de apostar em uma direção (PL-022).
-6. **CSVs fora do PR e prazo como estimativa**, recusando o gatilho de 2 h que cortaria o front (PL-024).
+6. **CSVs fora do repositório e prazo como estimativa**, recusando o gatilho de 2 h que cortaria o front (PL-024).
 7. **Não aprovar a regra A só pelo ganho**: exigir incerteza, sensibilidade e a separação entre comprovado e hipótese (PL-034).
 8. **Fronteira entre back e front:** decisão no back, apresentação no front (PL-037).
 9. **Personas isoladas, sem roteiro**, tratando opinião simulada como não evidência (PL-049).
@@ -345,10 +345,10 @@ O guia aceita narrativa escrita e histórico do git, sozinhos ou combinados. Uso
 | --- | --- |
 | Período | 14/10/2026 12:55 a 19/10/2026 14:24 (Etapas 00 a 11) |
 | Interações com IA documentadas | 61 (PL-001 a PL-061), todas no índice da seção 9 |
-| Commits | 40 na branch `submission/alice-dantas` (`85339bb` até o `HEAD`), só em `submissions/alice-dantas/`; os 3 últimos são a revisão final da entrega |
+| Commits | 41 na branch `submission/alice-dantas` (`85339bb` até o `HEAD`), só em `submissions/alice-dantas/`; os 4 últimos são a revisão final da entrega |
 | Testes (19/10/2026) | `pytest` 221 e `vitest` 284 passam, `tsc` sem erros |
 
-**Entregáveis:** solução em `solution/` (núcleo Python, CLI, API FastAPI e tela Next.js); README da submissão no template; documentação em `docs/` (PRD, discovery e ADRs condensados, auditoria dos dados, design system, testes com personas) e notas técnicas em `solution/README.md`; este log. O Pull Request `[Submission] Maria Alice Dantas — Challenge 003` ainda não foi aberto.
+**Entregáveis:** solução em `solution/` (núcleo Python, CLI, API FastAPI e tela Next.js); README da submissão no template; documentação em `docs/` (PRD, discovery e ADRs condensados, auditoria dos dados, design system, testes com personas) e notas técnicas em `solution/README.md`; este log.
 
 ### Histórico do git
 
@@ -364,7 +364,7 @@ git log --reverse --date=format:'%d/%m %H:%M' --format='%h %ad %s' 85339bb^..HEA
 | 08 — Contrato, Rankio, regra A e Inteligência | `734893d`, `c0b64da`, `dd9eb32` (contrato e backtest corrigido) · `b0ceef7`, `f054dab`, `8b0e8d4` (Rankio v4) · `735e9fd` · `94ca259` · `ab0f56f`, `55869f8` (regra A, contrato v5) |
 | 10 — Personas e priorização assistida | `a17471f`, `44298a5`, `007b677` (contrato v7) · `65eda15`, `04f2289` · `36a68a8`, `2676b65` · `fa23ae9`, `4140f8d` (priorização assistida) · `76f10a8`, `2b2945b` |
 | 11 — Delivery | `9cab309` · `5feecb3` (pasta no formato do guia) · `c5cd5f8` · `5bfbe37` (README) · `aa67cdd` · `56bbb01` |
-| Revisão final (19/10) | Os 3 últimos commits (`git log -3`): correção do PRD e do data audit, nova versão deste log com as capturas e timeout do `vitest` |
+| Revisão final (19/10) | Os 4 últimos commits (`git log -4`): correção do PRD e do data audit, nova versão deste log com as capturas, timeout do `vitest` e ajuste final do texto do log |
 
 ### Capturas de tela
 
