@@ -7,5 +7,7 @@ export default defineConfig({
     environment: "jsdom",
     include: ["tests/**/*.test.{ts,tsx}"],
     setupFiles: ["tests/setup.ts"],
+    // Na primeira execução (cache frio) um teste de render passa de 5 s.
+    testTimeout: 20000,
   },
 });
